@@ -74,7 +74,38 @@ check( 'a post type with an editor is offered', in_array( 'product', $eligible, 
 check( 'a post type with nothing to revise is left out', in_array( 'ledger', $eligible, true ), false );
 check( 'the revision post type itself is never offered', in_array( 'revision', $eligible, true ), false );
 
-/* --------------------------------------------------- 5. The keep floor */
+/* ------------------------------------- 5. Promoting a site to the network */
+echo "\nSettings::promote_to_network\n";
+reset_state();
+$GLOBALS['t_multisite'] = true;
+update_site_option( Settings::NETWORK_OPTION, array( 'keep' => 5, 'max_age_days' => 365, 'allow_site_override' => true ) );
+update_option( Settings::OPTION, array( 'keep' => 20 ) );
+Policy::flush();
+
+// The site overrides keep and inherits the age. Both must land on the network.
+Settings::promote_to_network();
+Policy::flush();
+check( 'the overridden value becomes the network default', (int) Settings::network()['keep'], 20 );
+check( 'the inherited value is carried up unchanged', (int) Settings::network()['max_age_days'], 365 );
+check( 'the site keeps nothing of its own', get_option( Settings::OPTION, 'gone' ), 'gone' );
+check( 'and so ends up with exactly what it had', [ (int) Settings::get( 'keep' ), (int) Settings::get( 'max_age_days' ) ], [ 20, 365 ] );
+check( 'the network keeps deciding who may override', Settings::allows_site_override(), true );
+
+// A site cannot hand that decision upwards along with everything else.
+reset_state();
+$GLOBALS['t_multisite'] = true;
+update_site_option( Settings::NETWORK_OPTION, array( 'keep' => 5, 'allow_site_override' => false ) );
+update_option( Settings::OPTION, array( 'keep' => 99 ) );
+Policy::flush();
+Settings::promote_to_network();
+check( 'the override switch survives a promotion', Settings::allows_site_override(), false );
+check( 'and a site that could not override promoted nothing', (int) Settings::network()['keep'], 5 );
+
+reset_state();
+Settings::promote_to_network();
+check( 'promoting does nothing on a single site', get_option( Settings::NETWORK_OPTION, 'none' ), 'none' );
+
+/* --------------------------------------------------- 6. The keep floor */
 echo "\nCleaner: the keep floor beats the age threshold\n";
 reset_state();
 update_option( Settings::OPTION, array( 'keep' => 5, 'max_age_days' => 365 ) );

@@ -369,8 +369,26 @@
 		} );
 	};
 
+	/**
+	 * Ask before a press that reaches past this screen.
+	 *
+	 * Promoting a site's settings rewrites the defaults every other site
+	 * starts from, which is not something to do by brushing past a button.
+	 */
+	const syncConfirms = () => {
+		for ( const control of document.querySelectorAll( '[data-confirm]' ) ) {
+			control.addEventListener( 'click', ( event ) => {
+				// eslint-disable-next-line no-alert
+				if ( ! window.confirm( control.dataset.confirm ) ) {
+					event.preventDefault();
+				}
+			} );
+		}
+	};
+
 	document.addEventListener( 'DOMContentLoaded', () => {
 		syncTabs();
+		syncConfirms();
 		syncSchedule();
 		syncQuietRows();
 

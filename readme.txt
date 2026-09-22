@@ -62,7 +62,9 @@ There are also **Preview** and **Run one batch now** buttons on the settings scr
 
 The network admin sets the defaults for every site, under **Network Admin → Settings → Revision Retention**. A switch there decides whether sites may override them. When they may, each site's own screen inherits every field it leaves empty and shows the network value behind it; when they may not, that screen reports the policy and nothing more.
 
-The sweep itself runs per site, under whatever policy that site ends up with.
+Settings travel the other way too. Once you have a policy on one site that you want everywhere, **Save as network default** on that site's screen makes it the default for the whole network and drops the site's own copy, so the site simply inherits what it already had. Sites with settings of their own keep them; only the defaults underneath move. The button only appears for a network administrator, since it decides what every other site starts from.
+
+The network screen can **Preview every site**, walking the whole network and reporting what the policy would remove without deleting anything, and **Sweep every site now**, which books a run on each site that has the scheduled sweep switched on. The sweep itself always runs per site, under whatever policy that site ends up with.
 
 = For developers =
 
@@ -137,4 +139,4 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * Switch revision support on for post types that ship without it.
 * Background sweep that works in batches and books its own next run.
 * WP-CLI commands `status`, `post-types` and `run`, with `--dry-run`.
-* Network wide defaults with optional per site overrides on multisite.
+* Network wide defaults with optional per site overrides on multisite, and a way to promote one site's settings to the network.

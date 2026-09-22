@@ -44,6 +44,13 @@
 	display: none;
 }
 
+.rvrt-settings .rvrt-submit .submit {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+	padding-block: 1em 0;
+}
+
 .rvrt-settings .rvrt-panel-intro {
 	margin-block-start: 1.25em;
 }

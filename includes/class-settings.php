@@ -313,6 +313,36 @@ class Settings {
 	}
 
 	/**
+	 * Make this site's settings the defaults for the whole network.
+	 *
+	 * What gets promoted is the effective policy, so a field this site left
+	 * inheriting keeps the value it was inheriting rather than falling back to
+	 * a plugin default. The site's own overrides are dropped afterwards: the
+	 * values now live on the network, so the site inherits exactly what it had
+	 * a moment ago and nothing about it changes.
+	 *
+	 * Sites that have settings of their own keep them. Only the defaults
+	 * underneath move.
+	 *
+	 * @return void
+	 */
+	public static function promote_to_network(): void {
+		if ( ! is_multisite() ) {
+			return;
+		}
+
+		$promoted = self::resolved();
+
+		// Whether sites may override at all is the network's own setting and
+		// is not something a site can hand upwards.
+		$promoted['allow_site_override'] = ! empty( self::network()['allow_site_override'] );
+
+		self::update_network( $promoted );
+		delete_option( self::OPTION );
+	}
+
+
+	/**
 	 * Capability required to change the settings on the current screen.
 	 *
 	 * @param bool $network Whether the network screen is meant.

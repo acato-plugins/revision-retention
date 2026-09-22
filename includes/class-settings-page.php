@@ -45,6 +45,13 @@ class Settings_Page {
 	private const NETWORK_ACTION = 'rvrt_save_network_settings';
 
 	/**
+	 * Field naming the button that promotes a site's settings to the network.
+	 *
+	 * @var string
+	 */
+	private const PROMOTE_FIELD = 'rvrt-promote';
+
+	/**
 	 * Action the sweep buttons post to.
 	 *
 	 * @var string
@@ -462,6 +469,7 @@ class Settings_Page {
 
 		$message = match ( $notice ) {
 			'saved' => _x( 'Settings saved.', 'admin notice', 'revision-retention' ),
+			'promoted' => _x( 'Saved, and these settings are now the defaults for every site on the network. This site has no settings of its own any more and follows those defaults, which is what it was already doing.', 'admin notice', 'revision-retention' ),
 			'booked' => sprintf(
 				/* translators: %s: number of sites. */
 				_nx( 'A sweep is booked on %s site.', 'A sweep is booked on %s sites.', $booked, 'admin notice', 'revision-retention' ),
@@ -626,12 +634,43 @@ class Settings_Page {
 
 			// The Save button belongs to this form, which the sweep section is not
 			// part of, so it steps aside there.
-			printf( '<div class="rvrt-submit"%s>', 'sweep' === $current ? ' hidden' : '' );
-			submit_button();
-			echo '</div>';
+			printf( '<div class="rvrt-submit"%s><p class="submit">', 'sweep' === $current ? ' hidden' : '' );
+
+			submit_button( _x( 'Save changes', 'button label', 'revision-retention' ), 'primary', 'submit', false );
+
+		if ( $this->can_promote( $is_network ) ) {
+			echo ' ';
+
+			submit_button(
+				_x( 'Save as network default', 'button label', 'revision-retention' ),
+				'secondary',
+				self::PROMOTE_FIELD,
+				false,
+				array(
+					'data-confirm' => _x( 'This makes the settings on this screen the defaults for every site on the network. Sites with settings of their own keep them. Continue?', 'confirmation', 'revision-retention' ),
+				)
+			);
+		}
+
+			echo '</p></div>';
 		?>
 		</form>
 		<?php
+	}
+
+	/**
+	 * Whether this screen may hand its settings up to the network.
+	 *
+	 * Only from a site, only on a network, and only for somebody who could
+	 * have edited those defaults directly: a site administrator changing what
+	 * every other site starts from would be a surprise nobody asked for.
+	 *
+	 * @param bool $is_network Whether the network screen is being rendered.
+	 *
+	 * @return bool
+	 */
+	private function can_promote( bool $is_network ): bool {
+		return ! $is_network && is_multisite() && current_user_can( Settings::capability( true ) );
 	}
 
 	/**
@@ -1568,9 +1607,20 @@ class Settings_Page {
 
 		Settings::update_site( Settings::sanitize( self::posted_settings() ) );
 		Policy::flush();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Checked above.
+		$promote = isset( $_POST[ self::PROMOTE_FIELD ] ) && $this->can_promote( false );
+
+		if ( $promote ) {
+			// The site is saved first, so what moves up is what was submitted
+			// rather than what was stored before it.
+			Settings::promote_to_network();
+			Policy::flush();
+		}
+
 		Scheduler::reschedule();
 
-		$this->redirect( array( 'rvrt-notice' => 'saved' ) + self::posted_tab() );
+		$this->redirect( array( 'rvrt-notice' => $promote ? 'promoted' : 'saved' ) + self::posted_tab() );
 	}
 
 	/**
