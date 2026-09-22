@@ -17,7 +17,7 @@ WordPress keeps post revisions forever unless you set `WP_POST_REVISIONS`, and e
 This plugin gives revisions a retention policy instead:
 
 * **Always keep the newest few.** A floor that is never crossed, however old those revisions are.
-* **Remove what is older than a threshold.** Anything past the floor and past the age you set.
+* **Remove what is older than a threshold.** Anything past the floor and past the age you pick, from a week up to five years.
 * **Set both per post type.** Long history for posts, a short leash on pages, nothing at all for a custom post type that churns.
 * **Clean up what is already there.** A scheduled sweep works through the site in batches, so an old site with a large `wp_posts` table is cleaned up over several quiet runs rather than one heavy one.
 
@@ -104,7 +104,7 @@ No. Autosaves are excluded from every query the sweep makes.
 
 = Why has nothing been removed yet? =
 
-A sweep only has work to do for a post type with an age threshold. With **Remove older than** set to 0 the plugin only caps the count on save, which is WordPress's own behaviour, and there is nothing to clean up afterwards. `wp revision-retention post-types` shows the rule in effect for each one.
+A sweep only has work to do for a post type with an age threshold. With **Remove older than** set to Never the plugin only caps the count on save, which is WordPress's own behaviour, and there is nothing to clean up afterwards. `wp revision-retention post-types` shows the rule in effect for each one.
 
 = My site is huge. Will the sweep time out? =
 

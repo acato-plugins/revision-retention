@@ -159,6 +159,12 @@ check( 'batch size is clamped', $s['batch_size'], 5000 );
 check( 'an unknown interval falls back', $s['cron_interval'], 'daily' );
 check( 'unknown post types are dropped', Settings::sanitize( array( 'enable_revisions' => array( 'product', 'bogus' ) ) )['enable_revisions'], array( 'product' ) );
 
+// The screen offers a list of durations, but that list is an affordance: a
+// value from a filter or from WP-CLI must survive being stored and read back.
+check( 'an age outside the offered list is accepted', Settings::sanitize( array( 'max_age_days' => '45' ) )['max_age_days'], 45 );
+check( 'an offered age is described with its label', Settings::describe_age( 365 ), '1 year' );
+check( 'any other age is still described in days', Settings::describe_age( 45 ), '45 days' );
+
 $GLOBALS['t_multisite'] = true;
 $s = Settings::sanitize( array( 'keep' => '', 'max_age_days' => '30' ) );
 check( 'an empty site field inherits rather than storing a default', isset( $s['keep'] ), false );

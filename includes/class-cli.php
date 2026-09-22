@@ -68,7 +68,7 @@ class CLI {
 			),
 			array(
 				'setting' => 'max_age_days',
-				'value'   => self::describe_age( (int) Settings::get( 'max_age_days' ) ),
+				'value'   => Settings::describe_age( (int) Settings::get( 'max_age_days' ) ),
 			),
 			array(
 				'setting' => 'batch_size',
@@ -142,7 +142,7 @@ class CLI {
 					? ( Post_Types::is_enabled_by_plugin( $post_type ) ? 'on (by this plugin)' : 'on' )
 					: 'off',
 				'keep'      => self::describe_keep( $rule->keep ),
-				'max_age'   => self::describe_age( $rule->max_age_days ),
+				'max_age'   => Settings::describe_age( $rule->max_age_days ),
 				'stored'    => (string) ( $counts[ $post_type ] ?? 0 ),
 			);
 		}
@@ -343,16 +343,5 @@ class CLI {
 		}
 
 		return 0 === $keep ? 'none' : (string) $keep;
-	}
-
-	/**
-	 * Put an age threshold into words.
-	 *
-	 * @param int $days Age threshold in days.
-	 *
-	 * @return string
-	 */
-	private static function describe_age( int $days ): string {
-		return $days > 0 ? sprintf( '%d days', $days ) : 'no threshold';
 	}
 }

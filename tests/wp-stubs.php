@@ -38,6 +38,7 @@ function apply_filters( $h, $v, ...$rest ) {
 }
 function __( $s, $d = null ) { return $s; }
 function _n( $s, $p, $n, $d = null ) { return 1 === $n ? $s : $p; }
+function number_format_i18n( $n, $d = 0 ) { return number_format( (float) $n, $d ); }
 function sanitize_key( $s ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $s ) ); }
 function post_type_exists( $t ) { return array_key_exists( $t, $GLOBALS['t_supports'] ); }
 function post_type_supports( $t, $f ) { return in_array( $f, $GLOBALS['t_supports'][ $t ] ?? array(), true ); }

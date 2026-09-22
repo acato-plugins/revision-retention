@@ -69,7 +69,11 @@
 
 .rvrt-settings .rvrt-col-field {
 	white-space: nowrap;
-	width: 11em;
+	width: 12em;
+}
+
+.rvrt-settings .rvrt-col-field select {
+	max-width: 100%;
 }
 
 .rvrt-settings .rvrt-label {

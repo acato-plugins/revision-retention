@@ -123,6 +123,50 @@ class Settings {
 	}
 
 	/**
+	 * The ages the screen offers, in days, labelled.
+	 *
+	 * A retention threshold is a duration rather than an arbitrary number, so
+	 * the screen offers the ones people actually reach for. Anything else a
+	 * site already has stored, or that a filter or WP-CLI sets, still works:
+	 * the value is kept in days and nothing here narrows what is accepted.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function age_choices(): array {
+		return array(
+			0    => __( 'Never', 'revision-retention' ),
+			7    => __( '7 days', 'revision-retention' ),
+			14   => __( '14 days', 'revision-retention' ),
+			30   => __( '30 days', 'revision-retention' ),
+			60   => __( '60 days', 'revision-retention' ),
+			90   => __( '90 days', 'revision-retention' ),
+			180  => __( '180 days', 'revision-retention' ),
+			365  => __( '1 year', 'revision-retention' ),
+			730  => __( '2 years', 'revision-retention' ),
+			1095 => __( '3 years', 'revision-retention' ),
+			1825 => __( '5 years', 'revision-retention' ),
+		);
+	}
+
+	/**
+	 * Put an age in days into the words the screen uses for it.
+	 *
+	 * @param int $days Age threshold in days.
+	 *
+	 * @return string
+	 */
+	public static function describe_age( int $days ): string {
+		$choices = self::age_choices();
+
+		if ( isset( $choices[ $days ] ) ) {
+			return $choices[ $days ];
+		}
+
+		/* translators: %s: number of days. */
+		return sprintf( _n( '%s day', '%s days', $days, 'revision-retention' ), number_format_i18n( $days ) );
+	}
+
+	/**
 	 * Seconds between two full sweeps, for the interval currently configured.
 	 *
 	 * @return int

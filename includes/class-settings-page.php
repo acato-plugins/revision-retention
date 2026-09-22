@@ -310,7 +310,7 @@ class Settings_Page {
 					<th scope="row"><?php echo esc_html( $label ); ?></th>
 					<td><?php echo esc_html( Post_Types::supports_revisions( $post_type ) ? __( 'On', 'revision-retention' ) : __( 'Off', 'revision-retention' ) ); ?></td>
 					<td><?php echo esc_html( self::describe_keep( $rule->keep ) ); ?></td>
-					<td><?php echo esc_html( self::describe_age( $rule->max_age_days ) ); ?></td>
+					<td><?php echo esc_html( Settings::describe_age( $rule->max_age_days ) ); ?></td>
 					<td><?php echo esc_html( number_format_i18n( $counts[ $post_type ] ?? 0 ) ); ?></td>
 				</tr>
 			<?php endforeach; ?>
@@ -364,11 +364,23 @@ class Settings_Page {
 					</th>
 					<td>
 						<?php
-						$this->render_number( 'max_age_days', 'rvrt-max-age-days', $stored, $inherited, $inheritable, 0 );
-						echo ' <span class="rvrt-unit">' . esc_html__( 'days', 'revision-retention' ) . '</span>';
+						self::render_age_select(
+							array(
+								'name'        => 'rvrt_settings[max_age_days]',
+								'id'          => 'rvrt-max-age-days',
+								'value'       => isset( $stored['max_age_days'] ) ? (int) $stored['max_age_days'] : null,
+								'empty_label' => $inheritable
+									? sprintf(
+										/* translators: %s: the age inherited from the network. */
+										__( 'Inherit (%s)', 'revision-retention' ),
+										Settings::describe_age( (int) ( $inherited['max_age_days'] ?? 0 ) )
+									)
+									: '',
+							)
+						);
 						?>
 						<p class="description">
-							<?php esc_html_e( 'Revisions past this age are removed by the sweep, except for the newest ones above. Use 0 to switch the age threshold off and only cap the count.', 'revision-retention' ); ?>
+							<?php esc_html_e( 'Revisions past this age are removed by the sweep, except for the newest ones above. Choose Never to switch the age threshold off and only cap the count.', 'revision-retention' ); ?>
 						</p>
 					</td>
 				</tr>
@@ -528,17 +540,24 @@ class Settings_Page {
 						/>
 					</td>
 					<td class="rvrt-col-field">
-						<input
-							type="number"
-							min="0"
-							step="1"
-							class="small-text"
-							name="rvrt_settings[post_types][<?php echo esc_attr( $post_type ); ?>][max_age_days]"
-							value="<?php echo esc_attr( isset( $override['max_age_days'] ) ? (string) $override['max_age_days'] : '' ); ?>"
-							placeholder="<?php echo esc_attr( (string) $rule->max_age_days ); ?>"
-							aria-label="<?php echo esc_attr( sprintf( /* translators: %s: post type label. */ __( 'Age in days after which revisions of %s are removed', 'revision-retention' ), $label ) ); ?>"
-						/>
-						<span class="rvrt-unit"><?php esc_html_e( 'days', 'revision-retention' ); ?></span>
+						<?php
+						self::render_age_select(
+							array(
+								'name'        => 'rvrt_settings[post_types][' . $post_type . '][max_age_days]',
+								'value'       => isset( $override['max_age_days'] ) ? (int) $override['max_age_days'] : null,
+								'empty_label' => sprintf(
+									/* translators: %s: the age set for the whole site. */
+									__( 'Policy above (%s)', 'revision-retention' ),
+									Settings::describe_age( $rule->max_age_days )
+								),
+								'aria_label'  => sprintf(
+									/* translators: %s: post type label. */
+									__( 'Age after which revisions of %s are removed', 'revision-retention' ),
+									$label
+								),
+							)
+						);
+						?>
 					</td>
 				</tr>
 			<?php endforeach; ?>
@@ -696,6 +715,53 @@ class Settings_Page {
 				? sprintf( ' placeholder="%s"', esc_attr( (string) ( $inherited[ $key ] ?? '' ) ) )
 				: ''
 		);
+	}
+
+	/**
+	 * Render the age threshold as a list of the durations people reach for.
+	 *
+	 * A value a site already has that is not one of those durations is added to
+	 * the list rather than dropped, so opening this screen and saving it cannot
+	 * quietly change a policy that was set from a filter or from WP-CLI.
+	 *
+	 * @param array{name: string, value: int|null, empty_label: string, id?: string, aria_label?: string} $args Field arguments.
+	 *
+	 * @return void
+	 */
+	private static function render_age_select( array $args ): void {
+		$value   = $args['value'];
+		$choices = Settings::age_choices();
+
+		if ( null !== $value && ! isset( $choices[ $value ] ) ) {
+			$choices[ $value ] = Settings::describe_age( $value );
+			ksort( $choices );
+		}
+
+		printf(
+			'<select name="%s"%s%s>',
+			esc_attr( $args['name'] ),
+			isset( $args['id'] ) ? sprintf( ' id="%s"', esc_attr( $args['id'] ) ) : '',
+			isset( $args['aria_label'] ) ? sprintf( ' aria-label="%s"', esc_attr( $args['aria_label'] ) ) : ''
+		);
+
+		if ( '' !== $args['empty_label'] ) {
+			printf(
+				'<option value=""%s>%s</option>',
+				selected( null, $value, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- selected() returns a fixed, safe attribute string.
+				esc_html( $args['empty_label'] )
+			);
+		}
+
+		foreach ( $choices as $days => $label ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( (string) $days ),
+				selected( $days, $value, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- selected() returns a fixed, safe attribute string.
+				esc_html( $label )
+			);
+		}
+
+		echo '</select>';
 	}
 
 	/**
@@ -906,21 +972,5 @@ class Settings_Page {
 		}
 
 		return 0 === $keep ? __( 'None', 'revision-retention' ) : number_format_i18n( $keep );
-	}
-
-	/**
-	 * Put an age threshold into words.
-	 *
-	 * @param int $days Age threshold in days.
-	 *
-	 * @return string
-	 */
-	private static function describe_age( int $days ): string {
-		if ( $days < 1 ) {
-			return __( 'Never', 'revision-retention' );
-		}
-
-		/* translators: %s: number of days. */
-		return sprintf( _n( '%s day', '%s days', $days, 'revision-retention' ), number_format_i18n( $days ) );
 	}
 }
