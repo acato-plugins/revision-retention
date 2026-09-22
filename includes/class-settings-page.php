@@ -1064,9 +1064,11 @@ class Settings_Page {
 				<button type="submit" name="mode" value="preview" class="button">
 					<?php echo esc_html_x( 'Preview', 'button label', 'revision-retention' ); ?>
 				</button>
-				<button type="submit" name="mode" value="run" class="button button-primary">
-					<?php echo esc_html_x( 'Run now', 'button label', 'revision-retention' ); ?>
-				</button>
+				<?php if ( Settings::may_sweep() ) : ?>
+					<button type="submit" name="mode" value="run" class="button button-primary">
+						<?php echo esc_html_x( 'Run now', 'button label', 'revision-retention' ); ?>
+					</button>
+				<?php endif; ?>
 				<button type="button" class="button rvrt-stop" hidden>
 					<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
 				</button>
@@ -1104,6 +1106,12 @@ class Settings_Page {
 
 			<p class="description">
 				<?php echo esc_html_x( 'Preview goes through the whole site and reports what the policy would remove, without deleting anything. Run now does the same and deletes as it goes, batch after batch, until the site is clean. Either one can be stopped, and the schedule picks up whatever is left.', 'field description', 'revision-retention' ); ?>
+				<?php
+				if ( ! Settings::may_sweep() ) {
+					echo ' ';
+					echo esc_html_x( 'This network keeps the retention policy to itself, so only a network administrator can sweep this site. The scheduled sweep still runs if the network has it switched on.', 'field description', 'revision-retention' );
+				}
+				?>
 			</p>
 		</form>
 				<?php
@@ -1130,7 +1138,15 @@ class Settings_Page {
 		check_ajax_referer( self::RUN_ACTION );
 
 		$dry_run = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
-		$cursor  = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
+
+		if ( ! $dry_run && ! Settings::may_sweep() ) {
+			wp_send_json_error(
+				array( 'message' => _x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) ),
+				403
+			);
+		}
+
+		$cursor = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
 
 		// A real run resumes whatever the schedule was part way through; a dry
 		// run is asked for from the beginning and keeps its own place.
@@ -1656,7 +1672,12 @@ class Settings_Page {
 		check_admin_referer( self::RUN_ACTION );
 
 		$dry_run = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
-		$cursor  = $dry_run ? 0 : Scheduler::state()['cursor'];
+
+		if ( ! $dry_run && ! Settings::may_sweep() ) {
+			wp_die( esc_html_x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) );
+		}
+
+		$cursor = $dry_run ? 0 : Scheduler::state()['cursor'];
 		$result  = ( new Cleaner() )->sweep(
 			(int) Settings::get( 'batch_size' ),
 			$dry_run,

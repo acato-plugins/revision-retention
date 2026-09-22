@@ -12,6 +12,7 @@ define( 'ARRAY_A', 'ARRAY_A' );
 $GLOBALS['t_options']      = array();
 $GLOBALS['t_site_options'] = array();
 $GLOBALS['t_multisite']    = false;
+$GLOBALS['t_caps']         = array( 'manage_options', 'manage_network_options', 'activate_plugins' );
 $GLOBALS['t_filters']      = array();
 $GLOBALS['t_deleted']      = array();
 // Feature support per post type, so post_type_supports() can tell 'editor'
@@ -25,6 +26,8 @@ $GLOBALS['t_supports'] = array(
 );
 
 function is_multisite() { return (bool) $GLOBALS['t_multisite']; }
+// Capabilities the current user has; a super admin holds manage_network_options.
+function current_user_can( $cap ) { return in_array( $cap, $GLOBALS['t_caps'] ?? array(), true ); }
 function get_option( $k, $d = false ) { return $GLOBALS['t_options'][ $k ] ?? $d; }
 function update_option( $k, $v ) { $GLOBALS['t_options'][ $k ] = $v; return true; }
 function delete_option( $k ) { unset( $GLOBALS['t_options'][ $k ] ); return true; }

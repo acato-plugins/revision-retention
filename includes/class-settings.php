@@ -343,6 +343,29 @@ class Settings {
 
 
 	/**
+	 * Whether this site may be swept from its own screen.
+	 *
+	 * A network that keeps the policy to itself keeps the deleting to itself
+	 * too. Otherwise a network administrator could switch the scheduled sweep
+	 * off for the whole network, and a site administrator could still press
+	 * the button and delete anyway, which is the opposite of what locking the
+	 * policy was for.
+	 *
+	 * This is about deleting only. Previewing takes nothing away, and reading
+	 * what the network's policy would do to your own site is worth having.
+	 *
+	 * @return bool
+	 */
+	public static function may_sweep(): bool {
+		if ( ! is_multisite() || self::allows_site_override() ) {
+			return true;
+		}
+
+		return current_user_can( self::capability( true ) );
+	}
+
+
+	/**
 	 * Capability required to change the settings on the current screen.
 	 *
 	 * @param bool $network Whether the network screen is meant.

@@ -24,6 +24,7 @@ function reset_state(): void {
 	$GLOBALS['t_options']      = array();
 	$GLOBALS['t_site_options'] = array();
 	$GLOBALS['t_multisite']    = false;
+	$GLOBALS['t_caps']         = array( 'manage_options', 'manage_network_options', 'activate_plugins' );
 	$GLOBALS['t_deleted']      = array();
 	Policy::flush();
 }
@@ -74,7 +75,25 @@ check( 'a post type with an editor is offered', in_array( 'product', $eligible, 
 check( 'a post type with nothing to revise is left out', in_array( 'ledger', $eligible, true ), false );
 check( 'the revision post type itself is never offered', in_array( 'revision', $eligible, true ), false );
 
-/* ------------------------------------- 5. Promoting a site to the network */
+/* ----------------------------------- 5. Who may sweep a locked down site */
+echo "\nSettings::may_sweep\n";
+reset_state();
+check( 'a single site always may', Settings::may_sweep(), true );
+
+$GLOBALS['t_multisite'] = true;
+update_site_option( Settings::NETWORK_OPTION, array( 'allow_site_override' => true ) );
+$GLOBALS['t_caps'] = array( 'manage_options' );
+check( 'a site administrator may while the network allows overrides', Settings::may_sweep(), true );
+
+// With the policy locked, deleting belongs to whoever set the policy. Otherwise
+// a network could switch the sweep off and a site could still press the button.
+update_site_option( Settings::NETWORK_OPTION, array( 'allow_site_override' => false ) );
+check( 'a site administrator may not once the policy is locked', Settings::may_sweep(), false );
+
+$GLOBALS['t_caps'] = array( 'manage_options', 'manage_network_options' );
+check( 'a network administrator still may', Settings::may_sweep(), true );
+
+/* ------------------------------------- 6. Promoting a site to the network */
 echo "\nSettings::promote_to_network\n";
 reset_state();
 $GLOBALS['t_multisite'] = true;

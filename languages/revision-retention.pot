@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-22T14:07:33+00:00\n"
+"POT-Creation-Date: 2026-09-22T14:22:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -44,7 +44,7 @@ msgid "Plugin could not be activated"
 msgstr ""
 
 #. translators: 1: required WordPress version, 2: WordPress version currently running.
-#: includes/class-requirements.php:109
+#: includes/class-requirements.php:118
 msgctxt "activation error"
 msgid "Revision Retention requires WordPress %1$s or newer, but this site runs WordPress %2$s. The plugin has been deactivated. Please update WordPress and activate the plugin again."
 msgstr ""
@@ -227,7 +227,7 @@ msgctxt "column heading"
 msgid "Post type"
 msgstr ""
 
-#: includes/class-settings-page.php:535 includes/class-settings-page.php:855 includes/class-settings-page.php:1096 includes/class-settings-page.php:1358
+#: includes/class-settings-page.php:535 includes/class-settings-page.php:855 includes/class-settings-page.php:1098 includes/class-settings-page.php:1374
 msgctxt "column heading"
 msgid "Revisions"
 msgstr ""
@@ -247,12 +247,12 @@ msgctxt "column heading"
 msgid "Stored now"
 msgstr ""
 
-#: includes/class-settings-page.php:546 includes/class-settings-page.php:885 includes/class-settings-page.php:1550
+#: includes/class-settings-page.php:546 includes/class-settings-page.php:885 includes/class-settings-page.php:1566
 msgctxt "revision support state"
 msgid "On"
 msgstr ""
 
-#: includes/class-settings-page.php:546 includes/class-settings-page.php:1551
+#: includes/class-settings-page.php:546 includes/class-settings-page.php:1567
 msgctxt "revision support state"
 msgid "Off"
 msgstr ""
@@ -290,7 +290,7 @@ msgstr ""
 #. translators: %s: the age inherited from the network.
 #. translators: %s: the value inherited from the network.
 #. translators: %s: the interval inherited from the network.
-#: includes/class-settings-page.php:713 includes/class-settings-page.php:1545 includes/class-settings-page.php:1577
+#: includes/class-settings-page.php:713 includes/class-settings-page.php:1561 includes/class-settings-page.php:1593
 msgctxt "inherited setting option"
 msgid "Inherit (%s)"
 msgstr ""
@@ -375,7 +375,7 @@ msgctxt "column heading"
 msgid "Stored"
 msgstr ""
 
-#: includes/class-settings-page.php:879 includes/class-settings-page.php:1738
+#: includes/class-settings-page.php:879 includes/class-settings-page.php:1759
 msgctxt "stored revision count"
 msgid "None"
 msgstr ""
@@ -443,90 +443,100 @@ msgctxt "button label"
 msgid "Preview"
 msgstr ""
 
-#: includes/class-settings-page.php:1068
+#: includes/class-settings-page.php:1069
 msgctxt "button label"
 msgid "Run now"
 msgstr ""
 
-#: includes/class-settings-page.php:1071 includes/class-settings-page.php:1332
+#: includes/class-settings-page.php:1073 includes/class-settings-page.php:1348
 msgctxt "button label"
 msgid "Stop"
 msgstr ""
 
-#: includes/class-settings-page.php:1082 includes/class-settings-page.php:1343
+#: includes/class-settings-page.php:1084 includes/class-settings-page.php:1359
 msgctxt "accessibility label"
 msgid "Sweep progress"
 msgstr ""
 
-#: includes/class-settings-page.php:1094 includes/class-settings-page.php:1355
+#: includes/class-settings-page.php:1096 includes/class-settings-page.php:1371
 msgctxt "column heading"
 msgid "Post"
 msgstr ""
 
-#: includes/class-settings-page.php:1095 includes/class-settings-page.php:1357
+#: includes/class-settings-page.php:1097 includes/class-settings-page.php:1373
 msgctxt "column heading"
 msgid "Type"
 msgstr ""
 
-#: includes/class-settings-page.php:1106
+#: includes/class-settings-page.php:1108
 msgctxt "field description"
 msgid "Preview goes through the whole site and reports what the policy would remove, without deleting anything. Run now does the same and deletes as it goes, batch after batch, until the site is clean. Either one can be stopped, and the schedule picks up whatever is left."
 msgstr ""
 
-#: includes/class-settings-page.php:1127 includes/class-settings-page.php:1181 includes/class-settings-page.php:1383 includes/class-settings-page.php:1653
+#: includes/class-settings-page.php:1112
+msgctxt "field description"
+msgid "This network keeps the retention policy to itself, so only a network administrator can sweep this site. The scheduled sweep still runs if the network has it switched on."
+msgstr ""
+
+#: includes/class-settings-page.php:1135 includes/class-settings-page.php:1197 includes/class-settings-page.php:1399 includes/class-settings-page.php:1669
 msgctxt "permission error"
 msgid "You are not allowed to do this."
 msgstr ""
 
+#: includes/class-settings-page.php:1144 includes/class-settings-page.php:1677
+msgctxt "permission error"
+msgid "The retention policy for this site is set network wide, so only a network administrator can sweep it."
+msgstr ""
+
 #. translators: %s: number of sites on the network.
-#: includes/class-settings-page.php:1321
+#: includes/class-settings-page.php:1337
 msgctxt "sweep status"
 msgid "Revisions live in each site's own database, so a sweep belongs to the site rather than to the network."
 msgstr ""
 
-#: includes/class-settings-page.php:1326
+#: includes/class-settings-page.php:1342
 msgctxt "button label"
 msgid "Preview every site"
 msgstr ""
 
-#: includes/class-settings-page.php:1329
+#: includes/class-settings-page.php:1345
 msgctxt "button label"
 msgid "Sweep every site now"
 msgstr ""
 
-#: includes/class-settings-page.php:1356
+#: includes/class-settings-page.php:1372
 msgctxt "column heading"
 msgid "Site"
 msgstr ""
 
-#: includes/class-settings-page.php:1368
+#: includes/class-settings-page.php:1384
 msgctxt "field description"
 msgid "Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Books a sweep on every site that has the scheduled sweep switched on, to start within the next few minutes. The work itself happens on each site, in batches, exactly as a scheduled run would. Sites that have switched the sweep off are left alone. For a preview of what one site would lose, use that site's own screen."
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: includes/class-settings-page.php:1546
+#: includes/class-settings-page.php:1562
 msgctxt "inherited boolean value"
 msgid "off"
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: includes/class-settings-page.php:1546
+#: includes/class-settings-page.php:1562
 msgctxt "inherited boolean value"
 msgid "on"
 msgstr ""
 
-#: includes/class-settings-page.php:1599 includes/class-settings-page.php:1635
+#: includes/class-settings-page.php:1615 includes/class-settings-page.php:1651
 msgctxt "permission error"
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: includes/class-settings-page.php:1605
+#: includes/class-settings-page.php:1621
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide."
 msgstr ""
 
-#: includes/class-settings-page.php:1735
+#: includes/class-settings-page.php:1756
 msgctxt "revisions kept"
 msgid "All"
 msgstr ""
@@ -572,7 +582,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites on the network.
-#: includes/class-settings-page.php:1317
+#: includes/class-settings-page.php:1333
 msgctxt "sweep status"
 msgid "This network has %s site."
 msgid_plural "This network has %s sites."

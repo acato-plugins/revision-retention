@@ -64,6 +64,8 @@ The network admin sets the defaults for every site, under **Network Admin → Se
 
 Settings travel the other way too. Once you have a policy on one site that you want everywhere, **Save as network default** on that site's screen makes it the default for the whole network and drops the site's own copy, so the site simply inherits what it already had. Sites with settings of their own keep them; only the defaults underneath move. The button only appears for a network administrator, since it decides what every other site starts from.
 
+When the network keeps the policy to itself, a site's screen can still **Preview** — reading what the policy would take away costs nothing — but only a network administrator can actually sweep that site. Otherwise a network could switch the scheduled sweep off and a site administrator could still delete by hand, which is the opposite of what locking the policy is for.
+
 The network screen can **Preview every site**, walking the whole network and reporting what the policy would remove without deleting anything, and **Sweep every site now**, which books a run on each site that has the scheduled sweep switched on. The sweep itself always runs per site, under whatever policy that site ends up with.
 
 = For developers =
