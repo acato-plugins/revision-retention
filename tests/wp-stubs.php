@@ -38,6 +38,12 @@ function apply_filters( $h, $v, ...$rest ) {
 }
 function __( $s, $d = null ) { return $s; }
 function _n( $s, $p, $n, $d = null ) { return 1 === $n ? $s : $p; }
+// The plugin uses the context carrying variants throughout.
+function _x( $s, $c, $d = null ) { return $s; }
+function _ex( $s, $c, $d = null ) { echo $s; }
+function esc_html_x( $s, $c, $d = null ) { return $s; }
+function esc_attr_x( $s, $c, $d = null ) { return $s; }
+function _nx( $s, $p, $n, $c, $d = null ) { return 1 === $n ? $s : $p; }
 function number_format_i18n( $n, $d = 0 ) { return number_format( (float) $n, $d ); }
 function sanitize_key( $s ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $s ) ); }
 function post_type_exists( $t ) { return array_key_exists( $t, $GLOBALS['t_supports'] ); }
@@ -47,6 +53,21 @@ function wp_delete_post_revision( $id ) { $GLOBALS['t_deleted'][] = (int) $id; r
 function wp_next_scheduled( $h ) { return false; }
 function wp_schedule_single_event( $t, $h ) { return true; }
 function wp_clear_scheduled_hook( $h ) { return 0; }
+function _prime_post_caches( $ids, $terms = true, $meta = true ) {}
+function get_post( $id ) {
+	$post            = new WP_Post();
+	$post->ID        = (int) $id;
+	$post->post_type = 'post';
+	return $post;
+}
+function get_the_title( $post ) { return 'Post ' . ( is_object( $post ) ? $post->ID : $post ); }
+function get_edit_post_link( $id, $context = 'display' ) { return 'https://example.test/edit?post=' . (int) $id; }
+function get_post_type_object( $name ) {
+	$o         = new stdClass();
+	$o->name   = $name;
+	$o->labels = (object) array( 'singular_name' => ucfirst( $name ) );
+	return $o;
+}
 function get_post_types( $args = array(), $output = 'names' ) {
 	$types = array();
 	foreach ( array( 'post' => 'Posts', 'page' => 'Pages', 'product' => 'Products', 'ledger' => 'Ledger entries', 'revision' => 'Revisions' ) as $name => $label ) {
@@ -59,6 +80,9 @@ function get_post_types( $args = array(), $output = 'names' ) {
 	}
 	return $types;
 }
+
+class WP_Post { public $ID = 0; public $post_type = 'post'; }
+class WP_Post_Type { public $name = ''; public $labels; }
 
 // A wpdb that answers from fixtures instead of MySQL, so the sweep's own
 // selection logic (the keep floor and the age cutoff) can be exercised.

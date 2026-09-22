@@ -73,6 +73,13 @@ class Settings {
 	private const MAX_BATCH_SIZE = 5000;
 
 	/**
+	 * Upper bound on how many revisions one run may remove.
+	 *
+	 * @var int
+	 */
+	private const MAX_DELETIONS = 100000;
+
+	/**
 	 * Every setting and the value it falls back to.
 	 *
 	 * @return array<string, mixed>
@@ -86,6 +93,7 @@ class Settings {
 			'cron_enabled'             => true,
 			'cron_interval'            => self::DEFAULT_INTERVAL,
 			'batch_size'               => 200,
+			'max_deletions'            => 1000,
 			'remove_data_on_uninstall' => false,
 		);
 	}
@@ -115,6 +123,7 @@ class Settings {
 			'cron_enabled'             => 'bool',
 			'cron_interval'            => 'enum',
 			'batch_size'               => 'int',
+			'max_deletions'            => 'int',
 			'remove_data_on_uninstall' => 'bool',
 		);
 	}
@@ -126,10 +135,10 @@ class Settings {
 	 */
 	public static function intervals(): array {
 		return array(
-			'hourly'  => __( 'Every hour', 'revision-retention' ),
-			'daily'   => __( 'Once a day', 'revision-retention' ),
-			'weekly'  => __( 'Once a week', 'revision-retention' ),
-			'monthly' => __( 'Once a month', 'revision-retention' ),
+			'hourly'  => _x( 'Every hour', 'sweep interval', 'revision-retention' ),
+			'daily'   => _x( 'Once a day', 'sweep interval', 'revision-retention' ),
+			'weekly'  => _x( 'Once a week', 'sweep interval', 'revision-retention' ),
+			'monthly' => _x( 'Once a month', 'sweep interval', 'revision-retention' ),
 		);
 	}
 
@@ -145,17 +154,17 @@ class Settings {
 	 */
 	public static function age_choices(): array {
 		return array(
-			0    => __( 'Never', 'revision-retention' ),
-			7    => __( '7 days', 'revision-retention' ),
-			14   => __( '14 days', 'revision-retention' ),
-			30   => __( '30 days', 'revision-retention' ),
-			60   => __( '60 days', 'revision-retention' ),
-			90   => __( '90 days', 'revision-retention' ),
-			180  => __( '180 days', 'revision-retention' ),
-			365  => __( '1 year', 'revision-retention' ),
-			730  => __( '2 years', 'revision-retention' ),
-			1095 => __( '3 years', 'revision-retention' ),
-			1825 => __( '5 years', 'revision-retention' ),
+			0    => _x( 'Never', 'age threshold', 'revision-retention' ),
+			7    => _x( '7 days', 'age threshold', 'revision-retention' ),
+			14   => _x( '14 days', 'age threshold', 'revision-retention' ),
+			30   => _x( '30 days', 'age threshold', 'revision-retention' ),
+			60   => _x( '60 days', 'age threshold', 'revision-retention' ),
+			90   => _x( '90 days', 'age threshold', 'revision-retention' ),
+			180  => _x( '180 days', 'age threshold', 'revision-retention' ),
+			365  => _x( '1 year', 'age threshold', 'revision-retention' ),
+			730  => _x( '2 years', 'age threshold', 'revision-retention' ),
+			1095 => _x( '3 years', 'age threshold', 'revision-retention' ),
+			1825 => _x( '5 years', 'age threshold', 'revision-retention' ),
 		);
 	}
 
@@ -174,7 +183,7 @@ class Settings {
 		}
 
 		/* translators: %s: number of days. */
-		return sprintf( _n( '%s day', '%s days', $days, 'revision-retention' ), number_format_i18n( $days ) );
+		return sprintf( _nx( '%s day', '%s days', $days, 'age threshold', 'revision-retention' ), number_format_i18n( $days ) );
 	}
 
 	/**
@@ -376,6 +385,7 @@ class Settings {
 			// Anything below zero means the same thing, so it is normalised.
 			'keep' => max( Retention_Rule::UNLIMITED, $number ),
 			'batch_size' => min( self::MAX_BATCH_SIZE, max( self::MIN_BATCH_SIZE, $number ) ),
+			'max_deletions' => min( self::MAX_DELETIONS, max( 0, $number ) ),
 			default => max( 0, $number ),
 		};
 	}

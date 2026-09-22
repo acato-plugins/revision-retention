@@ -150,13 +150,67 @@ $third = ( new Cleaner() )->sweep( 2, false, $second->cursor );
 check( 'a short batch ends the sweep', $third->finished, true );
 check( 'every post was visited exactly once', count( $GLOBALS['t_deleted'] ), 5 );
 
-/* --------------------------------------------------------- 9. Sanitizing */
+/* ------------------------------------------------- 9. The deletion cap */
+echo "\nCleaner: the cap on revisions per batch\n";
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 365 ) );
+$ten = array();
+for ( $i = 1; $i <= 10; $i++ ) {
+	$ten[] = array( 'ID' => 4000 + $i, 'post_date_gmt' => gmdate( 'Y-m-d H:i:s', time() - ( 800 * DAY_IN_SECONDS ) ) );
+}
+$GLOBALS['wpdb']->candidates = array();
+$GLOBALS['wpdb']->revisions  = array();
+foreach ( range( 1, 5 ) as $n ) {
+	$GLOBALS['wpdb']->candidates[]         = array( 'parent_id' => $n * 10, 'post_type' => 'post' );
+	$GLOBALS['wpdb']->revisions[ $n * 10 ] = $ten;
+}
+
+// Five posts of ten old revisions each. A cap of 25 must stop after the third
+// post rather than part way through it, so nothing is left half cleaned.
+$capped = ( new Cleaner() )->sweep( 100, false, 0, array(), 25 );
+check( 'the cap stops the batch at a post boundary', $capped->revisions, 30 );
+check( 'only whole posts were processed', $capped->posts, 3 );
+check( 'a capped batch is never reported as finished', $capped->finished, false );
+check( 'the cursor is the last post finished', $capped->cursor, 30 );
+
+// And the next batch picks up the rest.
+$rest = ( new Cleaner() )->sweep( 100, false, $capped->cursor, array(), 25 );
+check( 'the next batch takes what is left', $rest->revisions, 20 );
+check( 'and that batch does finish', $rest->finished, true );
+check( 'every revision went exactly once', count( $GLOBALS['t_deleted'] ), 50 );
+
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 365 ) );
+check( 'no cap means the whole batch runs', ( new Cleaner() )->sweep( 100, false, 0, array(), 0 )->revisions, 50 );
+
+/* ------------------------------------------- 10. The list of affected posts */
+echo "\nCleaner: naming the posts a batch touches\n";
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 365 ) );
+$GLOBALS['wpdb']->candidates = array(
+	array( 'parent_id' => 11, 'post_type' => 'post' ),
+	array( 'parent_id' => 12, 'post_type' => 'post' ),
+);
+$old_one = array( array( 'ID' => 5001, 'post_date_gmt' => gmdate( 'Y-m-d H:i:s', time() - ( 800 * DAY_IN_SECONDS ) ) ) );
+$recent  = array( array( 'ID' => 5002, 'post_date_gmt' => gmdate( 'Y-m-d H:i:s' ) ) );
+$GLOBALS['wpdb']->revisions = array( 11 => $old_one, 12 => $recent );
+
+$listed = ( new Cleaner() )->sweep( 100, true );
+check( 'only posts that actually lose something are listed', count( $listed->items ), 1 );
+check( 'the listed post is the one with old revisions', $listed->items[0]['id'], 11 );
+check( 'it reports how many it would lose', $listed->items[0]['revisions'], 1 );
+check( 'it carries a title to show', $listed->items[0]['title'], 'Post 11' );
+
+/* --------------------------------------------------------- 11. Sanitizing */
 echo "\nSettings::sanitize\n";
 reset_state();
 $s = Settings::sanitize( array( 'keep' => '-9', 'max_age_days' => '-5', 'batch_size' => '99999', 'cron_interval' => 'nonsense' ) );
 check( 'keep is normalised to unlimited', $s['keep'], -1 );
 check( 'a negative age becomes no threshold', $s['max_age_days'], 0 );
 check( 'batch size is clamped', $s['batch_size'], 5000 );
+check( 'the deletion cap is clamped', Settings::sanitize( array( 'max_deletions' => '999999' ) )['max_deletions'], 100000 );
+check( 'the deletion cap may be lifted with zero', Settings::sanitize( array( 'max_deletions' => '0' ) )['max_deletions'], 0 );
+check( 'the deletion cap defaults per batch', (int) Settings::get( 'max_deletions' ), 1000 );
 check( 'an unknown interval falls back to the default', $s['cron_interval'], 'weekly' );
 check( 'unknown post types are dropped', Settings::sanitize( array( 'enable_revisions' => array( 'product', 'bogus' ) ) )['enable_revisions'], array( 'product' ) );
 

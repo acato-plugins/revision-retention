@@ -1,29 +1,106 @@
 /**
  * Settings screen of the Revision Retention plugin.
+ *
+ * Sizing and spacing use logical properties throughout, so the screen follows
+ * the writing mode WordPress is running in rather than assuming left to right.
  */
 
-/* Admin screens stretch to the window, which on a wide monitor drags every
-   line of explanation out to a width nobody can read. The screen keeps a
-   measure of its own instead. */
 .rvrt-settings {
-	max-width: 1100px;
+	/* Admin screens stretch to the window, which on a wide monitor drags every
+	   line of explanation out to a width nobody can read. */
+	--rvrt-measure: 46em;
+	--rvrt-border: #c3c4c7;
+	--rvrt-rule: #dcdcde;
+	--rvrt-muted: #646970;
+	--rvrt-surface: #fff;
+
+	/* The admin colour scheme sets this; the fallback is the default scheme's
+	   blue, for the few screens that do not. */
+	--rvrt-accent: var(--wp-admin-theme-color, #2271b1);
+
+	max-inline-size: 1100px;
 }
 
-.rvrt-settings .rvrt-intro,
-.rvrt-settings .form-table td .description,
-.rvrt-settings > .description {
-	max-width: 46em;
+.rvrt-settings :is(.rvrt-intro, .form-table td .description, .rvrt-panel-intro) {
+	max-inline-size: var(--rvrt-measure);
 }
 
-.rvrt-settings h2 {
-	border-bottom: 1px solid #dcdcde;
-	margin-top: 2em;
-	padding-bottom: 0.4em;
+/* Tabs and panels --------------------------------------------------------- */
+
+.rvrt-settings .rvrt-tabs {
+	margin-block-end: 0;
+	padding-block-end: 0;
 }
+
+.rvrt-settings .rvrt-panel {
+	background: var(--rvrt-surface);
+	border: 1px solid var(--rvrt-border);
+	border-block-start: 0;
+	padding-block: 0.5em 1.5em;
+	padding-inline: 1.5em;
+}
+
+.rvrt-settings :is(.rvrt-panel, .rvrt-submit, .rvrt-progress, .rvrt-stop)[hidden] {
+	display: none;
+}
+
+.rvrt-settings .rvrt-panel-intro {
+	margin-block-start: 1.25em;
+}
+
+/* At a glance ------------------------------------------------------------- */
+
+.rvrt-settings .rvrt-stats {
+	background: var(--rvrt-rule);
+	border: 1px solid var(--rvrt-rule);
+	border-radius: 4px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1px;
+	list-style: none;
+	margin-block: 1.5em;
+	overflow: hidden;
+	padding: 0;
+}
+
+.rvrt-settings .rvrt-stats li {
+	background: var(--rvrt-surface);
+	flex: 1 1 10em;
+	margin: 0;
+	padding-block: 0.9em;
+	padding-inline: 1.2em;
+}
+
+.rvrt-settings .rvrt-stat-value {
+	display: block;
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.rvrt-settings .rvrt-stat-label {
+	color: var(--rvrt-muted);
+	font-size: 12px;
+}
+
+/* Network ----------------------------------------------------------------- */
+
+.rvrt-settings .rvrt-network-link {
+	margin-block: 1.5em 0;
+}
+
+.rvrt-settings .rvrt-network-link p {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75em;
+}
+
+/* Fields ------------------------------------------------------------------ */
 
 .rvrt-settings .rvrt-unit {
-	color: #50575e;
-	margin-left: 0.25em;
+	color: var(--rvrt-muted);
+	margin-inline-start: 0.25em;
 }
 
 /* Control first, then what it does, so an inherited three way choice lines up
@@ -38,59 +115,54 @@
 	color: #1d2327;
 }
 
-/* Post types ------------------------------------------------------------- */
+/* Post types -------------------------------------------------------------- */
 
-.rvrt-settings .rvrt-post-types,
-.rvrt-settings .rvrt-summary {
-	margin-bottom: 0.75em;
+.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) {
+	margin-block-end: 0.75em;
 }
 
-.rvrt-settings .rvrt-post-types th,
-.rvrt-settings .rvrt-post-types td,
-.rvrt-settings .rvrt-summary th,
-.rvrt-settings .rvrt-summary td {
+.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) :is(th, td) {
 	padding: 10px;
 	vertical-align: middle;
 }
 
 .rvrt-settings .rvrt-col-type {
-	width: 40%;
+	inline-size: 40%;
 }
 
 .rvrt-settings .rvrt-col-number {
-	text-align: right;
+	inline-size: 9em;
+	text-align: end;
 	white-space: nowrap;
-	width: 9em;
 }
 
 .rvrt-settings .rvrt-col-support {
-	width: 7em;
+	inline-size: 7em;
 }
 
 .rvrt-settings .rvrt-col-field {
+	inline-size: 12em;
 	white-space: nowrap;
-	width: 12em;
 }
 
 .rvrt-settings .rvrt-col-field select {
-	max-width: 100%;
+	max-inline-size: 100%;
 }
 
 .rvrt-settings .rvrt-label {
 	font-weight: 600;
 }
 
-.rvrt-settings .rvrt-post-types code,
-.rvrt-settings .rvrt-summary code {
+.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) code {
 	background: none;
-	color: #646970;
+	color: var(--rvrt-muted);
 	font-size: 12px;
 	font-weight: 400;
 	padding: 0;
 }
 
 .rvrt-settings .rvrt-post-types th[scope="row"] code {
-	margin-left: 0.5em;
+	margin-inline-start: 0.5em;
 }
 
 /* The number that matters carries the weight; an empty one gets out of the way. */
@@ -98,53 +170,102 @@
 	font-size: 14px;
 }
 
-.rvrt-settings .rvrt-none,
-.rvrt-settings .rvrt-native {
+.rvrt-settings :is(.rvrt-none, .rvrt-native) {
 	color: #8c8f94;
 }
 
 .rvrt-settings .rvrt-toggle-wrap {
-	margin: 0 0 1em;
+	margin-block: 0 1em;
 }
 
-/* Sweep ------------------------------------------------------------------ */
+/* Sweep ------------------------------------------------------------------- */
 
 .rvrt-settings .rvrt-sweep {
-	background: #fff;
-	border: 1px solid #dcdcde;
+	border: 1px solid var(--rvrt-rule);
 	border-radius: 4px;
-	padding: 1em 1.25em 1.25em;
+	padding-block: 1em 1.25em;
+	padding-inline: 1.25em;
 }
 
 .rvrt-settings .rvrt-sweep-status {
-	margin: 0 0 1em;
-	max-width: 46em;
+	margin-block: 0 1em;
+	max-inline-size: var(--rvrt-measure);
 }
 
 .rvrt-settings .rvrt-sweep-buttons {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 0.5em;
 }
 
 .rvrt-settings .rvrt-sweep .description {
-	margin-top: 0.75em;
-	max-width: 46em;
+	margin-block-start: 0.75em;
+	max-inline-size: var(--rvrt-measure);
+}
+
+.rvrt-settings .rvrt-progress {
+	margin-block-start: 1em;
+	max-inline-size: var(--rvrt-measure);
+}
+
+.rvrt-settings .rvrt-progress-bar {
+	background: var(--rvrt-rule);
+	block-size: 8px;
+	border-radius: 999px;
+	overflow: hidden;
+}
+
+.rvrt-settings .rvrt-progress-fill {
+	background: var(--rvrt-accent);
+	block-size: 100%;
+	display: block;
+	inline-size: 0;
+	transition: inline-size 200ms ease-out;
+}
+
+.rvrt-settings .rvrt-progress-text {
+	color: var(--rvrt-muted);
+	margin-block: 0.5em 0;
+}
+
+.rvrt-settings .rvrt-affected {
+	margin-block-start: 1.25em;
+	max-block-size: 24em;
+	overflow-y: auto;
+}
+
+.rvrt-settings .rvrt-affected :is(th, td) {
+	padding-block: 6px;
+	padding-inline: 10px;
+}
+
+.rvrt-settings .rvrt-affected thead th {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 1;
+}
+
+.rvrt-settings .rvrt-affected-more {
+	margin-block-start: 0.5em;
 }
 
 .rvrt-settings [aria-disabled="true"] {
 	opacity: 0.5;
 }
 
+@media (prefers-reduced-motion: reduce) {
+	.rvrt-settings .rvrt-progress-fill {
+		transition: none;
+	}
+}
+
 @media screen and (max-width: 782px) {
-	.rvrt-settings .rvrt-col-type,
-	.rvrt-settings .rvrt-col-number,
-	.rvrt-settings .rvrt-col-support,
-	.rvrt-settings .rvrt-col-field {
-		width: auto;
+	.rvrt-settings :is(.rvrt-col-type, .rvrt-col-number, .rvrt-col-support, .rvrt-col-field) {
+		inline-size: auto;
 	}
 
 	.rvrt-settings .rvrt-post-types th[scope="row"] code {
 		display: block;
-		margin-left: 0;
+		margin-inline-start: 0;
 	}
 }

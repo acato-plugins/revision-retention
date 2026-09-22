@@ -47,7 +47,7 @@ class Requirements {
 
 		wp_die(
 			esc_html( self::message() ),
-			esc_html__( 'Plugin could not be activated', 'revision-retention' ),
+			esc_html_x( 'Plugin could not be activated', 'activation error title', 'revision-retention' ),
 			array( 'back_link' => true )
 		);
 	}
@@ -106,7 +106,7 @@ class Requirements {
 	private static function message(): string {
 		return sprintf(
 			/* translators: 1: required WordPress version, 2: WordPress version currently running. */
-			__( 'Revision Retention requires WordPress %1$s or newer, but this site runs WordPress %2$s. The plugin has been deactivated. Please update WordPress and activate the plugin again.', 'revision-retention' ),
+			_x( 'Revision Retention requires WordPress %1$s or newer, but this site runs WordPress %2$s. The plugin has been deactivated. Please update WordPress and activate the plugin again.', 'activation error', 'revision-retention' ),
 			self::MIN_WP_VERSION,
 			self::current_version()
 		);

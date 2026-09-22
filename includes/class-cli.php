@@ -75,6 +75,12 @@ class CLI {
 				'value'   => (string) Settings::get( 'batch_size' ),
 			),
 			array(
+				'setting' => 'max_deletions',
+				'value'   => ( (int) Settings::get( 'max_deletions' ) ) > 0
+					? sprintf( '%s per run', number_format_i18n( (int) Settings::get( 'max_deletions' ) ) )
+					: 'no cap',
+			),
+			array(
 				'setting' => 'scheduled',
 				'value'   => empty( Settings::get( 'cron_enabled' ) )
 					? 'off'
@@ -174,6 +180,9 @@ class CLI {
 	 * [--max-batches=<number>]
 	 * : Stop after this many batches instead of running to completion.
 	 *
+	 * [--max-deletions=<number>]
+	 * : Revisions one batch may remove. Defaults to the configured cap, 0 lifts it.
+	 *
 	 * [--restart]
 	 * : Start from the first post again instead of resuming.
 	 *
@@ -200,6 +209,7 @@ class CLI {
 		$restart = (bool) \WP_CLI\Utils\get_flag_value( $assoc_args, 'restart', false );
 		$batch   = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'batch', (int) Settings::get( 'batch_size' ) );
 		$max     = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'max-batches', 0 );
+		$cap     = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'max-deletions', (int) Settings::get( 'max_deletions' ) );
 
 		$post_types = self::requested_post_types( $assoc_args );
 		$rules      = Policy::sweepable();
@@ -234,7 +244,7 @@ class CLI {
 		$batches = 0;
 
 		do {
-			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types );
+			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
 			$total  = $total->add( $result );
 			++$batches;
 

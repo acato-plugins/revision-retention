@@ -139,7 +139,13 @@ class Scheduler {
 	 */
 	public function run(): Sweep_Result {
 		$state  = self::state();
-		$result = ( new Cleaner() )->sweep( (int) Settings::get( 'batch_size' ), false, $state['cursor'] );
+		$result = ( new Cleaner() )->sweep(
+			(int) Settings::get( 'batch_size' ),
+			false,
+			$state['cursor'],
+			array(),
+			(int) Settings::get( 'max_deletions' )
+		);
 
 		if ( $result->finished ) {
 			self::remember_finished_run( $state, $result );

@@ -33,14 +33,15 @@ class Cleaner {
 	/**
 	 * Remove one batch of revisions.
 	 *
-	 * @param int                $batch_size Posts to work through in this batch.
-	 * @param bool               $dry_run    Count what would go without deleting anything.
-	 * @param int                $cursor     Parent post ID to resume after.
-	 * @param array<int, string> $post_types Limit the batch to these post types, empty for all.
+	 * @param int                $batch_size    Posts to work through in this batch.
+	 * @param bool               $dry_run       Count what would go without deleting anything.
+	 * @param int                $cursor        Parent post ID to resume after.
+	 * @param array<int, string> $post_types    Limit the batch to these post types, empty for all.
+	 * @param int                $max_deletions Stop once this many revisions have gone, or 0 for no cap.
 	 *
 	 * @return Sweep_Result
 	 */
-	public function sweep( int $batch_size, bool $dry_run = false, int $cursor = 0, array $post_types = array() ): Sweep_Result {
+	public function sweep( int $batch_size, bool $dry_run = false, int $cursor = 0, array $post_types = array(), int $max_deletions = 0 ): Sweep_Result {
 		$rules = Policy::sweepable();
 
 		if ( array() !== $post_types ) {
@@ -67,12 +68,16 @@ class Cleaner {
 		 */
 		$excluded = array_map( 'intval', (array) apply_filters( 'revision_retention_excluded_posts', array() ) );
 
-		$removed = 0;
-		$last    = $cursor;
+		$removed   = 0;
+		$processed = 0;
+		$capped    = false;
+		$last      = $cursor;
+		$affected  = array();
 
 		foreach ( $candidates as $candidate ) {
 			$parent_id = (int) ( $candidate['parent_id'] ?? 0 );
 			$last      = $parent_id;
+			++$processed;
 
 			if ( in_array( $parent_id, $excluded, true ) ) {
 				continue;
@@ -84,16 +89,74 @@ class Cleaner {
 				continue;
 			}
 
-			$removed += $this->clean_post( $parent_id, $rule, $dry_run );
+			$took     = $this->clean_post( $parent_id, $rule, $dry_run );
+			$removed += $took;
+
+			if ( $took > 0 ) {
+				$affected[ $parent_id ] = $took;
+			}
+
+			// The cap is checked between posts rather than inside one. Stopping
+			// half way through a post would move the cursor past revisions that
+			// still fall outside the policy, and nothing would come back for
+			// them until the sweep started over. Overshooting the cap by one
+			// post is the cheaper mistake.
+			if ( $max_deletions > 0 && $removed >= $max_deletions ) {
+				$capped = true;
+
+				break;
+			}
 		}
 
 		return new Sweep_Result(
 			$last,
-			count( $candidates ),
+			$processed,
 			$removed,
-			count( $candidates ) < $batch_size,
-			$dry_run
+			! $capped && count( $candidates ) < $batch_size,
+			$dry_run,
+			$this->describe_posts( $affected )
 		);
+	}
+
+	/**
+	 * Name the posts a batch took revisions from.
+	 *
+	 * The screen lists these so a preview is something to read rather than a
+	 * number to trust. Titles are fetched in one go: asking for them post by
+	 * post would put a query behind every row.
+	 *
+	 * @param array<int, int> $affected Revisions taken, keyed by post ID.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function describe_posts( array $affected ): array {
+		if ( array() === $affected ) {
+			return array();
+		}
+
+		_prime_post_caches( array_keys( $affected ), false, false );
+
+		$items = array();
+
+		foreach ( $affected as $post_id => $revisions ) {
+			$post = get_post( $post_id );
+
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+
+			$type = get_post_type_object( $post->post_type );
+
+			$items[] = array(
+				'id'        => $post_id,
+				'title'     => get_the_title( $post ),
+				'type'      => $type instanceof \WP_Post_Type ? $type->labels->singular_name : $post->post_type,
+				'revisions' => $revisions,
+				'editUrl'   => (string) get_edit_post_link( $post_id, 'raw' ),
+			);
+		}
+
+		return $items;
 	}
 
 	/**
@@ -229,6 +292,24 @@ class Cleaner {
 		);
 
 		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * The highest post ID that has revisions at all.
+	 *
+	 * The sweep walks posts in ID order, so the cursor against this is a fair
+	 * measure of how far through a run is. It is an estimate, not a count of
+	 * work left, which is all a progress bar needs.
+	 *
+	 * @return int
+	 */
+	public static function last_parent_id(): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read once per sweep to size its progress; a stale value would misreport it.
+		return (int) $wpdb->get_var(
+			"SELECT MAX( post_parent ) FROM {$wpdb->posts} WHERE post_type = 'revision'"
+		);
 	}
 
 	/**
