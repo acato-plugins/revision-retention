@@ -48,6 +48,17 @@ class Settings {
 	);
 
 	/**
+	 * How often a sweep runs unless a site says otherwise.
+	 *
+	 * Weekly rather than daily: a sweep only has work when revisions have aged
+	 * past the threshold, which is a slow thing to happen, and a weekly run on
+	 * a quiet site costs almost nothing while still keeping up.
+	 *
+	 * @var string
+	 */
+	private const DEFAULT_INTERVAL = 'weekly';
+
+	/**
 	 * Smallest and largest number of posts one batch may work through.
 	 *
 	 * @var int
@@ -73,7 +84,7 @@ class Settings {
 			'post_types'               => array(),
 			'enable_revisions'         => array(),
 			'cron_enabled'             => true,
-			'cron_interval'            => 'daily',
+			'cron_interval'            => self::DEFAULT_INTERVAL,
 			'batch_size'               => 200,
 			'remove_data_on_uninstall' => false,
 		);
@@ -174,7 +185,7 @@ class Settings {
 	public static function interval_seconds(): int {
 		$interval = (string) self::get( 'cron_interval' );
 
-		return self::INTERVALS[ $interval ] ?? DAY_IN_SECONDS;
+		return self::INTERVALS[ $interval ] ?? self::INTERVALS[ self::DEFAULT_INTERVAL ];
 	}
 
 	/**

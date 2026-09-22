@@ -45,6 +45,7 @@ check( 'page overrides keep only, age inherits', [ Policy::for_post_type( 'page'
 
 reset_state();
 check( 'unset options use the defaults', [ (int) Settings::get( 'keep' ), (int) Settings::get( 'max_age_days' ) ], [ 5, 365 ] );
+check( 'the sweep defaults to once a week', [ (string) Settings::get( 'cron_interval' ), Settings::interval_seconds() ], [ 'weekly', WEEK_IN_SECONDS ] );
 
 /* ---------------------------------------------------- 3. Multisite merge */
 echo "\nPolicy, multisite\n";
@@ -156,7 +157,7 @@ $s = Settings::sanitize( array( 'keep' => '-9', 'max_age_days' => '-5', 'batch_s
 check( 'keep is normalised to unlimited', $s['keep'], -1 );
 check( 'a negative age becomes no threshold', $s['max_age_days'], 0 );
 check( 'batch size is clamped', $s['batch_size'], 5000 );
-check( 'an unknown interval falls back', $s['cron_interval'], 'daily' );
+check( 'an unknown interval falls back to the default', $s['cron_interval'], 'weekly' );
 check( 'unknown post types are dropped', Settings::sanitize( array( 'enable_revisions' => array( 'product', 'bogus' ) ) )['enable_revisions'], array( 'product' ) );
 
 // The screen offers a list of durations, but that list is an affordance: a
