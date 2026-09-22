@@ -1,0 +1,28 @@
+# See: https://github.com/WordPress/plugin-check-action
+#
+# The checkout contains the whole repository, while WordPress.org only ever
+# receives what .distignore lets through. The exclusions below keep the two in
+# step, so this job checks the same file set that actually ships.
+name: Plugin Check
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-check:
+    name: Run Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: "./"
+          exclude-directories: ".github,.idea,.phpstan,.wordpress-org,node_modules,tests,vendor"
+          exclude-files: ".distignore,.editorconfig,.gitattributes,.gitignore,composer.json,composer.lock,phpcs.xml.dist,phpstan.neon"

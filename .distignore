@@ -1,0 +1,20 @@
+# Files and folders that should not end up in the plugin published on
+# WordPress.org.
+/.distignore
+/.editorconfig
+/.git
+/.github
+/.gitattributes
+/.gitignore
+/.idea
+/.prd
+/.wordpress-org
+/composer.json
+/composer.lock
+/node_modules
+/phpcs.xml.dist
+/phpstan.neon
+/vendor
+/.phpstan
+/tests
+/bin

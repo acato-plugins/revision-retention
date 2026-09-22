@@ -1,0 +1,19 @@
+# Directories
+/.wordpress-org export-ignore
+/.github export-ignore
+/.idea export-ignore
+/node_modules export-ignore
+/vendor export-ignore
+
+# Files
+/.distignore export-ignore
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/composer.json export-ignore
+/composer.lock export-ignore
+/phpcs.xml.dist export-ignore
+/phpstan.neon export-ignore
+/.phpstan export-ignore
+/tests export-ignore
+/bin export-ignore

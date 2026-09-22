@@ -1,0 +1,48 @@
+/**
+ * Settings screen of the Revision Retention plugin.
+ */
+
+.rvrt-settings .rvrt-intro {
+	max-width: 52em;
+}
+
+.rvrt-settings .rvrt-unit {
+	color: #50575e;
+}
+
+.rvrt-settings .rvrt-post-types,
+.rvrt-settings .rvrt-summary {
+	margin-bottom: 1.5em;
+	max-width: 60em;
+}
+
+.rvrt-settings .rvrt-post-types th[scope="row"] code,
+.rvrt-settings .rvrt-summary th[scope="row"] code {
+	color: #50575e;
+	display: block;
+	font-size: 11px;
+	font-weight: 400;
+}
+
+.rvrt-settings .rvrt-post-types td,
+.rvrt-settings .rvrt-summary td {
+	vertical-align: middle;
+}
+
+.rvrt-settings .rvrt-native {
+	color: #50575e;
+}
+
+.rvrt-settings .rvrt-inherit-label {
+	display: block;
+	margin-bottom: 0.25em;
+}
+
+.rvrt-settings .rvrt-sweep .description {
+	margin-top: 0.75em;
+	max-width: 52em;
+}
+
+.rvrt-settings [aria-disabled="true"] {
+	opacity: 0.5;
+}

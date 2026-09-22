@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<ruleset name="Revision Retention">
+	<description>WordPress Coding Standards for the Revision Retention plugin.</description>
+
+	<file>.</file>
+
+	<exclude-pattern>/.phpstan/*</exclude-pattern>
+	<exclude-pattern>/tests/*</exclude-pattern>
+	<exclude-pattern>/languages/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/vendor/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg name="parallel" value="8"/>
+	<arg name="colors"/>
+	<arg value="ps"/>
+
+	<config name="minimum_wp_version" value="6.7"/>
+	<config name="testVersion" value="8.2-"/>
+
+	<rule ref="WordPress"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="revision-retention"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="Acato\RevisionRetention"/>
+				<element value="rvrt"/>
+				<element value="revision_retention"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

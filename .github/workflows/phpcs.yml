@@ -1,0 +1,72 @@
+# See: https://github.com/PHPCSStandards/PHP_CodeSniffer
+#
+# PHPCS runs from the project's own phpcs.xml.dist, installed through Composer,
+# so the job checks exactly what `composer install && vendor/bin/phpcs` checks
+# on a developer machine. The full report goes to the job log; cs2pr turns the
+# same findings into inline annotations on the pull request.
+name: Inspections
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  runPHPCSInspection:
+    name: Run PHPCS inspection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: cs2pr
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run PHPCS inspection
+        run: vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+
+      - name: Annotate findings
+        if: ${{ failure() }}
+        run: cs2pr ./phpcs-report.xml
+
+  runPHPStanInspection:
+    name: Run PHPStan inspection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run PHPStan inspection
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+  runTests:
+    name: Run the retention logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Run tests
+        run: php tests/test-retention.php

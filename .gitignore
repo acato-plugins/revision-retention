@@ -1,0 +1,8 @@
+node_modules/
+vendor/
+.idea/
+.DS_Store
+*.log
+.prd/
+composer.lock
+phpcs-report.xml

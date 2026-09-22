@@ -1,0 +1,323 @@
+# Copyright (C) 2026 Acato
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Revision Retention 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/revision-retention\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-22T12:54:41+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Domain: revision-retention\n"
+
+#. Plugin Name of the plugin
+#: revision-retention.php includes/class-settings-page.php:84 includes/class-settings-page.php:85 includes/class-settings-page.php:100 includes/class-settings-page.php:101
+msgid "Revision Retention"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: revision-retention.php
+msgid "https://github.com/acato-plugins/revision-retention"
+msgstr ""
+
+#. Description of the plugin
+#: revision-retention.php
+msgid "Give post revisions a retention policy: keep the newest few, drop the ones older than a threshold, per post type, on a schedule or from WP-CLI."
+msgstr ""
+
+#. Author of the plugin
+#: revision-retention.php
+msgid "Acato"
+msgstr ""
+
+#. Author URI of the plugin
+#: revision-retention.php
+msgid "https://acato.nl"
+msgstr ""
+
+#: includes/class-requirements.php:50
+msgid "Plugin could not be activated"
+msgstr ""
+
+#. translators: 1: required WordPress version, 2: WordPress version currently running.
+#: includes/class-requirements.php:109
+msgid "Revision Retention requires WordPress %1$s or newer, but this site runs WordPress %2$s. The plugin has been deactivated. Please update WordPress and activate the plugin again."
+msgstr ""
+
+#: includes/class-settings-page.php:149
+msgid "Settings"
+msgstr ""
+
+#: includes/class-settings-page.php:217
+msgid "These are the defaults for every site on this network. Sites may override them only while the switch at the bottom allows it."
+msgstr ""
+
+#: includes/class-settings-page.php:219
+msgid "The retention policy for this site is set network wide and cannot be changed here."
+msgstr ""
+
+#: includes/class-settings-page.php:221
+msgid "These settings override the network defaults for this site. Leave a field empty to inherit the value shown behind it."
+msgstr ""
+
+#: includes/class-settings-page.php:223
+msgid "Revisions are kept per post: the newest few are always retained, and anything older than the threshold is removed by a scheduled sweep."
+msgstr ""
+
+#: includes/class-settings-page.php:248
+msgid "Settings saved."
+msgstr ""
+
+#: includes/class-settings-page.php:279
+msgid "There is more to do; the rest continues in the background."
+msgstr ""
+
+#: includes/class-settings-page.php:299 includes/class-settings-page.php:459
+msgid "Post type"
+msgstr ""
+
+#: includes/class-settings-page.php:300 includes/class-settings-page.php:460
+msgid "Revisions"
+msgstr ""
+
+#: includes/class-settings-page.php:301
+msgid "Keep"
+msgstr ""
+
+#: includes/class-settings-page.php:302 includes/class-settings-page.php:363 includes/class-settings-page.php:462
+msgid "Remove older than"
+msgstr ""
+
+#: includes/class-settings-page.php:303 includes/class-settings-page.php:464
+msgid "Stored now"
+msgstr ""
+
+#: includes/class-settings-page.php:311 includes/class-settings-page.php:641
+msgid "On"
+msgstr ""
+
+#: includes/class-settings-page.php:311 includes/class-settings-page.php:642
+msgid "Off"
+msgstr ""
+
+#: includes/class-settings-page.php:346
+msgid "Retention policy"
+msgstr ""
+
+#: includes/class-settings-page.php:350 includes/class-settings-page.php:461
+msgid "Always keep"
+msgstr ""
+
+#: includes/class-settings-page.php:357
+msgid "The newest revisions of every post, which are never removed however old they get. Use 0 to keep none, or -1 to keep every revision and never purge anything."
+msgstr ""
+
+#. translators: %s: post type label.
+#: includes/class-settings-page.php:368 includes/class-settings-page.php:513
+msgid "days"
+msgstr ""
+
+#: includes/class-settings-page.php:371
+msgid "Revisions past this age are removed by the sweep, except for the newest ones above. Use 0 to switch the age threshold off and only cap the count."
+msgstr ""
+
+#: includes/class-settings-page.php:377
+msgid "Post types"
+msgstr ""
+
+#: includes/class-settings-page.php:379
+msgid "Leave a field empty to use the policy above. Switching revisions on for a post type that does not store them applies from the next time such a post is saved."
+msgstr ""
+
+#: includes/class-settings-page.php:383
+msgid "Scheduled sweep"
+msgstr ""
+
+#: includes/class-settings-page.php:386
+msgid "Run automatically"
+msgstr ""
+
+#: includes/class-settings-page.php:388
+msgid "Sweep old revisions in the background"
+msgstr ""
+
+#: includes/class-settings-page.php:389
+msgid "Each run works through the site in batches and books the next batch itself, so a large site is cleaned up over several runs instead of one long one."
+msgstr ""
+
+#: includes/class-settings-page.php:394
+msgid "How often"
+msgstr ""
+
+#: includes/class-settings-page.php:400
+msgid "Posts per batch"
+msgstr ""
+
+#: includes/class-settings-page.php:404
+msgid "Lower this if a sweep is too heavy for the server, raise it to get through a large site sooner."
+msgstr ""
+
+#: includes/class-settings-page.php:409
+msgid "Uninstall"
+msgstr ""
+
+#: includes/class-settings-page.php:412
+msgid "On removal"
+msgstr ""
+
+#: includes/class-settings-page.php:414
+msgid "Remove all data of this plugin when it is uninstalled"
+msgstr ""
+
+#: includes/class-settings-page.php:415
+msgid "Deletes these settings. Revisions already removed cannot be brought back either way."
+msgstr ""
+
+#: includes/class-settings-page.php:421
+msgid "Sites"
+msgstr ""
+
+#: includes/class-settings-page.php:424
+msgid "Overrides"
+msgstr ""
+
+#: includes/class-settings-page.php:428
+msgid "Let each site override these defaults"
+msgstr ""
+
+#: includes/class-settings-page.php:430
+msgid "With this off, every site follows the policy above and its own screen only reports it. Overrides a site saved earlier are kept and take effect again when this is switched back on."
+msgstr ""
+
+#: includes/class-settings-page.php:482
+msgid "Supported"
+msgstr ""
+
+#: includes/class-settings-page.php:486
+msgid "Enable"
+msgstr ""
+
+#. translators: %s: post type label.
+#: includes/class-settings-page.php:499
+msgid "Revisions to always keep for %s"
+msgstr ""
+
+#. translators: %s: post type label.
+#: includes/class-settings-page.php:511
+msgid "Age in days after which revisions of %s are removed"
+msgstr ""
+
+#: includes/class-settings-page.php:534
+msgid "Sweep now"
+msgstr ""
+
+#: includes/class-settings-page.php:538
+msgid "A sweep is part way through this site and continues from where it stopped."
+msgstr ""
+
+#. translators: 1: how long ago the last sweep finished, 2: number of revisions it removed.
+#: includes/class-settings-page.php:542
+msgid "The last sweep finished %1$s ago and removed %2$s revisions."
+msgstr ""
+
+#. translators: 1: how long ago the last sweep finished, 2: number of revisions it removed.
+#: includes/class-settings-page.php:547
+msgid "No sweep has finished on this site yet."
+msgstr ""
+
+#. translators: %s: time until the next scheduled sweep.
+#: includes/class-settings-page.php:554
+msgid "The next one is due in %s."
+msgstr ""
+
+#: includes/class-settings-page.php:564
+msgid "Preview"
+msgstr ""
+
+#: includes/class-settings-page.php:567
+msgid "Run one batch now"
+msgstr ""
+
+#: includes/class-settings-page.php:570
+msgid "Preview reports what the policy would remove without deleting anything. Running a batch deletes for real and hands the rest back to the schedule."
+msgstr ""
+
+#. translators: %s: the value inherited from the network.
+#. translators: %s: the interval inherited from the network.
+#: includes/class-settings-page.php:636 includes/class-settings-page.php:666
+msgid "Inherit from network (%s)"
+msgstr ""
+
+#. translators: %s: the value inherited from the network.
+#: includes/class-settings-page.php:637
+msgid "off"
+msgstr ""
+
+#. translators: %s: the value inherited from the network.
+#: includes/class-settings-page.php:637
+msgid "on"
+msgstr ""
+
+#: includes/class-settings-page.php:688 includes/class-settings-page.php:713
+msgid "You are not allowed to change these settings."
+msgstr ""
+
+#: includes/class-settings-page.php:694
+msgid "The retention policy for this site is set network wide."
+msgstr ""
+
+#: includes/class-settings-page.php:731
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: includes/class-settings-page.php:805
+msgid "All"
+msgstr ""
+
+#: includes/class-settings-page.php:808
+msgid "None"
+msgstr ""
+
+#: includes/class-settings-page.php:820
+msgid "Never"
+msgstr ""
+
+#. translators: 1: number of revisions, 2: number of posts.
+#: includes/class-settings-page.php:251
+msgid "%1$d revision in %2$d post would be removed. Nothing has been deleted."
+msgid_plural "%1$d revisions across %2$d posts would be removed. Nothing has been deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: number of revisions, 2: number of posts.
+#: includes/class-settings-page.php:262
+msgid "Removed %1$d revision from %2$d post."
+msgid_plural "Removed %1$d revisions from %2$d posts."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: number of days.
+#: includes/class-settings-page.php:824
+msgid "%s day"
+msgid_plural "%s days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-settings.php:118
+msgid "Every hour"
+msgstr ""
+
+#: includes/class-settings.php:119
+msgid "Once a day"
+msgstr ""
+
+#: includes/class-settings.php:120
+msgid "Once a week"
+msgstr ""
+
+#: includes/class-settings.php:121
+msgid "Once a month"
+msgstr ""

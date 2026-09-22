@@ -1,0 +1,14 @@
+# The WordPress extension is wired in by phpstan/extension-installer, so it is
+# deliberately not included again here.
+parameters:
+	level: 7
+	paths:
+		- revision-retention.php
+		- includes
+		- uninstall.php
+	scanFiles:
+		- .phpstan/wp-cli-stubs.php
+	# WordPress hands filter callbacks and hook results back as whatever a third
+	# party returned, so the guards against a wrong type are real rather than
+	# redundant, however the PHPDoc of the calling function reads.
+	treatPhpDocTypesAsCertain: false
