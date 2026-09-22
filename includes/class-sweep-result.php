@@ -19,11 +19,11 @@ final class Sweep_Result {
 	/**
 	 * Build a result.
 	 *
-	 * @param int                             $cursor    Highest parent post ID this batch dealt with.
-	 * @param int                             $posts     Posts whose revisions were looked at.
-	 * @param int                             $revisions Revisions removed, or that would have been removed on a dry run.
-	 * @param bool                            $finished  Whether there is nothing left after this batch.
-	 * @param bool                            $dry_run   Whether anything was actually deleted.
+	 * @param int                              $cursor    Highest parent post ID this batch dealt with.
+	 * @param int                              $posts     Posts whose revisions were looked at.
+	 * @param int                              $revisions Revisions removed, or that would have been removed on a dry run.
+	 * @param bool                             $finished  Whether there is nothing left after this batch.
+	 * @param bool                             $dry_run   Whether anything was actually deleted.
 	 * @param array<int, array<string, mixed>> $items     The posts this batch took revisions from.
 	 */
 	public function __construct(

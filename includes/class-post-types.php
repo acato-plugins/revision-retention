@@ -140,6 +140,18 @@ class Post_Types {
 	}
 
 	/**
+	 * Forget the eligible post types.
+	 *
+	 * Needed after switching to another site, whose plugins and themes register
+	 * post types of their own.
+	 *
+	 * @return void
+	 */
+	public static function flush(): void {
+		self::$eligible = null;
+	}
+
+	/**
 	 * Whether a post type stores revisions at all right now.
 	 *
 	 * @param string $post_type Post type slug.

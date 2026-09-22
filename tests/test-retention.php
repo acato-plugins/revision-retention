@@ -199,7 +199,7 @@ $listed = ( new Cleaner() )->sweep( 100, true );
 check( 'only posts that actually lose something are listed', count( $listed->items ), 1 );
 check( 'the listed post is the one with old revisions', $listed->items[0]['id'], 11 );
 check( 'it reports how many it would lose', $listed->items[0]['revisions'], 1 );
-check( 'it carries a title to show', $listed->items[0]['title'], 'Post 11' );
+check( 'it carries a title to show, entities decoded', $listed->items[0]['title'], "Post \xe2\x80\x93 11" );
 
 /* --------------------------------------------------------- 11. Sanitizing */
 echo "\nSettings::sanitize\n";

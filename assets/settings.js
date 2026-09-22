@@ -10,9 +10,27 @@
 
 	const strings = window.rvrtSettings ?? {};
 
-	/** Fill a %1$s / %2$s template, the way the PHP side writes them. */
+	/**
+	 * Present a count the way the site writes numbers.
+	 *
+	 * The PHP side runs every count through number_format_i18n(), which is why
+	 * these strings take %s rather than %d: the placeholder is filled with an
+	 * already formatted string, not a bare integer.
+	 */
+	const count = ( value ) =>
+		Number( value ).toLocaleString( document.documentElement.lang || undefined );
+
+	/**
+	 * Fill a translated template, numbered placeholders or a single bare one.
+	 *
+	 * Translators reorder %1$s and %2$s, and a string with one placeholder is
+	 * written as plain %s, so both spellings have to work.
+	 */
 	const format = ( template, first, second ) =>
-		String( template ?? '' ).replace( '%1$s', first ).replace( '%2$s', second );
+		String( template ?? '' )
+			.replace( '%1$s', count( first ) )
+			.replace( '%2$s', count( second ) )
+			.replace( '%s', count( first ) );
 
 	/**
 	 * Dim the scheduling fields while the scheduled sweep is switched off.
@@ -141,19 +159,16 @@
 	 * keeps going until there is nothing left. Either can be stopped, and
 	 * whatever is left is still the schedule's to finish.
 	 */
-	const syncSweep = () => {
-		const form = document.querySelector( '.rvrt-sweep[data-ajax-url]' );
-
-		if ( ! form || ! window.fetch ) {
-			return;
-		}
-
+	const syncSweep = ( form ) => {
+		const network = form.dataset.scope === 'network';
 		const buttons = [ ...form.querySelectorAll( 'button[name="mode"]' ) ];
 		const stop = form.querySelector( '.rvrt-stop' );
 		const progress = form.querySelector( '.rvrt-progress' );
 		const bar = form.querySelector( '.rvrt-progress-bar' );
 		const fill = form.querySelector( '.rvrt-progress-fill' );
 		const text = form.querySelector( '.rvrt-progress-text' );
+		const result = form.querySelector( '.rvrt-sweep-result' );
+		const resultText = result.querySelector( 'p' );
 		const affected = form.querySelector( '.rvrt-affected' );
 		const affectedBody = affected.querySelector( 'tbody' );
 		const affectedMore = affected.querySelector( '.rvrt-affected-more' );
@@ -180,7 +195,21 @@
 			progress.hidden = false;
 		};
 
+		/**
+		 * State the outcome where it will actually be read.
+		 *
+		 * The running commentary belongs in small text beside the bar, but the
+		 * sentence that says whether anything was deleted is the one people are
+		 * looking for, so it gets a notice of its own.
+		 */
+		const announce = ( message, kind ) => {
+			result.className = `rvrt-sweep-result notice inline notice-${ kind }`;
+			resultText.textContent = message;
+			result.hidden = false;
+		};
+
 		const resetList = () => {
+			result.hidden = true;
 			affectedBody.replaceChildren();
 			affected.hidden = true;
 			affectedMore.hidden = true;
@@ -198,6 +227,7 @@
 
 				const row = document.createElement( 'tr' );
 				const title = document.createElement( 'th' );
+				const site = document.createElement( 'td' );
 				const type = document.createElement( 'td' );
 				const count = document.createElement( 'td' );
 
@@ -213,11 +243,14 @@
 					title.textContent = item.title || strings.untitled;
 				}
 
+				site.textContent = item.site ?? '';
 				type.textContent = item.type;
 				count.textContent = item.revisions;
 				count.className = 'rvrt-col-number';
 
-				row.append( title, type, count );
+				// The network list says which site each post belongs to; a
+				// single site's list has no such column to fill.
+				row.append( ...( network ? [ title, site, type, count ] : [ title, type, count ] ) );
 				affectedBody.append( row );
 				listed += 1;
 			}
@@ -238,15 +271,16 @@
 			text.textContent = message;
 		};
 
-		const requestBatch = async ( mode, cursor ) => {
+		const requestBatch = async ( mode, cursor, site ) => {
 			const response = await fetch( form.dataset.ajaxUrl, {
 				method: 'POST',
 				credentials: 'same-origin',
 				body: new URLSearchParams( {
-					action: 'rvrt_run_sweep',
+					action: form.dataset.request,
 					_wpnonce: form.dataset.nonce,
 					mode,
 					cursor: String( cursor ),
+					site: String( site ),
 				} ),
 			} );
 
@@ -262,17 +296,19 @@
 		const sweep = async ( mode ) => {
 			const totals = { posts: 0, revisions: 0 };
 			let cursor = 0;
+			let site = 0;
 			let finished = false;
 
 			while ( ! finished && ! cancelled ) {
 				// Each batch is awaited before the next is asked for, so the
 				// site is never handed more than one sweep at a time.
 				// eslint-disable-next-line no-await-in-loop
-				const batch = await requestBatch( mode, cursor );
+				const batch = await requestBatch( mode, cursor, site );
 
 				totals.posts += batch.posts;
 				totals.revisions += batch.revisions;
 				cursor = batch.cursor;
+				site = batch.site ?? 0;
 				finished = batch.finished;
 
 				addToList( batch.items ?? [] );
@@ -311,12 +347,16 @@
 					totals.posts
 				);
 
-				report(
-					finished ? 100 : Number( bar.getAttribute( 'aria-valuenow' ) ),
-					finished ? done : `${ done } ${ strings.stoppedShort }`
-				);
+				report( finished ? 100 : Number( bar.getAttribute( 'aria-valuenow' ) ), '' );
+
+				if ( ! finished ) {
+					announce( `${ done } ${ strings.stoppedShort }`, 'warning' );
+				} else {
+					announce( done, button.value === 'run' ? 'success' : 'info' );
+				}
 			} catch ( error ) {
-				report( 0, error.message );
+				report( 0, '' );
+				announce( error.message, 'error' );
 			} finally {
 				setBusy( false );
 			}
@@ -333,6 +373,11 @@
 		syncTabs();
 		syncSchedule();
 		syncQuietRows();
-		syncSweep();
+
+		if ( window.fetch ) {
+			for ( const form of document.querySelectorAll( '.rvrt-sweep[data-ajax-url]' ) ) {
+				syncSweep( form );
+			}
+		}
 	} );
 } )();

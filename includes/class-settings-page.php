@@ -80,6 +80,7 @@ class Settings_Page {
 			add_action( 'network_admin_menu', array( $this, 'add_network_page' ) );
 			add_action( 'network_admin_edit_' . self::NETWORK_ACTION, array( $this, 'save_network_settings' ) );
 			add_action( 'network_admin_edit_' . self::NETWORK_RUN_ACTION, array( $this, 'sweep_network' ) );
+			add_action( 'wp_ajax_' . self::NETWORK_RUN_ACTION, array( $this, 'ajax_network_sweep_batch' ) );
 		}
 	}
 
@@ -469,22 +470,22 @@ class Settings_Page {
 			'preview' => sprintf(
 				/* translators: 1: number of revisions, 2: number of posts. */
 				_nx(
-					'%1$d revision in %2$d post would be removed. Nothing has been deleted.',
-					'%1$d revisions across %2$d posts would be removed. Nothing has been deleted.',
+					'%1$s revision in %2$s post would be removed. Nothing has been deleted.',
+					'%1$s revisions across %2$s posts would be removed. Nothing has been deleted.',
 					$revisions, 'admin notice', 'revision-retention'
 				),
-				$revisions,
-				$posts
+				number_format_i18n( $revisions ),
+				number_format_i18n( $posts )
 			),
 			'swept' => sprintf(
 				/* translators: 1: number of revisions, 2: number of posts. */
 				_nx(
-					'Removed %1$d revision from %2$d post.',
-					'Removed %1$d revisions from %2$d posts.',
+					'Removed %1$s revision from %2$s post.',
+					'Removed %1$s revisions from %2$s posts.',
 					$revisions, 'admin notice', 'revision-retention'
 				),
-				$revisions,
-				$posts
+				number_format_i18n( $revisions ),
+				number_format_i18n( $posts )
 			),
 			default => '',
 		};
@@ -986,6 +987,8 @@ class Settings_Page {
 			method="post"
 			action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 			class="rvrt-sweep"
+			data-scope="site"
+			data-request="<?php echo esc_attr( self::RUN_ACTION ); ?>"
 			data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 			data-nonce="<?php echo esc_attr( wp_create_nonce( self::RUN_ACTION ) ); ?>"
 		>
@@ -1042,17 +1045,21 @@ class Settings_Page {
 				<p class="rvrt-progress-text" aria-live="polite"></p>
 			</div>
 
+			<div class="rvrt-sweep-result notice inline" role="status" hidden><p></p></div>
+
 			<div class="rvrt-affected" hidden>
-				<table class="widefat striped">
-					<thead>
-						<tr>
-							<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
-							<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
-							<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
+				<div class="rvrt-affected-scroll">
+					<table class="widefat striped">
+						<thead>
+							<tr>
+								<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
+								<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
+								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
 				<p class="rvrt-affected-more description" hidden></p>
 			</div>
 
@@ -1121,6 +1128,95 @@ class Settings_Page {
 	}
 
 	/**
+	 * Preview one batch on one site of the network, then say where to go next.
+	 *
+	 * A network preview walks the sites in turn, a batch at a time, so the
+	 * browser drives it and no single request has to carry a whole network.
+	 * Nothing is ever deleted here: the network screen previews, and the
+	 * deleting is booked per site where it belongs.
+	 *
+	 * @return void
+	 */
+	public function ajax_network_sweep_batch(): void {
+		if ( ! is_multisite() || ! current_user_can( Settings::capability( true ) ) ) {
+			wp_send_json_error( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), 403 );
+		}
+
+		check_ajax_referer( self::NETWORK_RUN_ACTION );
+
+		$sites = array_map( 'intval', (array) get_sites( array( 'fields' => 'ids' ) ) );
+
+		if ( array() === $sites ) {
+			wp_send_json_success(
+				array(
+					'site'      => 0,
+					'cursor'    => 0,
+					'posts'     => 0,
+					'revisions' => 0,
+					'items'     => array(),
+					'finished'  => true,
+					'progress'  => 100,
+				)
+			);
+		}
+
+		$requested = isset( $_POST['site'] ) ? absint( wp_unslash( $_POST['site'] ) ) : 0;
+		$cursor    = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
+		$index     = 0 === $requested ? 0 : array_search( $requested, $sites, true );
+
+		if ( false === $index ) {
+			$index  = 0;
+			$cursor = 0;
+		}
+
+		$site_id = $sites[ $index ];
+
+		switch_to_blog( $site_id );
+
+		// Another site means other post types, other plugins and another policy.
+		Policy::flush();
+		Post_Types::flush();
+
+		$result = ( new Cleaner() )->sweep(
+			(int) Settings::get( 'batch_size' ),
+			true,
+			$cursor,
+			array(),
+			(int) Settings::get( 'max_deletions' )
+		);
+
+		$name  = get_bloginfo( 'name' );
+		$items = array_map(
+			static function ( array $item ) use ( $name ): array {
+				$item['site'] = $name;
+
+				return $item;
+			},
+			$result->items
+		);
+
+		restore_current_blog();
+		Policy::flush();
+		Post_Types::flush();
+
+		// A finished site hands over to the next one; the last one ends the run.
+		$next_index = $result->finished ? $index + 1 : $index;
+		$finished   = $next_index >= count( $sites );
+
+		wp_send_json_success(
+			array(
+				'site'      => $finished ? 0 : $sites[ $next_index ],
+				'cursor'    => $result->finished ? 0 : $result->cursor,
+				'posts'     => $result->posts,
+				'revisions' => $result->revisions,
+				'items'     => $items,
+				'finished'  => $finished,
+				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $next_index / count( $sites ) ) * 100 ) ),
+			)
+		);
+	}
+
+	/**
 	 * Store where a real run got to, so the schedule carries on from there.
 	 *
 	 * @param Sweep_Result $result What the batch did.
@@ -1164,7 +1260,15 @@ class Settings_Page {
 			$current,
 			function () use ( $sites ) {
 				?>
-				<form method="post" action="<?php echo esc_url( network_admin_url( 'edit.php?action=' . self::NETWORK_RUN_ACTION ) ); ?>" class="rvrt-sweep">
+				<form
+					method="post"
+					action="<?php echo esc_url( network_admin_url( 'edit.php?action=' . self::NETWORK_RUN_ACTION ) ); ?>"
+					class="rvrt-sweep"
+					data-scope="network"
+					data-request="<?php echo esc_attr( self::NETWORK_RUN_ACTION ); ?>"
+					data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+					data-nonce="<?php echo esc_attr( wp_create_nonce( self::NETWORK_RUN_ACTION ) ); ?>"
+				>
 					<?php wp_nonce_field( self::NETWORK_RUN_ACTION ); ?>
 
 					<p class="rvrt-sweep-status">
@@ -1179,13 +1283,50 @@ class Settings_Page {
 					</p>
 
 					<div class="rvrt-sweep-buttons">
+						<button type="button" name="mode" value="preview" class="button">
+							<?php echo esc_html_x( 'Preview every site', 'button label', 'revision-retention' ); ?>
+						</button>
 						<button type="submit" class="button button-primary">
 							<?php echo esc_html_x( 'Sweep every site now', 'button label', 'revision-retention' ); ?>
 						</button>
+						<button type="button" class="button rvrt-stop" hidden>
+							<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
+						</button>
+					</div>
+
+					<div class="rvrt-progress" hidden>
+						<div
+							class="rvrt-progress-bar"
+							role="progressbar"
+							aria-valuemin="0"
+							aria-valuemax="100"
+							aria-valuenow="0"
+							aria-label="<?php echo esc_attr_x( 'Sweep progress', 'accessibility label', 'revision-retention' ); ?>"
+						><span class="rvrt-progress-fill"></span></div>
+						<p class="rvrt-progress-text" aria-live="polite"></p>
+					</div>
+
+					<div class="rvrt-sweep-result notice inline" role="status" hidden><p></p></div>
+
+					<div class="rvrt-affected" hidden>
+						<div class="rvrt-affected-scroll">
+							<table class="widefat striped">
+								<thead>
+									<tr>
+										<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
+										<th scope="col"><?php echo esc_html_x( 'Site', 'column heading', 'revision-retention' ); ?></th>
+										<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
+										<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+						<p class="rvrt-affected-more description" hidden></p>
 					</div>
 
 					<p class="description">
-						<?php echo esc_html_x( 'Books a sweep on every site that has the scheduled sweep switched on, to start within the next few minutes. The work itself happens on each site, in batches, exactly as a scheduled run would. Sites that have switched the sweep off are left alone. For a preview of what one site would lose, use that site\'s own screen.', 'field description', 'revision-retention' ); ?>
+						<?php echo esc_html_x( 'Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Books a sweep on every site that has the scheduled sweep switched on, to start within the next few minutes. The work itself happens on each site, in batches, exactly as a scheduled run would. Sites that have switched the sweep off are left alone. For a preview of what one site would lose, use that site\'s own screen.', 'field description', 'revision-retention' ); ?>
 					</p>
 				</form>
 				<?php

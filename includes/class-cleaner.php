@@ -149,7 +149,10 @@ class Cleaner {
 
 			$items[] = array(
 				'id'        => $post_id,
-				'title'     => get_the_title( $post ),
+				// Titles come back texturised, so an en dash arrives as
+				// &#8211;. The screen writes these as text rather than markup,
+				// which would show the entity instead of the character.
+				'title'     => html_entity_decode( get_the_title( $post ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ),
 				'type'      => $type instanceof \WP_Post_Type ? $type->labels->singular_name : $post->post_type,
 				'revisions' => $revisions,
 				'editUrl'   => (string) get_edit_post_link( $post_id, 'raw' ),

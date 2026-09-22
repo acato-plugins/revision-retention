@@ -60,7 +60,8 @@ function get_post( $id ) {
 	$post->post_type = 'post';
 	return $post;
 }
-function get_the_title( $post ) { return 'Post ' . ( is_object( $post ) ? $post->ID : $post ); }
+// WordPress texturises titles, so entities are what the sweep actually sees.
+function get_the_title( $post ) { return 'Post &#8211; ' . ( is_object( $post ) ? $post->ID : $post ); }
 function get_edit_post_link( $id, $context = 'display' ) { return 'https://example.test/edit?post=' . (int) $id; }
 function get_post_type_object( $name ) {
 	$o         = new stdClass();
