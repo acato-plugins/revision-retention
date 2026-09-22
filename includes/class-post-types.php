@@ -115,6 +115,15 @@ class Post_Types {
 				continue;
 			}
 
+			// A revision stores the title, content and excerpt of a post. A
+			// post type with no editor has none of that to revise, which is
+			// what keeps the likes of ACF's field groups and a theme's
+			// template records out of the list. One that already stores
+			// revisions stays in regardless, so nothing in use disappears.
+			if ( ! post_type_supports( $post_type->name, 'editor' ) && ! post_type_supports( $post_type->name, 'revisions' ) ) {
+				continue;
+			}
+
 			$eligible[ $post_type->name ] = $post_type->labels->name ?? $post_type->name;
 		}
 

@@ -14,7 +14,15 @@ $GLOBALS['t_site_options'] = array();
 $GLOBALS['t_multisite']    = false;
 $GLOBALS['t_filters']      = array();
 $GLOBALS['t_deleted']      = array();
-$GLOBALS['t_supports']     = array( 'post' => true, 'page' => true, 'product' => false );
+// Feature support per post type, so post_type_supports() can tell 'editor'
+// from 'revisions' the way WordPress does.
+$GLOBALS['t_supports'] = array(
+	'post'      => array( 'editor', 'revisions' ),
+	'page'      => array( 'editor', 'revisions' ),
+	'product'   => array( 'editor' ),
+	'ledger'    => array( 'title', 'custom-fields' ),
+	'revision'  => array( 'editor' ),
+);
 
 function is_multisite() { return (bool) $GLOBALS['t_multisite']; }
 function get_option( $k, $d = false ) { return $GLOBALS['t_options'][ $k ] ?? $d; }
@@ -32,15 +40,15 @@ function __( $s, $d = null ) { return $s; }
 function _n( $s, $p, $n, $d = null ) { return 1 === $n ? $s : $p; }
 function sanitize_key( $s ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i', '', (string) $s ) ); }
 function post_type_exists( $t ) { return array_key_exists( $t, $GLOBALS['t_supports'] ); }
-function post_type_supports( $t, $f ) { return ! empty( $GLOBALS['t_supports'][ $t ] ); }
-function add_post_type_support( $t, $f ) { $GLOBALS['t_supports'][ $t ] = true; }
+function post_type_supports( $t, $f ) { return in_array( $f, $GLOBALS['t_supports'][ $t ] ?? array(), true ); }
+function add_post_type_support( $t, $f ) { $GLOBALS['t_supports'][ $t ][] = $f; }
 function wp_delete_post_revision( $id ) { $GLOBALS['t_deleted'][] = (int) $id; return true; }
 function wp_next_scheduled( $h ) { return false; }
 function wp_schedule_single_event( $t, $h ) { return true; }
 function wp_clear_scheduled_hook( $h ) { return 0; }
 function get_post_types( $args = array(), $output = 'names' ) {
 	$types = array();
-	foreach ( array( 'post' => 'Posts', 'page' => 'Pages', 'product' => 'Products', 'revision' => 'Revisions' ) as $name => $label ) {
+	foreach ( array( 'post' => 'Posts', 'page' => 'Pages', 'product' => 'Products', 'ledger' => 'Ledger entries', 'revision' => 'Revisions' ) as $name => $label ) {
 		$o          = new stdClass();
 		$o->name    = $name;
 		$o->public  = true;

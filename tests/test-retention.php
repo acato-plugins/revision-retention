@@ -65,7 +65,15 @@ update_option( Settings::OPTION, array( 'keep' => 20, 'post_types' => array( 'pa
 Policy::flush();
 check( 'site per post type rule layers over the network one', [ Policy::for_post_type( 'page' )->keep, Policy::for_post_type( 'page' )->max_age_days ], [ 1, 90 ] );
 
-/* --------------------------------------------------- 4. The keep floor */
+/* --------------------------------------------------- 4. Eligibility */
+echo "\nPost_Types::eligible\n";
+reset_state();
+$eligible = array_keys( Acato\RevisionRetention\Post_Types::eligible() );
+check( 'a post type with an editor is offered', in_array( 'product', $eligible, true ), true );
+check( 'a post type with nothing to revise is left out', in_array( 'ledger', $eligible, true ), false );
+check( 'the revision post type itself is never offered', in_array( 'revision', $eligible, true ), false );
+
+/* --------------------------------------------------- 5. The keep floor */
 echo "\nCleaner: the keep floor beats the age threshold\n";
 reset_state();
 update_option( Settings::OPTION, array( 'keep' => 5, 'max_age_days' => 365 ) );

@@ -1,19 +1,16 @@
 /**
  * Settings screen of the Revision Retention plugin.
  *
- * Dims the scheduling fields while the scheduled sweep is switched off, so the
- * screen says what it is going to do. Purely cosmetic: the values are still
- * submitted and still saved, and the server decides what they mean.
+ * Two small conveniences, both cosmetic: the scheduling fields are dimmed
+ * while the scheduled sweep is switched off, and the post types that hold no
+ * revisions start out folded away. Everything is still submitted and still
+ * saved either way, and the server decides what it means.
  */
 ( function () {
 	'use strict';
 
-	document.addEventListener( 'DOMContentLoaded', function () {
+	function syncSchedule() {
 		var toggle = document.getElementById( 'rvrt-cron-enabled' );
-		var fields = [
-			document.getElementById( 'rvrt-cron-interval' ),
-			document.getElementById( 'rvrt-batch-size' ),
-		];
 
 		if ( ! toggle ) {
 			return;
@@ -29,15 +26,12 @@
 			return '0' !== toggle.value;
 		}
 
-		function sync() {
+		function apply() {
 			var enabled = isEnabled();
 
-			fields.forEach( function ( field ) {
-				if ( ! field ) {
-					return;
-				}
-
-				var row = field.closest( 'tr' );
+			[ 'rvrt-cron-interval', 'rvrt-batch-size' ].forEach( function ( id ) {
+				var field = document.getElementById( id );
+				var row = field && field.closest( 'tr' );
 
 				if ( row ) {
 					row.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
@@ -45,7 +39,33 @@
 			} );
 		}
 
-		toggle.addEventListener( 'change', sync );
-		sync();
+		toggle.addEventListener( 'change', apply );
+		apply();
+	}
+
+	function syncQuietRows() {
+		var button = document.querySelector( '.rvrt-toggle' );
+
+		if ( ! button ) {
+			return;
+		}
+
+		button.addEventListener( 'click', function () {
+			var shown = '1' === button.getAttribute( 'data-shown' );
+
+			document.querySelectorAll( '.rvrt-quiet' ).forEach( function ( row ) {
+				row.hidden = shown;
+			} );
+
+			button.setAttribute( 'data-shown', shown ? '0' : '1' );
+			button.textContent = shown
+				? button.getAttribute( 'data-show' )
+				: button.getAttribute( 'data-hide' );
+		} );
+	}
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		syncSchedule();
+		syncQuietRows();
 	} );
 }() );

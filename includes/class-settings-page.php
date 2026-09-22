@@ -452,42 +452,70 @@ class Settings_Page {
 		$counts    = $show_counts ? Cleaner::counts() : array();
 		$enabled   = isset( $stored['enable_revisions'] ) && is_array( $stored['enable_revisions'] ) ? $stored['enable_revisions'] : array();
 		$overrides = isset( $stored['post_types'] ) && is_array( $stored['post_types'] ) ? $stored['post_types'] : array();
+		$rows      = self::order_post_types( $counts );
+		$quiet     = 0;
+
+		foreach ( $rows as $post_type => $label ) {
+			if ( self::is_quiet( $post_type, $counts, $enabled, $overrides ) ) {
+				++$quiet;
+			}
+		}
 		?>
 		<table class="widefat striped rvrt-post-types">
 			<thead>
 				<tr>
-					<th scope="col"><?php esc_html_e( 'Post type', 'revision-retention' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Revisions', 'revision-retention' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Always keep', 'revision-retention' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Remove older than', 'revision-retention' ); ?></th>
+					<th scope="col" class="rvrt-col-type"><?php esc_html_e( 'Post type', 'revision-retention' ); ?></th>
 					<?php if ( $show_counts ) : ?>
-						<th scope="col"><?php esc_html_e( 'Stored now', 'revision-retention' ); ?></th>
+						<th scope="col" class="rvrt-col-number"><?php esc_html_e( 'Stored', 'revision-retention' ); ?></th>
 					<?php endif; ?>
+					<th scope="col" class="rvrt-col-support"><?php esc_html_e( 'Revisions', 'revision-retention' ); ?></th>
+					<th scope="col" class="rvrt-col-field"><?php esc_html_e( 'Always keep', 'revision-retention' ); ?></th>
+					<th scope="col" class="rvrt-col-field"><?php esc_html_e( 'Remove older than', 'revision-retention' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php
-			foreach ( Post_Types::eligible() as $post_type => $label ) :
+			foreach ( $rows as $post_type => $label ) :
 				$native   = Post_Types::supports_revisions( $post_type ) && ! in_array( $post_type, $enabled, true );
 				$rule     = Policy::for_post_type( $post_type );
 				$override = isset( $overrides[ $post_type ] ) && is_array( $overrides[ $post_type ] ) ? $overrides[ $post_type ] : array();
+				$stored_n = $counts[ $post_type ] ?? 0;
 				?>
-				<tr>
-					<th scope="row">
-						<?php echo esc_html( $label ); ?>
+				<tr<?php echo self::is_quiet( $post_type, $counts, $enabled, $overrides ) ? ' class="rvrt-quiet" hidden' : ''; ?>>
+					<th scope="row" class="rvrt-col-type">
+						<span class="rvrt-label"><?php echo esc_html( $label ); ?></span>
 						<code><?php echo esc_html( $post_type ); ?></code>
 					</th>
-					<td>
+					<?php if ( $show_counts ) : ?>
+						<td class="rvrt-col-number">
+							<?php if ( $stored_n > 0 ) : ?>
+								<strong><?php echo esc_html( number_format_i18n( $stored_n ) ); ?></strong>
+							<?php else : ?>
+								<span class="rvrt-none" aria-hidden="true">&mdash;</span>
+								<span class="screen-reader-text"><?php esc_html_e( 'None', 'revision-retention' ); ?></span>
+							<?php endif; ?>
+						</td>
+					<?php endif; ?>
+					<td class="rvrt-col-support">
 						<?php if ( $native ) : ?>
-							<span class="rvrt-native"><?php esc_html_e( 'Supported', 'revision-retention' ); ?></span>
+							<span class="rvrt-native"><?php esc_html_e( 'On', 'revision-retention' ); ?></span>
 						<?php else : ?>
 							<label>
 								<input type="checkbox" name="rvrt_settings[enable_revisions][]" value="<?php echo esc_attr( $post_type ); ?>" <?php checked( in_array( $post_type, $enabled, true ) ); ?> />
-								<?php esc_html_e( 'Enable', 'revision-retention' ); ?>
+								<span class="screen-reader-text">
+									<?php
+									printf(
+										/* translators: %s: post type label. */
+										esc_html__( 'Store revisions for %s', 'revision-retention' ),
+										esc_html( $label )
+									);
+									?>
+								</span>
+								<span aria-hidden="true"><?php esc_html_e( 'Enable', 'revision-retention' ); ?></span>
 							</label>
 						<?php endif; ?>
 					</td>
-					<td>
+					<td class="rvrt-col-field">
 						<input
 							type="number"
 							min="-1"
@@ -499,7 +527,7 @@ class Settings_Page {
 							aria-label="<?php echo esc_attr( sprintf( /* translators: %s: post type label. */ __( 'Revisions to always keep for %s', 'revision-retention' ), $label ) ); ?>"
 						/>
 					</td>
-					<td>
+					<td class="rvrt-col-field">
 						<input
 							type="number"
 							min="0"
@@ -512,14 +540,79 @@ class Settings_Page {
 						/>
 						<span class="rvrt-unit"><?php esc_html_e( 'days', 'revision-retention' ); ?></span>
 					</td>
-					<?php if ( $show_counts ) : ?>
-						<td><?php echo esc_html( number_format_i18n( $counts[ $post_type ] ?? 0 ) ); ?></td>
-					<?php endif; ?>
 				</tr>
 			<?php endforeach; ?>
 			</tbody>
 		</table>
+
+		<?php if ( $quiet > 0 ) : ?>
+			<p class="rvrt-toggle-wrap">
+				<button type="button" class="button-link rvrt-toggle" data-shown="0"
+					data-show="<?php echo esc_attr( sprintf( /* translators: %s: number of post types. */ _n( 'Show %s post type without revisions', 'Show %s post types without revisions', $quiet, 'revision-retention' ), number_format_i18n( $quiet ) ) ); ?>"
+					data-hide="<?php esc_attr_e( 'Hide the post types without revisions', 'revision-retention' ); ?>">
+					<?php
+					printf(
+						/* translators: %s: number of post types. */
+						esc_html( _n( 'Show %s post type without revisions', 'Show %s post types without revisions', $quiet, 'revision-retention' ) ),
+						esc_html( number_format_i18n( $quiet ) )
+					);
+					?>
+				</button>
+			</p>
+		<?php endif; ?>
 		<?php
+	}
+
+	/**
+	 * Eligible post types, the ones worth looking at first.
+	 *
+	 * Most sites register a long tail of post types that hold nothing. Sorting
+	 * on what is actually stored puts the rows an administrator came here for
+	 * at the top instead of wherever WordPress happened to register them.
+	 *
+	 * @param array<string, int> $counts Stored revisions per post type.
+	 *
+	 * @return array<string, string> Labels keyed by post type slug.
+	 */
+	private static function order_post_types( array $counts ): array {
+		$rows = Post_Types::eligible();
+
+		uksort(
+			$rows,
+			static function ( string $a, string $b ) use ( $counts, $rows ): int {
+				$difference = ( $counts[ $b ] ?? 0 ) <=> ( $counts[ $a ] ?? 0 );
+
+				return 0 !== $difference ? $difference : strcasecmp( $rows[ $a ], $rows[ $b ] );
+			}
+		);
+
+		return $rows;
+	}
+
+	/**
+	 * Whether a row can start out folded away.
+	 *
+	 * A post type with nothing stored, no revisions being kept for it and no
+	 * rule of its own is noise on a screen about cleaning revisions up. It is
+	 * still rendered, just behind a toggle.
+	 *
+	 * @param string               $post_type Post type slug.
+	 * @param array<string, int>   $counts    Stored revisions per post type.
+	 * @param array<int, string>   $enabled   Post types revisions were switched on for.
+	 * @param array<string, mixed> $overrides Per post type rules.
+	 *
+	 * @return bool
+	 */
+	private static function is_quiet( string $post_type, array $counts, array $enabled, array $overrides ): bool {
+		if ( ! empty( $counts[ $post_type ] ) ) {
+			return false;
+		}
+
+		if ( in_array( $post_type, $enabled, true ) || isset( $overrides[ $post_type ] ) ) {
+			return false;
+		}
+
+		return ! Post_Types::supports_revisions( $post_type );
 	}
 
 	/**
@@ -532,40 +625,45 @@ class Settings_Page {
 		$next  = wp_next_scheduled( Scheduler::HOOK );
 		?>
 		<h2><?php esc_html_e( 'Sweep now', 'revision-retention' ); ?></h2>
-		<p class="description">
-			<?php
-			if ( $state['cursor'] > 0 ) {
-				esc_html_e( 'A sweep is part way through this site and continues from where it stopped.', 'revision-retention' );
-			} elseif ( $state['finished'] > 0 ) {
-				printf(
-					/* translators: 1: how long ago the last sweep finished, 2: number of revisions it removed. */
-					esc_html__( 'The last sweep finished %1$s ago and removed %2$s revisions.', 'revision-retention' ),
-					esc_html( human_time_diff( $state['finished'] ) ),
-					esc_html( number_format_i18n( $state['removed'] ) )
-				);
-			} else {
-				esc_html_e( 'No sweep has finished on this site yet.', 'revision-retention' );
-			}
-
-			if ( $next ) {
-				echo ' ';
-				printf(
-					/* translators: %s: time until the next scheduled sweep. */
-					esc_html__( 'The next one is due in %s.', 'revision-retention' ),
-					esc_html( human_time_diff( (int) $next ) )
-				);
-			}
-			?>
-		</p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="rvrt-sweep">
 			<?php wp_nonce_field( self::RUN_ACTION ); ?>
 			<input type="hidden" name="action" value="<?php echo esc_attr( self::RUN_ACTION ); ?>" />
-			<button type="submit" name="mode" value="preview" class="button">
-				<?php esc_html_e( 'Preview', 'revision-retention' ); ?>
-			</button>
-			<button type="submit" name="mode" value="run" class="button button-primary">
-				<?php esc_html_e( 'Run one batch now', 'revision-retention' ); ?>
-			</button>
+
+			<p class="rvrt-sweep-status">
+				<?php
+				if ( $state['cursor'] > 0 ) {
+					esc_html_e( 'A sweep is part way through this site and continues from where it stopped.', 'revision-retention' );
+				} elseif ( $state['finished'] > 0 ) {
+					printf(
+						/* translators: 1: how long ago the last sweep finished, 2: number of revisions it removed. */
+						esc_html__( 'The last sweep finished %1$s ago and removed %2$s revisions.', 'revision-retention' ),
+						esc_html( human_time_diff( $state['finished'] ) ),
+						esc_html( number_format_i18n( $state['removed'] ) )
+					);
+				} else {
+					esc_html_e( 'No sweep has finished on this site yet.', 'revision-retention' );
+				}
+
+				if ( $next ) {
+					echo ' ';
+					printf(
+						/* translators: %s: time until the next scheduled sweep. */
+						esc_html__( 'The next one is due in %s.', 'revision-retention' ),
+						esc_html( human_time_diff( (int) $next ) )
+					);
+				}
+				?>
+			</p>
+
+			<div class="rvrt-sweep-buttons">
+				<button type="submit" name="mode" value="preview" class="button">
+					<?php esc_html_e( 'Preview', 'revision-retention' ); ?>
+				</button>
+				<button type="submit" name="mode" value="run" class="button button-primary">
+					<?php esc_html_e( 'Run one batch now', 'revision-retention' ); ?>
+				</button>
+			</div>
+
 			<p class="description">
 				<?php esc_html_e( 'Preview reports what the policy would remove without deleting anything. Running a batch deletes for real and hands the rest back to the schedule.', 'revision-retention' ); ?>
 			</p>
@@ -627,20 +725,22 @@ class Settings_Page {
 
 		$value = isset( $stored[ $key ] ) ? ( $stored[ $key ] ? '1' : '0' ) : '';
 		?>
-		<label for="<?php echo esc_attr( $id ); ?>" class="rvrt-inherit-label"><?php echo esc_html( $text ); ?></label>
-		<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]">
-			<option value="" <?php selected( '', $value ); ?>>
-				<?php
-				printf(
-					/* translators: %s: the value inherited from the network. */
-					esc_html__( 'Inherit from network (%s)', 'revision-retention' ),
-					empty( $inherited[ $key ] ) ? esc_html__( 'off', 'revision-retention' ) : esc_html__( 'on', 'revision-retention' )
-				);
-				?>
-			</option>
-			<option value="1" <?php selected( '1', $value ); ?>><?php esc_html_e( 'On', 'revision-retention' ); ?></option>
-			<option value="0" <?php selected( '0', $value ); ?>><?php esc_html_e( 'Off', 'revision-retention' ); ?></option>
-		</select>
+		<label for="<?php echo esc_attr( $id ); ?>" class="rvrt-choice">
+			<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]">
+				<option value="" <?php selected( '', $value ); ?>>
+					<?php
+					printf(
+						/* translators: %s: the value inherited from the network. */
+						esc_html__( 'Inherit (%s)', 'revision-retention' ),
+						empty( $inherited[ $key ] ) ? esc_html__( 'off', 'revision-retention' ) : esc_html__( 'on', 'revision-retention' )
+					);
+					?>
+				</option>
+				<option value="1" <?php selected( '1', $value ); ?>><?php esc_html_e( 'On', 'revision-retention' ); ?></option>
+				<option value="0" <?php selected( '0', $value ); ?>><?php esc_html_e( 'Off', 'revision-retention' ); ?></option>
+			</select>
+			<span class="rvrt-choice-text"><?php echo esc_html( $text ); ?></span>
+		</label>
 		<?php
 	}
 
@@ -663,7 +763,7 @@ class Settings_Page {
 					<?php
 					printf(
 						/* translators: %s: the interval inherited from the network. */
-						esc_html__( 'Inherit from network (%s)', 'revision-retention' ),
+						esc_html__( 'Inherit (%s)', 'revision-retention' ),
 						esc_html( $intervals[ (string) ( $inherited['cron_interval'] ?? '' ) ] ?? '' )
 					);
 					?>

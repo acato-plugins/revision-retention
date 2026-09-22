@@ -2,47 +2,145 @@
  * Settings screen of the Revision Retention plugin.
  */
 
-.rvrt-settings .rvrt-intro {
-	max-width: 52em;
+/* Admin screens stretch to the window, which on a wide monitor drags every
+   line of explanation out to a width nobody can read. The screen keeps a
+   measure of its own instead. */
+.rvrt-settings {
+	max-width: 1100px;
+}
+
+.rvrt-settings .rvrt-intro,
+.rvrt-settings .form-table td .description,
+.rvrt-settings > .description {
+	max-width: 46em;
+}
+
+.rvrt-settings h2 {
+	border-bottom: 1px solid #dcdcde;
+	margin-top: 2em;
+	padding-bottom: 0.4em;
 }
 
 .rvrt-settings .rvrt-unit {
 	color: #50575e;
+	margin-left: 0.25em;
 }
+
+/* Control first, then what it does, so an inherited three way choice lines up
+   with the plain checkboxes elsewhere on the screen. */
+.rvrt-settings .rvrt-choice {
+	align-items: center;
+	display: flex;
+	gap: 0.5em;
+}
+
+.rvrt-settings .rvrt-choice-text {
+	color: #1d2327;
+}
+
+/* Post types ------------------------------------------------------------- */
 
 .rvrt-settings .rvrt-post-types,
 .rvrt-settings .rvrt-summary {
-	margin-bottom: 1.5em;
-	max-width: 60em;
+	margin-bottom: 0.75em;
 }
 
-.rvrt-settings .rvrt-post-types th[scope="row"] code,
-.rvrt-settings .rvrt-summary th[scope="row"] code {
-	color: #50575e;
-	display: block;
-	font-size: 11px;
-	font-weight: 400;
-}
-
+.rvrt-settings .rvrt-post-types th,
 .rvrt-settings .rvrt-post-types td,
+.rvrt-settings .rvrt-summary th,
 .rvrt-settings .rvrt-summary td {
+	padding: 10px;
 	vertical-align: middle;
 }
 
-.rvrt-settings .rvrt-native {
-	color: #50575e;
+.rvrt-settings .rvrt-col-type {
+	width: 40%;
 }
 
-.rvrt-settings .rvrt-inherit-label {
-	display: block;
-	margin-bottom: 0.25em;
+.rvrt-settings .rvrt-col-number {
+	text-align: right;
+	white-space: nowrap;
+	width: 9em;
+}
+
+.rvrt-settings .rvrt-col-support {
+	width: 7em;
+}
+
+.rvrt-settings .rvrt-col-field {
+	white-space: nowrap;
+	width: 11em;
+}
+
+.rvrt-settings .rvrt-label {
+	font-weight: 600;
+}
+
+.rvrt-settings .rvrt-post-types code,
+.rvrt-settings .rvrt-summary code {
+	background: none;
+	color: #646970;
+	font-size: 12px;
+	font-weight: 400;
+	padding: 0;
+}
+
+.rvrt-settings .rvrt-post-types th[scope="row"] code {
+	margin-left: 0.5em;
+}
+
+/* The number that matters carries the weight; an empty one gets out of the way. */
+.rvrt-settings .rvrt-col-number strong {
+	font-size: 14px;
+}
+
+.rvrt-settings .rvrt-none,
+.rvrt-settings .rvrt-native {
+	color: #8c8f94;
+}
+
+.rvrt-settings .rvrt-toggle-wrap {
+	margin: 0 0 1em;
+}
+
+/* Sweep ------------------------------------------------------------------ */
+
+.rvrt-settings .rvrt-sweep {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 1em 1.25em 1.25em;
+}
+
+.rvrt-settings .rvrt-sweep-status {
+	margin: 0 0 1em;
+	max-width: 46em;
+}
+
+.rvrt-settings .rvrt-sweep-buttons {
+	display: flex;
+	gap: 0.5em;
 }
 
 .rvrt-settings .rvrt-sweep .description {
 	margin-top: 0.75em;
-	max-width: 52em;
+	max-width: 46em;
 }
 
 .rvrt-settings [aria-disabled="true"] {
 	opacity: 0.5;
+}
+
+@media screen and (max-width: 782px) {
+	.rvrt-settings .rvrt-col-type,
+	.rvrt-settings .rvrt-col-number,
+	.rvrt-settings .rvrt-col-support,
+	.rvrt-settings .rvrt-col-field {
+		width: auto;
+	}
+
+	.rvrt-settings .rvrt-post-types th[scope="row"] code {
+		display: block;
+		margin-left: 0;
+	}
 }
