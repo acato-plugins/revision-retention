@@ -232,6 +232,14 @@ check( 'the listed post is the one with old revisions', $listed->items[0]['id'],
 check( 'it reports how many it would lose', $listed->items[0]['revisions'], 1 );
 check( 'it carries a title to show, entities decoded', $listed->items[0]['title'], "Post \xe2\x80\x93 11" );
 
+// The screen puts the edit link into an href, so a hostile filter on
+// get_edit_post_link() must not be able to smuggle a script in.
+$GLOBALS['t_edit_link'] = 'javascript:alert(1)';
+$GLOBALS['wpdb']->revisions = array( 11 => $old_one, 12 => $recent );
+$hostile = ( new Cleaner() )->sweep( 100, true );
+check( 'a javascript: edit link is dropped', $hostile->items[0]['editUrl'], '' );
+unset( $GLOBALS['t_edit_link'] );
+
 /* --------------------------------------------------------- 11. Sanitizing */
 echo "\nSettings::sanitize\n";
 reset_state();

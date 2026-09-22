@@ -155,7 +155,11 @@ class Cleaner {
 				'title'     => html_entity_decode( get_the_title( $post ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ),
 				'type'      => $type instanceof \WP_Post_Type ? $type->labels->singular_name : $post->post_type,
 				'revisions' => $revisions,
-				'editUrl'   => (string) get_edit_post_link( $post_id, 'raw' ),
+				// The screen puts this straight into an href. Core builds it, so
+				// it is already an admin URL, but a filter on it is somebody
+				// else's code and a javascript: URI there would be a script to
+				// run. sanitize_url() allows only the protocols WordPress does.
+				'editUrl'   => sanitize_url( (string) get_edit_post_link( $post_id, 'raw' ) ),
 			);
 		}
 

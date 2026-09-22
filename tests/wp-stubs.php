@@ -62,7 +62,11 @@ function get_post( $id ) {
 }
 // WordPress texturises titles, so entities are what the sweep actually sees.
 function get_the_title( $post ) { return 'Post &#8211; ' . ( is_object( $post ) ? $post->ID : $post ); }
-function get_edit_post_link( $id, $context = 'display' ) { return 'https://example.test/edit?post=' . (int) $id; }
+function get_edit_post_link( $id, $context = 'display' ) { return $GLOBALS['t_edit_link'] ?? ( 'https://example.test/edit?post=' . (int) $id ); }
+function sanitize_url( $url ) {
+	// Mirrors the part of esc_url_raw() that matters here: only these schemes survive.
+	return preg_match( '#^(https?|ftps?|mailto):#i', (string) $url ) ? $url : '';
+}
 function get_post_type_object( $name ) {
 	$o         = new stdClass();
 	$o->name   = $name;

@@ -68,11 +68,20 @@ class Requirements {
 	 *
 	 * This covers an install that was downgraded after the plugin was already
 	 * active. The notice below is shown in this same request; afterwards the
-	 * plugin is off and no longer loads.
+	 * plugin is off and no longer loads. It waits for somebody who may
+	 * deactivate plugins, which on a neglected site means the next time an
+	 * administrator looks at it.
 	 *
 	 * @return void
 	 */
 	public function deactivate(): void {
+		// admin_init also fires on admin-ajax.php, which is reachable without
+		// being logged in at all, so deactivating has to be gated on the
+		// capability for it rather than on merely reaching an admin request.
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			return;
+		}
+
 		if ( ! function_exists( 'deactivate_plugins' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
