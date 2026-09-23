@@ -89,11 +89,11 @@ class Cleaner {
 				continue;
 			}
 
-			$took     = $this->clean_post( $parent_id, $rule, $dry_run );
-			$removed += $took;
+			$outcome  = $this->clean_post( $parent_id, $rule, $dry_run );
+			$removed += $outcome['removed'];
 
-			if ( $took > 0 ) {
-				$affected[ $parent_id ] = $took;
+			if ( $outcome['removed'] > 0 ) {
+				$affected[ $parent_id ] = $outcome;
 			}
 
 			// The cap is checked between posts rather than inside one. Stopping
@@ -126,7 +126,7 @@ class Cleaner {
 	 * number to trust. Titles are fetched in one go: asking for them post by
 	 * post would put a query behind every row.
 	 *
-	 * @param array<int, int> $affected Revisions taken, keyed by post ID.
+	 * @param array<int, array{removed: int, kept: int}> $affected What each post lost and kept, keyed by post ID.
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
@@ -139,7 +139,7 @@ class Cleaner {
 
 		$items = array();
 
-		foreach ( $affected as $post_id => $revisions ) {
+		foreach ( $affected as $post_id => $outcome ) {
 			$post = get_post( $post_id );
 
 			if ( ! $post instanceof \WP_Post ) {
@@ -155,7 +155,10 @@ class Cleaner {
 				// which would show the entity instead of the character.
 				'title'     => html_entity_decode( get_the_title( $post ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ),
 				'type'      => $type instanceof \WP_Post_Type ? $type->labels->singular_name : $post->post_type,
-				'revisions' => $revisions,
+				'revisions' => $outcome['removed'],
+				// What the post is left with, so the keep floor is visible
+				// rather than something to take on trust.
+				'kept'      => $outcome['kept'],
 				// The screen puts this straight into an href. Core builds it, so
 				// it is already an admin URL, but a filter on it is somebody
 				// else's code and a javascript: URI there would be a script to
@@ -174,9 +177,9 @@ class Cleaner {
 	 * @param Retention_Rule $rule    Rule in effect for this post's type.
 	 * @param bool           $dry_run Count instead of delete.
 	 *
-	 * @return int Revisions removed, or that would have been removed.
+	 * @return array{removed: int, kept: int} What went, and what is left behind.
 	 */
-	private function clean_post( int $post_id, Retention_Rule $rule, bool $dry_run ): int {
+	private function clean_post( int $post_id, Retention_Rule $rule, bool $dry_run ): array {
 		$revisions = $this->revisions_of( $post_id );
 
 		// The newest ones are the floor and are never up for deletion, however
@@ -184,7 +187,10 @@ class Cleaner {
 		$candidates = array_slice( $revisions, max( 0, $rule->keep ) );
 
 		if ( array() === $candidates ) {
-			return 0;
+			return array(
+				'removed' => 0,
+				'kept'    => count( $revisions ),
+			);
 		}
 
 		$cutoff  = $rule->cutoff_gmt();
@@ -202,7 +208,10 @@ class Cleaner {
 			++$removed;
 		}
 
-		return $removed;
+		return array(
+			'removed' => $removed,
+			'kept'    => count( $revisions ) - $removed,
+		);
 	}
 
 	/**

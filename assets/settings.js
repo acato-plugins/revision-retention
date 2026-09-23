@@ -230,6 +230,7 @@
 				const site = document.createElement( 'td' );
 				const type = document.createElement( 'td' );
 				const count = document.createElement( 'td' );
+				const kept = document.createElement( 'td' );
 
 				title.scope = 'row';
 
@@ -247,10 +248,13 @@
 				type.textContent = item.type;
 				count.textContent = item.revisions;
 				count.className = 'rvrt-col-number';
+				// What the post keeps, so the floor is visible next to the loss.
+				kept.textContent = item.kept ?? '';
+				kept.className = 'rvrt-col-number rvrt-kept';
 
 				// The network list says which site each post belongs to; a
 				// single site's list has no such column to fill.
-				row.append( ...( network ? [ title, site, type, count ] : [ title, type, count ] ) );
+				row.append( ...( network ? [ title, site, type, count, kept ] : [ title, type, count, kept ] ) );
 				affectedBody.append( row );
 				listed += 1;
 			}

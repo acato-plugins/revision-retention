@@ -144,6 +144,9 @@ $result = ( new Cleaner() )->sweep( 100, false );
 check( 'dormant post keeps its newest five', $result->revisions, 35 );
 check( 'the five survivors are the newest', count( array_intersect( $GLOBALS['t_deleted'], array_column( array_slice( $revisions, 0, 5 ), 'ID' ) ) ), 0 );
 check( 'deletions actually happened', count( $GLOBALS['t_deleted'] ), 35 );
+// What the list shows a tester: 35 going, 5 staying, which is the floor made visible.
+check( 'the list reports what goes', $result->items[0]['revisions'], 35 );
+check( 'and what the floor keeps back', $result->items[0]['kept'], 5 );
 
 /* ------------------------------------------------------------ 5. Dry run */
 echo "\nCleaner: dry run\n";
@@ -218,6 +221,7 @@ foreach ( range( 1, 5 ) as $n ) {
 // Five posts of ten old revisions each. A cap of 25 must stop after the third
 // post rather than part way through it, so nothing is left half cleaned.
 $capped = ( new Cleaner() )->sweep( 100, false, 0, array(), 25 );
+check( 'each swept post reports nothing left behind', array_unique( array_column( $capped->items, 'kept' ) ), array( 0 ) );
 check( 'the cap stops the batch at a post boundary', $capped->revisions, 30 );
 check( 'only whole posts were processed', $capped->posts, 3 );
 check( 'a capped batch is never reported as finished', $capped->finished, false );
@@ -251,6 +255,7 @@ check( 'two posts were scanned', $listed->posts, 2 );
 check( 'but only one is reported as affected', $listed->affected, 1 );
 check( 'the listed post is the one with old revisions', $listed->items[0]['id'], 11 );
 check( 'it reports how many it would lose', $listed->items[0]['revisions'], 1 );
+check( 'and how many it would keep', $listed->items[0]['kept'], 0 );
 check( 'it carries a title to show, entities decoded', $listed->items[0]['title'], "Post \xe2\x80\x93 11" );
 
 // The screen puts the edit link into an href, so a hostile filter on

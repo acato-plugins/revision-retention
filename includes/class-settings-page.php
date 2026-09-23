@@ -1116,7 +1116,8 @@ class Settings_Page {
 							<tr>
 								<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
 								<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
-								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
+								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Removing', 'column heading', 'revision-retention' ); ?></th>
+								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Remaining', 'column heading', 'revision-retention' ); ?></th>
 							</tr>
 						</thead>
 						<tbody></tbody>
@@ -1420,7 +1421,8 @@ class Settings_Page {
 										<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
 										<th scope="col"><?php echo esc_html_x( 'Site', 'column heading', 'revision-retention' ); ?></th>
 										<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
-										<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
+										<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Removing', 'column heading', 'revision-retention' ); ?></th>
+								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Remaining', 'column heading', 'revision-retention' ); ?></th>
 									</tr>
 								</thead>
 								<tbody></tbody>
