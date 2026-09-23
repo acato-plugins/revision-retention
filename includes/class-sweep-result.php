@@ -25,6 +25,7 @@ final class Sweep_Result {
 	 * @param bool                             $finished  Whether there is nothing left after this batch.
 	 * @param bool                             $dry_run   Whether anything was actually deleted.
 	 * @param array<int, array<string, mixed>> $items     The posts this batch took revisions from.
+	 * @param int                              $affected  How many posts that was.
 	 */
 	public function __construct(
 		public readonly int $cursor,
@@ -32,7 +33,8 @@ final class Sweep_Result {
 		public readonly int $revisions,
 		public readonly bool $finished,
 		public readonly bool $dry_run,
-		public readonly array $items = array()
+		public readonly array $items = array(),
+		public readonly int $affected = 0
 	) {}
 
 	/**
@@ -49,7 +51,11 @@ final class Sweep_Result {
 			$this->revisions + $next->revisions,
 			$next->finished,
 			$this->dry_run,
-			array_merge( $this->items, $next->items )
+			// Only the newest batch's detail is carried forward. A run over a
+			// large site would otherwise hold a row per post in memory for a
+			// list that nothing reads back.
+			$next->items,
+			$this->affected + $next->affected
 		);
 	}
 }

@@ -265,8 +265,8 @@ class CLI {
 
 		\WP_CLI::success(
 			sprintf(
-				'%d posts checked, %d revisions %s.%s',
-				$total->posts,
+				'%d posts lost revisions, %d revisions %s.%s',
+				$total->affected,
 				$total->revisions,
 				$dry_run ? 'would be removed' : 'removed',
 				$total->finished ? '' : ' Stopped early; run again to continue.'

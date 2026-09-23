@@ -136,8 +136,8 @@ class Settings_Page {
 
 		$url = plugin_dir_url( RVRT_PLUGIN_FILE );
 
-		wp_enqueue_style( 'rvrt-settings', $url . 'assets/settings.css', array(), RVRT_VERSION );
-		wp_enqueue_script( 'rvrt-settings', $url . 'assets/settings.js', array(), RVRT_VERSION, true );
+		wp_enqueue_style( 'rvrt-settings', $url . 'assets/settings.css', array(), self::asset_version( 'assets/settings.css' ) );
+		wp_enqueue_script( 'rvrt-settings', $url . 'assets/settings.js', array(), self::asset_version( 'assets/settings.js' ), true );
 
 		wp_localize_script(
 			'rvrt-settings',
@@ -155,11 +155,32 @@ class Settings_Page {
 				'stoppedShort' => _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' ),
 				'stopping'     => _x( 'Stopping after this batch…', 'sweep progress', 'revision-retention' ),
 				'failed'       => _x( 'The sweep could not be completed.', 'sweep error', 'revision-retention' ),
+				'notJson'      => _x( 'The server answered with something other than data, which usually means another plugin printed a PHP warning. The site\'s error log will say what it was.', 'sweep error', 'revision-retention' ),
 				/* translators: %s: number of posts. */
 				'more'         => _x( 'And %s more posts.', 'affected posts list', 'revision-retention' ),
 				'untitled'     => _x( '(no title)', 'affected posts list', 'revision-retention' ),
 			)
 		);
+	}
+
+	/**
+	 * The version to hang on an asset's URL.
+	 *
+	 * The plugin version alone is not enough: an asset edited between releases
+	 * keeps the same URL and browsers go on serving the copy they already have.
+	 * The file's own modification time changes whenever the file does, which is
+	 * exactly the question a cache buster is asking.
+	 *
+	 * @param string $relative Path of the asset inside the plugin.
+	 *
+	 * @return string
+	 */
+	private static function asset_version( string $relative ): string {
+		// Derived from the plugin file the way the URL above is, rather than
+		// from RVRT_PLUGIN_DIR, so the two always agree.
+		$modified = @filemtime( plugin_dir_path( RVRT_PLUGIN_FILE ) . $relative ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing or unreadable asset falls back to the plugin version rather than warning.
+
+		return false === $modified ? RVRT_VERSION : (string) $modified;
 	}
 
 	/**
@@ -1132,7 +1153,7 @@ class Settings_Page {
 	 */
 	public function ajax_sweep_batch(): void {
 		if ( ! current_user_can( Settings::capability() ) ) {
-			wp_send_json_error( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), 403 );
+			self::send_json( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), false, 403 );
 		}
 
 		check_ajax_referer( self::RUN_ACTION );
@@ -1140,8 +1161,9 @@ class Settings_Page {
 		$dry_run = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
 
 		if ( ! $dry_run && ! Settings::may_sweep() ) {
-			wp_send_json_error(
+			self::send_json(
 				array( 'message' => _x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) ),
+				false,
 				403
 			);
 		}
@@ -1168,13 +1190,14 @@ class Settings_Page {
 
 		$last = Cleaner::last_parent_id();
 
-		wp_send_json_success(
+		self::send_json(
 			array(
 				'cursor'    => $result->cursor,
 				'posts'     => $result->posts,
 				'revisions' => $result->revisions,
 				'finished'  => $result->finished,
 				'items'     => $result->items,
+				'affected'  => $result->affected,
 				'progress'  => $result->finished || $last < 1
 					? 100
 					: min( 99, (int) floor( ( $result->cursor / $last ) * 100 ) ),
@@ -1194,7 +1217,7 @@ class Settings_Page {
 	 */
 	public function ajax_network_sweep_batch(): void {
 		if ( ! is_multisite() || ! current_user_can( Settings::capability( true ) ) ) {
-			wp_send_json_error( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), 403 );
+			self::send_json( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), false, 403 );
 		}
 
 		check_ajax_referer( self::NETWORK_RUN_ACTION );
@@ -1202,7 +1225,7 @@ class Settings_Page {
 		$sites = array_map( 'intval', (array) get_sites( array( 'fields' => 'ids' ) ) );
 
 		if ( array() === $sites ) {
-			wp_send_json_success(
+			self::send_json(
 				array(
 					'site'      => 0,
 					'cursor'    => 0,
@@ -1258,17 +1281,43 @@ class Settings_Page {
 		$next_index = $result->finished ? $index + 1 : $index;
 		$finished   = $next_index >= count( $sites );
 
-		wp_send_json_success(
+		self::send_json(
 			array(
 				'site'      => $finished ? 0 : $sites[ $next_index ],
 				'cursor'    => $result->finished ? 0 : $result->cursor,
-				'posts'     => $result->posts,
+				'posts'     => $result->affected,
 				'revisions' => $result->revisions,
 				'items'     => $items,
 				'finished'  => $finished,
 				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $next_index / count( $sites ) ) * 100 ) ),
 			)
 		);
+	}
+
+	/**
+	 * Answer with JSON and nothing else.
+	 *
+	 * A notice or warning printed by anything else loaded on the request lands
+	 * in front of the response and turns valid JSON into something the screen
+	 * cannot read. Whatever has been buffered is dropped here so the endpoint
+	 * answers cleanly; the site's own error log still has it.
+	 *
+	 * @param array<string, mixed> $data   Payload to send.
+	 * @param bool                 $success Whether the batch succeeded.
+	 * @param int                  $status  HTTP status code.
+	 *
+	 * @return void
+	 */
+	private static function send_json( array $data, bool $success = true, int $status = 200 ): void {
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+
+		if ( $success ) {
+			wp_send_json_success( $data, $status );
+		}
+
+		wp_send_json_error( $data, $status );
 	}
 
 	/**
@@ -1678,7 +1727,7 @@ class Settings_Page {
 		}
 
 		$cursor = $dry_run ? 0 : Scheduler::state()['cursor'];
-		$result  = ( new Cleaner() )->sweep(
+		$result = ( new Cleaner() )->sweep(
 			(int) Settings::get( 'batch_size' ),
 			$dry_run,
 			$cursor,
@@ -1694,7 +1743,7 @@ class Settings_Page {
 			array(
 				'rvrt-notice'    => $dry_run ? 'preview' : 'swept',
 				'rvrt-revisions' => (string) $result->revisions,
-				'rvrt-posts'     => (string) $result->posts,
+				'rvrt-posts'     => (string) $result->affected,
 				'rvrt-finished'  => $result->finished ? '1' : '0',
 				'rvrt-tab'       => 'sweep',
 			)

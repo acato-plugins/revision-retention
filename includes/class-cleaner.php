@@ -114,7 +114,8 @@ class Cleaner {
 			$removed,
 			! $capped && count( $candidates ) < $batch_size,
 			$dry_run,
-			$this->describe_posts( $affected )
+			$this->describe_posts( $affected ),
+			count( $affected )
 		);
 	}
 

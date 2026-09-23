@@ -284,7 +284,17 @@
 				} ),
 			} );
 
-			const payload = await response.json();
+			const text = await response.text();
+			let payload;
+
+			try {
+				payload = JSON.parse( text );
+			} catch {
+				// Anything that prints before the response lands in front of it
+				// and stops it being data at all. Say so, rather than showing a
+				// parser's complaint about an angle bracket.
+				throw new Error( strings.notJson );
+			}
 
 			if ( ! payload?.success ) {
 				throw new Error( payload?.data?.message ?? strings.failed );
@@ -305,7 +315,9 @@
 				// eslint-disable-next-line no-await-in-loop
 				const batch = await requestBatch( mode, cursor, site );
 
-				totals.posts += batch.posts;
+				// The posts that actually lost something, which is what the list
+				// below shows and what the sentence is about.
+				totals.posts += batch.affected ?? batch.posts;
 				totals.revisions += batch.revisions;
 				cursor = batch.cursor;
 				site = batch.site ?? 0;

@@ -99,8 +99,10 @@ class Test_WPDB {
 	public $candidates = array();
 	public $revisions = array();
 	public function esc_like( $t ) { return addcslashes( $t, '_%\\' ); }
+	public $queries = array();
 	public function prepare( $q, ...$a ) {
 		if ( 1 === count( $a ) && is_array( $a[0] ) ) { $a = $a[0]; }
+		$this->queries[] = array( 'query' => $q, 'args' => $a );
 		return array( 'query' => $q, 'args' => $a );
 	}
 	public function get_results( $q, $output = null ) {

@@ -247,6 +247,8 @@ $GLOBALS['wpdb']->revisions = array( 11 => $old_one, 12 => $recent );
 
 $listed = ( new Cleaner() )->sweep( 100, true );
 check( 'only posts that actually lose something are listed', count( $listed->items ), 1 );
+check( 'two posts were scanned', $listed->posts, 2 );
+check( 'but only one is reported as affected', $listed->affected, 1 );
 check( 'the listed post is the one with old revisions', $listed->items[0]['id'], 11 );
 check( 'it reports how many it would lose', $listed->items[0]['revisions'], 1 );
 check( 'it carries a title to show, entities decoded', $listed->items[0]['title'], "Post \xe2\x80\x93 11" );
@@ -259,7 +261,35 @@ $hostile = ( new Cleaner() )->sweep( 100, true );
 check( 'a javascript: edit link is dropped', $hostile->items[0]['editUrl'], '' );
 unset( $GLOBALS['t_edit_link'] );
 
-/* --------------------------------------------------------- 11. Sanitizing */
+/* ------------------------------------------------ 11. Autosaves are spared */
+echo "\nCleaner: autosaves are excluded in SQL\n";
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 365 ) );
+$GLOBALS['wpdb']->queries    = array();
+$GLOBALS['wpdb']->candidates = array( array( 'parent_id' => 11, 'post_type' => 'post' ) );
+$GLOBALS['wpdb']->revisions  = array( 11 => $old_one );
+( new Cleaner() )->sweep( 10, true );
+
+// The exclusion lives in the WHERE clause, so this guards the clause itself:
+// a fixture cannot run SQL, but it can insist the predicate is still written.
+$looked_for_parents = false;
+$looked_for_one     = false;
+foreach ( $GLOBALS['wpdb']->queries as $q ) {
+	$excludes = str_contains( $q['query'], 'post_name NOT LIKE %s' )
+		&& in_array( '%-autosave-v1', $q['args'], true );
+
+	if ( str_contains( $q['query'], 'GROUP BY r.post_parent' ) && $excludes ) {
+		$looked_for_parents = true;
+	}
+	if ( str_contains( $q['query'], 'ORDER BY post_date_gmt DESC' ) && $excludes ) {
+		$looked_for_one = true;
+	}
+}
+check( 'the candidate query excludes autosaves', $looked_for_parents, true );
+check( 'the per post query excludes autosaves', $looked_for_one, true );
+check( 'and the counts query does too', str_contains( Cleaner::counts() === array() ? implode( '', array_column( $GLOBALS['wpdb']->queries, 'query' ) ) : implode( '', array_column( $GLOBALS['wpdb']->queries, 'query' ) ), 'post_name NOT LIKE %s' ), true );
+
+/* --------------------------------------------------------- 12. Sanitizing */
 echo "\nSettings::sanitize\n";
 reset_state();
 $s = Settings::sanitize( array( 'keep' => '-9', 'max_age_days' => '-5', 'batch_size' => '99999', 'cron_interval' => 'nonsense' ) );
