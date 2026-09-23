@@ -138,7 +138,7 @@
 }
 
 .rvrt-settings .rvrt-col-number {
-	inline-size: 9em;
+	inline-size: fit-content;
 	text-align: end;
 	white-space: nowrap;
 }
