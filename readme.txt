@@ -128,9 +128,9 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 == Screenshots ==
 
-1. The settings screen: the policy, and the per post type table with the revisions stored right now.
-2. Preview reporting what the policy would remove before anything is deleted.
-3. The network settings screen on multisite, with the switch deciding whether sites may override.
+1. The settings screen, with the policy in force at the top and every post type's rule and stored revisions below it.
+2. Preview reporting what the policy would take from each post, and what each post keeps, before anything is deleted.
+3. The schedule: how often the sweep runs, how many posts it looks at per batch, and the most it may delete in one.
 
 == Changelog ==
 
