@@ -33,13 +33,13 @@
 			.replace( '%s', count( first ) );
 
 	/**
-	 * Dim the scheduling fields while the scheduled sweep is switched off.
+	 * Dim the fields that depend on a switch while it is off.
 	 *
 	 * Cosmetic only: the values are still submitted and still saved, and the
 	 * server decides what they mean.
 	 */
-	const syncSchedule = () => {
-		const toggle = document.getElementById( 'rvrt-cron-enabled' );
+	const syncDependent = ( toggleId, ids ) => {
+		const toggle = document.getElementById( toggleId );
 
 		if ( ! toggle ) {
 			return;
@@ -53,7 +53,7 @@
 		const apply = () => {
 			const enabled = isEnabled();
 
-			for ( const id of [ 'rvrt-cron-interval', 'rvrt-max-deletions', 'rvrt-batch-size' ] ) {
+			for ( const id of ids ) {
 				const row = document.getElementById( id )?.closest( 'tr' );
 
 				row?.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
@@ -275,7 +275,7 @@
 			text.textContent = message;
 		};
 
-		const requestBatch = async ( mode, cursor, site ) => {
+		const requestBatch = async ( mode, cursor, site, log ) => {
 			const response = await fetch( form.dataset.ajaxUrl, {
 				method: 'POST',
 				credentials: 'same-origin',
@@ -285,6 +285,9 @@
 					mode,
 					cursor: String( cursor ),
 					site: String( site ),
+					// The log entry the first batch opened, so the whole run is
+					// one entry however many batches it takes.
+					log: String( log ),
 				} ),
 			} );
 
@@ -311,13 +314,14 @@
 			const totals = { posts: 0, revisions: 0 };
 			let cursor = 0;
 			let site = 0;
+			let log = 0;
 			let finished = false;
 
 			while ( ! finished && ! cancelled ) {
 				// Each batch is awaited before the next is asked for, so the
 				// site is never handed more than one sweep at a time.
 				// eslint-disable-next-line no-await-in-loop
-				const batch = await requestBatch( mode, cursor, site );
+				const batch = await requestBatch( mode, cursor, site, log );
 
 				// The posts that actually lost something, which is what the list
 				// below shows and what the sentence is about.
@@ -325,6 +329,7 @@
 				totals.revisions += batch.revisions;
 				cursor = batch.cursor;
 				site = batch.site ?? 0;
+				log = batch.log || log;
 				finished = batch.finished;
 
 				addToList( batch.items ?? [] );
@@ -405,7 +410,8 @@
 	document.addEventListener( 'DOMContentLoaded', () => {
 		syncTabs();
 		syncConfirms();
-		syncSchedule();
+		syncDependent( 'rvrt-cron-enabled', [ 'rvrt-cron-interval', 'rvrt-max-deletions', 'rvrt-batch-size' ] );
+		syncDependent( 'rvrt-log-enabled', [ 'rvrt-log-retention' ] );
 		syncQuietRows();
 
 		if ( window.fetch ) {

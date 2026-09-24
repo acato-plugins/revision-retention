@@ -59,6 +59,29 @@ class Settings {
 	private const DEFAULT_INTERVAL = 'weekly';
 
 	/**
+	 * How long a log entry may be kept, in days.
+	 *
+	 * @var array<string, int>
+	 */
+	private const LOG_RETENTION = array(
+		'week'      => 7,
+		'month'     => 30,
+		'quarter'   => 90,
+		'half_year' => 180,
+		'year'      => 365,
+	);
+
+	/**
+	 * How long log entries are kept unless a site says otherwise.
+	 *
+	 * Long enough to answer "what happened to the history of this page last
+	 * month", short enough that the table never becomes a thing of its own.
+	 *
+	 * @var string
+	 */
+	private const DEFAULT_LOG_RETENTION = 'quarter';
+
+	/**
 	 * Smallest and largest number of posts one batch may work through.
 	 *
 	 * @var int
@@ -94,6 +117,8 @@ class Settings {
 			'cron_interval'            => self::DEFAULT_INTERVAL,
 			'batch_size'               => 200,
 			'max_deletions'            => 1000,
+			'log_enabled'              => false,
+			'log_retention'            => self::DEFAULT_LOG_RETENTION,
 			'remove_data_on_uninstall' => false,
 		);
 	}
@@ -124,6 +149,8 @@ class Settings {
 			'cron_interval'            => 'enum',
 			'batch_size'               => 'int',
 			'max_deletions'            => 'int',
+			'log_enabled'              => 'bool',
+			'log_retention'            => 'enum',
 			'remove_data_on_uninstall' => 'bool',
 		);
 	}
@@ -140,6 +167,32 @@ class Settings {
 			'weekly'  => _x( 'Once a week', 'sweep interval', 'revision-retention' ),
 			'monthly' => _x( 'Once a month', 'sweep interval', 'revision-retention' ),
 		);
+	}
+
+	/**
+	 * How long log entries can be kept, labelled for the screen.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function log_retentions(): array {
+		return array(
+			'week'      => _x( 'One week', 'log retention', 'revision-retention' ),
+			'month'     => _x( 'One month', 'log retention', 'revision-retention' ),
+			'quarter'   => _x( 'Three months', 'log retention', 'revision-retention' ),
+			'half_year' => _x( 'Six months', 'log retention', 'revision-retention' ),
+			'year'      => _x( 'One year', 'log retention', 'revision-retention' ),
+		);
+	}
+
+	/**
+	 * Days a log entry is kept, for the retention currently configured.
+	 *
+	 * @return int
+	 */
+	public static function log_retention_days(): int {
+		$retention = (string) self::get( 'log_retention' );
+
+		return self::LOG_RETENTION[ $retention ] ?? self::LOG_RETENTION[ self::DEFAULT_LOG_RETENTION ];
 	}
 
 	/**
@@ -403,7 +456,7 @@ class Settings {
 
 			$sanitized[ $key ] = match ( $type ) {
 				'bool' => (bool) $raw,
-				'enum' => self::sanitize_interval( $raw, (string) $defaults[ $key ] ),
+				'enum' => self::sanitize_choice( $key, $raw, (string) $defaults[ $key ] ),
 				default => self::sanitize_number( $key, $raw, (int) $defaults[ $key ] ),
 			};
 		}
@@ -444,17 +497,19 @@ class Settings {
 	}
 
 	/**
-	 * Keep the interval to one this plugin knows how to schedule.
+	 * Keep a choice to one this plugin knows what to do with.
 	 *
+	 * @param string $key      Which setting is being sanitized.
 	 * @param mixed  $value    Raw submitted value.
 	 * @param string $fallback Value to use when nothing usable was submitted.
 	 *
 	 * @return string
 	 */
-	private static function sanitize_interval( $value, string $fallback ): string {
-		$value = is_string( $value ) ? $value : '';
+	private static function sanitize_choice( string $key, $value, string $fallback ): string {
+		$value   = is_string( $value ) ? $value : '';
+		$allowed = 'log_retention' === $key ? self::LOG_RETENTION : self::INTERVALS;
 
-		return isset( self::INTERVALS[ $value ] ) ? $value : $fallback;
+		return isset( $allowed[ $value ] ) ? $value : $fallback;
 	}
 
 	/**

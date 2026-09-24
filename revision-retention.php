@@ -3,7 +3,7 @@
  * Plugin Name:       Revision Retention
  * Plugin URI:        https://github.com/acato-plugins/revision-retention
  * Description:       Give post revisions a retention policy: keep the newest few, drop the ones older than a threshold, per post type, on a schedule or from WP-CLI.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.7
  * Requires PHP:      8.2
  * Author:            Acato
@@ -22,7 +22,7 @@ namespace Acato\RevisionRetention;
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'RVRT_VERSION' ) ) {
-	define( 'RVRT_VERSION', '1.0.0' );
+	define( 'RVRT_VERSION', '1.1.0' );
 }
 
 if ( ! defined( 'RVRT_PLUGIN_FILE' ) ) {
@@ -62,6 +62,7 @@ spl_autoload_register(
 register_activation_hook( RVRT_PLUGIN_FILE, array( Requirements::class, 'block_activation' ) );
 register_activation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_activation' ) );
 register_deactivation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_deactivation' ) );
+register_deactivation_hook( RVRT_PLUGIN_FILE, array( Log::class, 'on_deactivation' ) );
 
 // A WordPress old enough to miss the revision APIs this plugin builds on would
 // break in ways an administrator cannot act on, so it stops before booting.

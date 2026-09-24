@@ -50,6 +50,7 @@ final class Plugin {
 		( new Post_Types() )->register();
 		( new Limits() )->register();
 		( new Scheduler() )->register();
+		( new Log() )->register();
 		( new Settings_Page() )->register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {

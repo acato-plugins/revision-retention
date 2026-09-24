@@ -284,6 +284,487 @@
 	opacity: 0.5;
 }
 
+/* Logs -------------------------------------------------------------------- */
+
+.rvrt-settings .rvrt-log {
+	/* A tint of the admin colour for surfaces that belong to the log, so the
+	   timeline follows whichever colour scheme the user picked. */
+	--rvrt-tint: color-mix(in srgb, var(--rvrt-accent) 10%, var(--rvrt-surface));
+	--rvrt-cli: #1d2327;
+	--rvrt-screen: #7a3fb4;
+	--rvrt-rail: 18px;
+
+	margin-block-start: 0.5em;
+}
+
+.rvrt-settings .rvrt-log-head {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75em 1.5em;
+	justify-content: space-between;
+	margin-block: 1.25em 1em;
+}
+
+.rvrt-settings .rvrt-log-totals {
+	font-size: 14px;
+	margin: 0;
+	max-inline-size: var(--rvrt-measure);
+}
+
+.rvrt-settings .rvrt-log-totals strong {
+	font-variant-numeric: tabular-nums;
+}
+
+/* A segmented control, built from plain links. */
+.rvrt-settings .rvrt-log-filter {
+	background: #f0f0f1;
+	border-radius: 999px;
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+}
+
+.rvrt-settings .rvrt-log-filter a {
+	border-radius: 999px;
+	color: var(--rvrt-muted);
+	font-size: 12px;
+	font-weight: 500;
+	padding-block: 4px;
+	padding-inline: 12px;
+	text-decoration: none;
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+.rvrt-settings .rvrt-log-filter a:hover {
+	color: #1d2327;
+}
+
+.rvrt-settings .rvrt-log-filter a[aria-current="page"] {
+	background: var(--rvrt-surface);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+	color: #1d2327;
+}
+
+/* Activity chart ---------------------------------------------------------- */
+
+.rvrt-settings .rvrt-chart {
+	background: linear-gradient(to bottom, var(--rvrt-tint), var(--rvrt-surface));
+	border: 1px solid var(--rvrt-rule);
+	border-radius: 8px;
+	margin: 0 0 2em;
+	padding-block: 1em 0.6em;
+	padding-inline: 1em;
+}
+
+.rvrt-settings .rvrt-chart-bars {
+	align-items: end;
+	block-size: 72px;
+	display: flex;
+	gap: 3px;
+}
+
+.rvrt-settings .rvrt-chart-bar {
+	background: linear-gradient(to top, var(--rvrt-accent), color-mix(in srgb, var(--rvrt-accent) 55%, #fff));
+	block-size: max(var(--rvrt-height), 3px);
+	border-radius: 3px 3px 1px 1px;
+	flex: 1 1 0;
+	min-inline-size: 2px;
+	transform-origin: bottom;
+	animation: rvrt-grow 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	transition: filter 150ms ease;
+}
+
+.rvrt-settings .rvrt-chart-bar:hover {
+	filter: brightness(1.15) saturate(1.2);
+}
+
+.rvrt-settings .rvrt-chart-bar.is-empty {
+	background: var(--rvrt-rule);
+	block-size: 3px;
+}
+
+.rvrt-settings .rvrt-chart-caption {
+	color: var(--rvrt-muted);
+	display: flex;
+	font-size: 11px;
+	justify-content: space-between;
+	margin-block-start: 0.5em;
+}
+
+/* Timeline ---------------------------------------------------------------- */
+
+.rvrt-settings :is(.rvrt-timeline, .rvrt-day-entries, .rvrt-types) {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.rvrt-settings .rvrt-day + .rvrt-day {
+	margin-block-start: 1.75em;
+}
+
+/* The day stays in view while its entries scroll past. */
+.rvrt-settings .rvrt-day-label {
+	background: var(--rvrt-surface);
+	color: var(--rvrt-muted);
+	font-size: 11px;
+	font-weight: 600;
+	inset-block-start: 32px;
+	letter-spacing: 0.08em;
+	margin: 0 0 0.75em;
+	padding-block: 0.4em;
+	position: sticky;
+	text-transform: uppercase;
+	z-index: 2;
+}
+
+.rvrt-settings .rvrt-day-entries {
+	position: relative;
+}
+
+/* The line everything hangs from, fading out at the end of the day. */
+.rvrt-settings .rvrt-day-entries::before {
+	background: linear-gradient(to bottom, var(--rvrt-accent), color-mix(in srgb, var(--rvrt-accent) 25%, transparent) 85%, transparent);
+	border-radius: 2px;
+	content: "";
+	inline-size: 2px;
+	inset-block: 18px 0;
+	inset-inline-start: calc(var(--rvrt-rail) - 1px);
+	position: absolute;
+}
+
+.rvrt-settings .rvrt-entry {
+	animation: rvrt-rise 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	animation-delay: calc(var(--rvrt-i, 0) * 45ms);
+	display: grid;
+	gap: 1em;
+	grid-template-columns: calc(var(--rvrt-rail) * 2) minmax(0, 1fr);
+	margin: 0 0 0.9em;
+	position: relative;
+}
+
+.rvrt-settings .rvrt-marker {
+	align-items: center;
+	background: var(--rvrt-accent);
+	block-size: 36px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 4px var(--rvrt-surface), 0 2px 8px color-mix(in srgb, var(--rvrt-accent) 45%, transparent);
+	color: #fff;
+	display: flex;
+	inline-size: 36px;
+	justify-content: center;
+	position: relative;
+	z-index: 1;
+}
+
+.rvrt-settings .rvrt-entry-screen .rvrt-marker {
+	background: var(--rvrt-screen);
+	box-shadow: 0 0 0 4px var(--rvrt-surface), 0 2px 8px color-mix(in srgb, var(--rvrt-screen) 45%, transparent);
+}
+
+.rvrt-settings .rvrt-entry-cli .rvrt-marker {
+	background: var(--rvrt-cli);
+	box-shadow: 0 0 0 4px var(--rvrt-surface), 0 2px 8px rgb(0 0 0 / 0.3);
+}
+
+.rvrt-settings .rvrt-marker img {
+	block-size: 100%;
+	border-radius: 50%;
+	inline-size: 100%;
+	object-fit: cover;
+}
+
+.rvrt-settings .rvrt-card {
+	background: var(--rvrt-surface);
+	border: 1px solid var(--rvrt-rule);
+	border-radius: 10px;
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+	padding-block: 0.85em 0.9em;
+	padding-inline: 1.1em;
+	position: relative;
+	transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+/* A notch pointing back at the line. */
+.rvrt-settings .rvrt-card::before {
+	background: inherit;
+	block-size: 10px;
+	border-block-end: 1px solid var(--rvrt-rule);
+	border-inline-start: 1px solid var(--rvrt-rule);
+	content: "";
+	inline-size: 10px;
+	inset-block-start: 13px;
+	inset-inline-start: -6px;
+	position: absolute;
+	rotate: 45deg;
+	transition: border-color 200ms ease;
+}
+
+.rvrt-settings .rvrt-card:hover {
+	border-color: color-mix(in srgb, var(--rvrt-accent) 40%, var(--rvrt-rule));
+	box-shadow: 0 6px 20px -8px color-mix(in srgb, var(--rvrt-accent) 45%, transparent);
+	transform: translateY(-1px);
+}
+
+.rvrt-settings .rvrt-card:hover::before {
+	border-color: color-mix(in srgb, var(--rvrt-accent) 40%, var(--rvrt-rule));
+}
+
+.rvrt-settings .rvrt-card-head {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+}
+
+.rvrt-settings .rvrt-card-who {
+	font-weight: 600;
+}
+
+.rvrt-settings .rvrt-card-who a {
+	text-decoration: none;
+}
+
+.rvrt-settings .rvrt-card-site {
+	align-items: center;
+	color: var(--rvrt-muted);
+	display: inline-flex;
+	gap: 0.25em;
+	text-decoration: none;
+}
+
+.rvrt-settings .rvrt-card-site .dashicons {
+	font-size: 16px;
+	height: 16px;
+	width: 16px;
+}
+
+.rvrt-settings a.rvrt-card-site:hover {
+	color: var(--rvrt-accent);
+}
+
+.rvrt-settings .rvrt-pill {
+	background: var(--rvrt-tint);
+	border-radius: 999px;
+	color: var(--rvrt-accent);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.6;
+	padding-inline: 8px;
+}
+
+.rvrt-settings .rvrt-pill-screen {
+	background: color-mix(in srgb, var(--rvrt-screen) 10%, #fff);
+	color: var(--rvrt-screen);
+}
+
+.rvrt-settings .rvrt-pill-cli {
+	background: #f0f0f1;
+	color: var(--rvrt-cli);
+	font-family: Consolas, Monaco, monospace;
+}
+
+.rvrt-settings .rvrt-card-time {
+	color: var(--rvrt-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	margin-inline-start: auto;
+}
+
+.rvrt-settings .rvrt-card-what {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4em;
+	margin-block: 0.35em 0.5em;
+}
+
+.rvrt-settings .rvrt-card-count {
+	background: linear-gradient(120deg, #1d2327, var(--rvrt-accent));
+	background-clip: text;
+	color: transparent;
+	font-size: 26px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+}
+
+.rvrt-settings .rvrt-card-unit {
+	color: var(--rvrt-muted);
+}
+
+/* How this sweep compares with the biggest one on the page. */
+.rvrt-settings .rvrt-meter {
+	background: #f0f0f1;
+	block-size: 4px;
+	border-radius: 999px;
+	display: block;
+	overflow: hidden;
+}
+
+.rvrt-settings .rvrt-meter span {
+	animation: rvrt-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	animation-delay: calc(var(--rvrt-i, 0) * 45ms + 150ms);
+	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-accent) 50%, #fff), var(--rvrt-accent));
+	block-size: 100%;
+	border-radius: inherit;
+	display: block;
+	inline-size: var(--rvrt-share);
+}
+
+.rvrt-settings .rvrt-entry-screen .rvrt-meter span {
+	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-screen) 50%, #fff), var(--rvrt-screen));
+}
+
+.rvrt-settings .rvrt-entry-cli .rvrt-meter span {
+	background: linear-gradient(90deg, #8c8f94, var(--rvrt-cli));
+}
+
+.rvrt-settings .rvrt-types {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4em;
+	margin-block-start: 0.75em;
+}
+
+.rvrt-settings .rvrt-types li {
+	border: 1px solid var(--rvrt-rule);
+	border-radius: 6px;
+	color: var(--rvrt-muted);
+	font-size: 12px;
+	margin: 0;
+	padding-block: 1px;
+	padding-inline: 7px;
+}
+
+.rvrt-settings .rvrt-types b {
+	color: #1d2327;
+	font-variant-numeric: tabular-nums;
+	margin-inline-start: 0.2em;
+}
+
+.rvrt-settings .rvrt-status {
+	align-items: center;
+	color: var(--rvrt-muted);
+	display: flex;
+	font-size: 12px;
+	gap: 0.45em;
+	margin-block: 0.75em 0;
+}
+
+.rvrt-settings .rvrt-status-dot {
+	background: #00a32a;
+	block-size: 7px;
+	border-radius: 50%;
+	flex: none;
+	inline-size: 7px;
+}
+
+.rvrt-settings .rvrt-status-stopped .rvrt-status-dot {
+	background: #dba617;
+}
+
+.rvrt-settings .rvrt-status-running {
+	color: var(--rvrt-accent);
+	font-weight: 600;
+}
+
+.rvrt-settings .rvrt-status-running .rvrt-status-dot {
+	animation: rvrt-pulse 1.4s ease-out infinite;
+	background: var(--rvrt-accent);
+}
+
+.rvrt-settings .rvrt-log-pages {
+	align-items: center;
+	display: flex;
+	gap: 0.75em;
+	justify-content: center;
+	margin-block-start: 1.5em;
+}
+
+.rvrt-settings .rvrt-log-page-of {
+	color: var(--rvrt-muted);
+}
+
+.rvrt-settings .rvrt-log-nothing {
+	color: var(--rvrt-muted);
+	text-align: center;
+}
+
+.rvrt-settings .rvrt-log-empty {
+	border: 1px dashed var(--rvrt-border);
+	border-radius: 10px;
+	margin-block: 1.5em 0.5em;
+	padding: 2.5em 1.5em;
+	text-align: center;
+}
+
+.rvrt-settings .rvrt-log-empty-icon {
+	background: color-mix(in srgb, var(--rvrt-accent) 10%, #fff);
+	block-size: 56px;
+	border-radius: 50%;
+	color: var(--rvrt-accent);
+	font-size: 28px;
+	inline-size: 56px;
+	line-height: 56px;
+}
+
+.rvrt-settings .rvrt-log-empty-title {
+	font-size: 15px;
+	font-weight: 600;
+	margin-block: 0.75em 0.25em;
+}
+
+.rvrt-settings .rvrt-log-empty .description {
+	margin-inline: auto;
+	max-inline-size: 32em;
+}
+
+@keyframes rvrt-rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+@keyframes rvrt-grow {
+	from {
+		transform: scaleY(0);
+	}
+}
+
+@keyframes rvrt-fill {
+	from {
+		inline-size: 0;
+	}
+}
+
+@keyframes rvrt-pulse {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--rvrt-accent) 60%, transparent);
+	}
+
+	100% {
+		box-shadow: 0 0 0 8px transparent;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.rvrt-settings :is(.rvrt-entry, .rvrt-chart-bar, .rvrt-meter span, .rvrt-status-dot) {
+		animation: none;
+	}
+
+	.rvrt-settings .rvrt-card {
+		transition: none;
+	}
+
+	.rvrt-settings .rvrt-card:hover {
+		transform: none;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.rvrt-settings .rvrt-progress-fill {
 		transition: none;
@@ -298,5 +779,18 @@
 	.rvrt-settings .rvrt-post-types th[scope="row"] code {
 		display: block;
 		margin-inline-start: 0;
+	}
+
+	.rvrt-settings .rvrt-day-label {
+		inset-block-start: 46px;
+	}
+
+	.rvrt-settings .rvrt-log {
+		--rvrt-rail: 14px;
+	}
+
+	.rvrt-settings .rvrt-marker {
+		block-size: 28px;
+		inline-size: 28px;
 	}
 }
