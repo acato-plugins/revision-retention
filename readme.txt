@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -44,6 +44,12 @@ The sweep runs in the background at an interval you choose. Every run books the 
 
 There are also **Preview** and **Run one batch now** buttons on the settings screen. Preview reports what the policy would remove without deleting anything.
 
+= A log of every sweep =
+
+Switch on the log and every sweep that removes revisions gets an entry on the **Logs** tab: whether the schedule, somebody on the settings screen, or WP-CLI ran it, who that was, how many revisions it removed from how many posts, and per post type. A sweep spread over many batches is one entry. The tab shows them on a timeline, with a bar per day for the last month. Entries are kept for as long as you choose, from a week to a year, and older ones are deleted daily. Previews are never logged.
+
+Each site keeps its own log, next to its own revisions. On multisite the network screen's **Logs** tab shows every site's log together on one timeline, with each entry naming the site it ran on and linking to that site's own log.
+
 = From WP-CLI =
 
     # What is the policy, and what has it still got to do?
@@ -67,6 +73,8 @@ Settings travel the other way too. Once you have a policy on one site that you w
 When the network keeps the policy to itself, a site's screen can still **Preview** — reading what the policy would take away costs nothing — but only a network administrator can actually sweep that site. Otherwise a network could switch the scheduled sweep off and a site administrator could still delete by hand, which is the opposite of what locking the policy is for.
 
 The network screen can **Preview every site**, walking the whole network and reporting what the policy would remove without deleting anything, and **Sweep every site now**, which books a run on each site that has the scheduled sweep switched on. The sweep itself always runs per site, under whatever policy that site ends up with.
+
+Its **Logs** tab brings the log of every site together, so you can see what was removed across the network, where, and by whom, without opening each site in turn.
 
 = For developers =
 
@@ -131,8 +139,15 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 1. The settings screen, with the policy in force at the top and every post type's rule and stored revisions below it.
 2. Preview reporting what the policy would take from each post, and what each post keeps, before anything is deleted.
 3. The schedule: how often the sweep runs, how many posts it looks at per batch, and the most it may delete in one.
+4. The log as a timeline: a bar per day for the last month, and every sweep with who ran it, what it removed per post type, and whether it finished.
+5. The network's Logs tab, which shows every site's log together and names the site each sweep ran on.
 
 == Changelog ==
+
+= 1.1.0 =
+* An optional log of every sweep, who ran it and what it removed, shown as a timeline on its own tab.
+* Log entries are kept for a period you choose, from a week to a year, and older ones are deleted daily.
+* On multisite, the network screen shows the logs of every site together.
 
 = 1.0.0 =
 * Initial release.

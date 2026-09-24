@@ -227,6 +227,17 @@ class Settings_Page {
 	}
 
 	/**
+	 * URL of one tab of this site's screen.
+	 *
+	 * @param string $tab Tab slug.
+	 *
+	 * @return string
+	 */
+	private static function tab_url( string $tab ): string {
+		return add_query_arg( 'rvrt-tab', $tab, self::page_url() );
+	}
+
+	/**
 	 * Render whichever shape of the screen applies here.
 	 *
 	 * @return void
@@ -259,6 +270,16 @@ class Settings_Page {
 			if ( $read_only ) {
 				$this->render_panel( 'policy', $current, array( $this, 'render_summary' ) );
 				$this->render_sweep_form( $current );
+				$this->render_panel(
+					'logs',
+					$current,
+					function () {
+						( new Log_View( self::tab_url( 'logs' ) ) )->render();
+					}
+				);
+
+				// The wrapper is closed here too, since this branch leaves early.
+				echo '</div>';
 
 				return;
 			}
@@ -288,6 +309,7 @@ class Settings_Page {
 			return array(
 				'policy' => _x( 'Policy', 'settings tab', 'revision-retention' ),
 				'sweep'  => _x( 'Sweep now', 'settings tab', 'revision-retention' ),
+				'logs'   => _x( 'Logs', 'settings tab', 'revision-retention' ),
 			);
 		}
 
@@ -302,6 +324,7 @@ class Settings_Page {
 		}
 
 		$tabs['sweep']    = _x( 'Sweep now', 'settings tab', 'revision-retention' );
+		$tabs['logs']     = _x( 'Logs', 'settings tab', 'revision-retention' );
 		$tabs['advanced'] = _x( 'Advanced', 'settings tab', 'revision-retention' );
 
 		return $tabs;
@@ -646,6 +669,14 @@ class Settings_Page {
 		}
 
 			$this->render_panel(
+				'logs',
+				$current,
+				function () use ( $stored, $inherited, $inheritable, $is_network ) {
+					$this->render_log_section( $stored, $inherited, $inheritable, $is_network );
+				}
+			);
+
+			$this->render_panel(
 				'advanced',
 				$current,
 				function () use ( $stored, $inherited, $inheritable ) {
@@ -770,7 +801,7 @@ class Settings_Page {
 				<th scope="row">
 					<label for="rvrt-cron-interval"><?php echo esc_html_x( 'How often', 'field label', 'revision-retention' ); ?></label>
 				</th>
-				<td><?php $this->render_interval( $stored, $inherited, $inheritable ); ?></td>
+				<td><?php $this->render_choice( 'cron_interval', 'rvrt-cron-interval', Settings::intervals(), $stored, $inherited, $inheritable ); ?></td>
 			</tr>
 			<tr>
 				<th scope="row">
@@ -794,6 +825,51 @@ class Settings_Page {
 			</tr>
 		</table>
 		<?php
+	}
+
+	/**
+	 * Whether sweeps are logged and for how long, then the log itself.
+	 *
+	 * @param array<string, mixed> $stored      Values as stored for this screen.
+	 * @param array<string, mixed> $inherited   Network values to fall back to.
+	 * @param bool                 $inheritable Whether an empty field inherits.
+	 * @param bool                 $is_network  Whether the network screen is being rendered.
+	 *
+	 * @return void
+	 */
+	private function render_log_section( array $stored, array $inherited, bool $inheritable, bool $is_network ): void {
+		?>
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php echo esc_html_x( 'Log', 'field label', 'revision-retention' ); ?></th>
+				<td>
+					<?php $this->render_bool( 'log_enabled', 'rvrt-log-enabled', _x( 'Keep a log of every sweep that removes revisions', 'checkbox label', 'revision-retention' ), $stored, $inherited, $inheritable ); ?>
+					<p class="description"><?php echo esc_html_x( 'Records who or what ran each sweep, the schedule, somebody on this screen or WP-CLI, and how many revisions it removed. Previews are never logged.', 'field description', 'revision-retention' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row">
+					<label for="rvrt-log-retention"><?php echo esc_html_x( 'Keep entries for', 'field label', 'revision-retention' ); ?></label>
+				</th>
+				<td>
+					<?php $this->render_choice( 'log_retention', 'rvrt-log-retention', Settings::log_retentions(), $stored, $inherited, $inheritable ); ?>
+					<p class="description"><?php echo esc_html_x( 'Older entries are deleted once a day.', 'field description', 'revision-retention' ); ?></p>
+				</td>
+			</tr>
+		</table>
+		<?php
+		if ( $is_network ) {
+			printf(
+				'<p class="description rvrt-panel-intro">%s</p>',
+				esc_html_x( 'Each site keeps its own log, next to its own revisions. Below are the logs of every site together; a site\'s own screen shows just that site.', 'field description', 'revision-retention' )
+			);
+
+			( new Log_View( add_query_arg( 'rvrt-tab', 'logs', self::page_url( true ) ), true ) )->render();
+
+			return;
+		}
+
+		( new Log_View( self::tab_url( 'logs' ) ) )->render();
 	}
 
 	/**
@@ -1185,8 +1261,14 @@ class Settings_Page {
 			(int) Settings::get( 'max_deletions' )
 		);
 
+		$entry = 0;
+
 		if ( ! $dry_run ) {
 			$this->remember_sweep( $result );
+
+			// The script hands back the entry the first batch opened, so a run
+			// of any length is one line in the log.
+			$entry = Log::record( Log::SOURCE_SCREEN, $result, isset( $_POST['log'] ) ? absint( wp_unslash( $_POST['log'] ) ) : 0 );
 		}
 
 		$last = Cleaner::last_parent_id();
@@ -1199,6 +1281,7 @@ class Settings_Page {
 				'finished'  => $result->finished,
 				'items'     => $result->items,
 				'affected'  => $result->affected,
+				'log'       => $entry,
 				'progress'  => $result->finished || $last < 1
 					? 100
 					: min( 99, (int) floor( ( $result->cursor / $last ) * 100 ) ),
@@ -1623,32 +1706,34 @@ class Settings_Page {
 	}
 
 	/**
-	 * Render the interval choice.
+	 * Render a choice between a fixed set of values.
 	 *
-	 * @param array<string, mixed> $stored      Values as stored for this screen.
-	 * @param array<string, mixed> $inherited   Network values to fall back to.
-	 * @param bool                 $inheritable Whether an empty value inherits.
+	 * @param string                $key         Setting key.
+	 * @param string                $id          HTML id.
+	 * @param array<string, string> $choices     Labels keyed by value.
+	 * @param array<string, mixed>  $stored      Values as stored for this screen.
+	 * @param array<string, mixed>  $inherited   Network values to fall back to.
+	 * @param bool                  $inheritable Whether an empty value inherits.
 	 *
 	 * @return void
 	 */
-	private function render_interval( array $stored, array $inherited, bool $inheritable ): void {
-		$value     = isset( $stored['cron_interval'] ) ? (string) $stored['cron_interval'] : '';
-		$intervals = Settings::intervals();
+	private function render_choice( string $key, string $id, array $choices, array $stored, array $inherited, bool $inheritable ): void {
+		$value = isset( $stored[ $key ] ) ? (string) $stored[ $key ] : '';
 		?>
-		<select id="rvrt-cron-interval" name="rvrt_settings[cron_interval]">
+		<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]">
 			<?php if ( $inheritable ) : ?>
 				<option value="" <?php selected( '', $value ); ?>>
 					<?php
 					printf(
-						/* translators: %s: the interval inherited from the network. */
+						/* translators: %s: the value inherited from the network. */
 						esc_html_x( 'Inherit (%s)', 'inherited setting option', 'revision-retention' ),
-						esc_html( $intervals[ (string) ( $inherited['cron_interval'] ?? '' ) ] ?? '' )
+						esc_html( $choices[ (string) ( $inherited[ $key ] ?? '' ) ] ?? '' )
 					);
 					?>
 				</option>
 			<?php endif; ?>
-			<?php foreach ( $intervals as $interval => $label ) : ?>
-				<option value="<?php echo esc_attr( $interval ); ?>" <?php selected( $interval, $value ); ?>>
+			<?php foreach ( $choices as $choice => $label ) : ?>
+				<option value="<?php echo esc_attr( $choice ); ?>" <?php selected( $choice, $value ); ?>>
 					<?php echo esc_html( $label ); ?>
 				</option>
 			<?php endforeach; ?>
@@ -1739,6 +1824,7 @@ class Settings_Page {
 
 		if ( ! $dry_run ) {
 			$this->remember_sweep( $result );
+			Log::record( Log::SOURCE_SCREEN, $result );
 		}
 
 		$this->redirect(

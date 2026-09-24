@@ -242,10 +242,12 @@ class CLI {
 		$cleaner = new Cleaner();
 		$total   = new Sweep_Result( $cursor, 0, 0, false, $dry_run );
 		$batches = 0;
+		$entry   = 0;
 
 		do {
 			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
 			$total  = $total->add( $result );
+			$entry  = Log::record( Log::SOURCE_CLI, $result, $entry );
 			++$batches;
 
 			\WP_CLI::log(

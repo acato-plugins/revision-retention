@@ -17,7 +17,9 @@ require_once __DIR__ . '/includes/class-retention-rule.php';
 require_once __DIR__ . '/includes/class-post-types.php';
 require_once __DIR__ . '/includes/class-settings.php';
 require_once __DIR__ . '/includes/class-scheduler.php';
+require_once __DIR__ . '/includes/class-log.php';
 
+use Acato\RevisionRetention\Log;
 use Acato\RevisionRetention\Scheduler;
 use Acato\RevisionRetention\Settings;
 
@@ -35,6 +37,8 @@ function rvrt_uninstall_site(): void {
 
 	delete_option( Settings::OPTION );
 	delete_option( Scheduler::CURSOR_OPTION );
+
+	Log::uninstall();
 }
 
 if ( ! is_multisite() ) {

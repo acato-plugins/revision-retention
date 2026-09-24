@@ -147,6 +147,10 @@ class Scheduler {
 			(int) Settings::get( 'max_deletions' )
 		);
 
+		// The whole sweep is one entry in the log, however many batches it takes,
+		// so the entry this run opened is carried along with the cursor.
+		$entry = Log::record( Log::SOURCE_CRON, $result, $state['log'] );
+
 		if ( $result->finished ) {
 			self::remember_finished_run( $state, $result );
 			self::reschedule();
@@ -163,6 +167,7 @@ class Scheduler {
 				'started'   => $state['started'] > 0 ? $state['started'] : time(),
 				'finished'  => $state['finished'],
 				'removed'   => $state['removed'],
+				'log'       => $entry,
 			)
 		);
 
@@ -174,7 +179,7 @@ class Scheduler {
 	/**
 	 * Where the current sweep got to, and what the last one did.
 	 *
-	 * @return array{cursor: int, revisions: int, posts: int, started: int, finished: int, removed: int}
+	 * @return array{cursor: int, revisions: int, posts: int, started: int, finished: int, removed: int, log: int}
 	 */
 	public static function state(): array {
 		$stored = get_option( self::CURSOR_OPTION, array() );
@@ -187,6 +192,7 @@ class Scheduler {
 			'started'   => (int) ( $stored['started'] ?? 0 ),
 			'finished'  => (int) ( $stored['finished'] ?? 0 ),
 			'removed'   => (int) ( $stored['removed'] ?? 0 ),
+			'log'       => (int) ( $stored['log'] ?? 0 ),
 		);
 	}
 
@@ -214,8 +220,8 @@ class Scheduler {
 	/**
 	 * Record a completed sweep and clear the cursor for the next one.
 	 *
-	 * @param array{cursor: int, revisions: int, posts: int, started: int, finished: int, removed: int} $state  State before this batch.
-	 * @param Sweep_Result                                                                              $result What the last batch did.
+	 * @param array{cursor: int, revisions: int, posts: int, started: int, finished: int, removed: int, log: int} $state  State before this batch.
+	 * @param Sweep_Result                                                                                        $result What the last batch did.
 	 *
 	 * @return void
 	 */

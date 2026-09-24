@@ -305,6 +305,16 @@ check( 'the deletion cap is clamped', Settings::sanitize( array( 'max_deletions'
 check( 'the deletion cap may be lifted with zero', Settings::sanitize( array( 'max_deletions' => '0' ) )['max_deletions'], 0 );
 check( 'the deletion cap defaults per batch', (int) Settings::get( 'max_deletions' ), 1000 );
 check( 'an unknown interval falls back to the default', $s['cron_interval'], 'weekly' );
+
+$s = Settings::sanitize( array( 'log_enabled' => '1', 'log_retention' => 'forever' ) );
+check( 'the log can be switched on', $s['log_enabled'], true );
+check( 'an unknown log retention falls back to three months', $s['log_retention'], 'quarter' );
+check( 'a known log retention is kept', Settings::sanitize( array( 'log_retention' => 'year' ) )['log_retention'], 'year' );
+
+reset_state();
+check( 'the log is off until switched on', Settings::get( 'log_enabled' ), false );
+update_option( Settings::OPTION, array( 'log_retention' => 'week' ) );
+check( 'log retention resolves to days', Settings::log_retention_days(), 7 );
 check( 'unknown post types are dropped', Settings::sanitize( array( 'enable_revisions' => array( 'product', 'bogus' ) ) )['enable_revisions'], array( 'product' ) );
 
 // The screen offers a list of durations, but that list is an affordance: a

@@ -129,4 +129,4 @@ foreach ( array( 'retention-rule', 'post-types', 'settings', 'policy', 'sweep-re
 }
 
 define( 'RVRT_PLUGIN_FILE', __DIR__ . '/../revision-retention.php' );
-define( 'RVRT_VERSION', '1.0.0' );
+define( 'RVRT_VERSION', '1.1.0' );
