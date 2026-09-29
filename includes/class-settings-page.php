@@ -1290,12 +1290,13 @@ class Settings_Page {
 	}
 
 	/**
-	 * Preview one batch on one site of the network, then say where to go next.
+	 * Sweep one batch on one site of the network, then say where to go next.
 	 *
-	 * A network preview walks the sites in turn, a batch at a time, so the
-	 * browser drives it and no single request has to carry a whole network.
-	 * Nothing is ever deleted here: the network screen previews, and the
-	 * deleting is booked per site where it belongs.
+	 * A network sweep walks the sites in turn, a batch at a time, so the
+	 * browser drives it and no single request has to carry a whole network. A
+	 * real run deletes and logs on each site exactly as that site's own Run now
+	 * would, and passes over the sites that have switched the sweep off, the
+	 * same ones booking a sweep leaves alone.
 	 *
 	 * @return void
 	 */
@@ -1322,6 +1323,7 @@ class Settings_Page {
 			);
 		}
 
+		$dry_run   = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
 		$requested = isset( $_POST['site'] ) ? absint( wp_unslash( $_POST['site'] ) ) : 0;
 		$cursor    = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
 		$index     = 0 === $requested ? 0 : array_search( $requested, $sites, true );
@@ -1339,13 +1341,31 @@ class Settings_Page {
 		Policy::flush();
 		Post_Types::flush();
 
-		$result = ( new Cleaner() )->sweep(
-			(int) Settings::get( 'batch_size' ),
-			true,
-			$cursor,
-			array(),
-			(int) Settings::get( 'max_deletions' )
-		);
+		// A site that switched the sweep off is not overruled from here, the
+		// same as when a sweep is booked, and counts as done straight away.
+		$skipped = ! $dry_run && empty( Settings::get( 'cron_enabled' ) );
+		$entry   = 0;
+
+		// A real run resumes whatever the schedule was part way through.
+		if ( ! $dry_run && 0 === $cursor ) {
+			$cursor = Scheduler::state()['cursor'];
+		}
+
+		$result = $skipped
+			? new Sweep_Result( 0, 0, 0, true, false )
+			: ( new Cleaner() )->sweep(
+				(int) Settings::get( 'batch_size' ),
+				$dry_run,
+				$cursor,
+				array(),
+				(int) Settings::get( 'max_deletions' )
+			);
+
+		if ( ! $dry_run && ! $skipped ) {
+			$this->remember_sweep( $result );
+
+			$entry = Log::record( Log::SOURCE_SCREEN, $result, isset( $_POST['log'] ) ? absint( wp_unslash( $_POST['log'] ) ) : 0 );
+		}
 
 		$name  = get_bloginfo( 'name' );
 		$items = array_map(
@@ -1372,6 +1392,9 @@ class Settings_Page {
 				'posts'     => $result->affected,
 				'revisions' => $result->revisions,
 				'items'     => $items,
+				// The entry lives in this site's own table, so it is only handed
+				// back while the next batch stays on the same site.
+				'log'       => $result->finished ? 0 : $entry,
 				'finished'  => $finished,
 				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $next_index / count( $sites ) ) * 100 ) ),
 			)
@@ -1429,12 +1452,12 @@ class Settings_Page {
 	}
 
 	/**
-	 * Render the network sweep, which books a run on each site.
+	 * Render the network sweep, which runs or books a sweep on each site.
 	 *
-	 * A network screen has no database of its own to clean. WP-Cron is per
-	 * site, and so is a sweep: this books one on every site instead of doing
-	 * the work here, which keeps a network of any size out of a single request
-	 * and lets each site clean itself in batches the way it always does.
+	 * A network screen has no database of its own to clean. Sweeping now walks
+	 * the sites from the browser a batch at a time, so a network of any size
+	 * stays out of a single request. Booking leaves each site to WP-Cron,
+	 * which is per site, to clean itself in batches the way it always does.
 	 *
 	 * @param string $current Tab being shown.
 	 *
@@ -1474,8 +1497,11 @@ class Settings_Page {
 						<button type="button" name="mode" value="preview" class="button">
 							<?php echo esc_html_x( 'Preview every site', 'button label', 'revision-retention' ); ?>
 						</button>
-						<button type="submit" class="button button-primary">
+						<button type="button" name="mode" value="run" class="button button-primary">
 							<?php echo esc_html_x( 'Sweep every site now', 'button label', 'revision-retention' ); ?>
+						</button>
+						<button type="submit" class="button">
+							<?php echo esc_html_x( 'Schedule a sweep on every site', 'button label', 'revision-retention' ); ?>
 						</button>
 						<button type="button" class="button rvrt-stop" hidden>
 							<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
@@ -1515,7 +1541,7 @@ class Settings_Page {
 					</div>
 
 					<p class="description">
-						<?php echo esc_html_x( 'Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Books a sweep on every site that has the scheduled sweep switched on, to start within the next few minutes. The work itself happens on each site, in batches, exactly as a scheduled run would. Sites that have switched the sweep off are left alone. For a preview of what one site would lose, use that site\'s own screen.', 'field description', 'revision-retention' ); ?>
+						<?php echo esc_html_x( 'Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Sweep every site now does the same and deletes as it goes, site after site, and logs what it removed on each one. It can be stopped, and the schedule picks up whatever is left. Schedule a sweep on every site leaves the work to WP-Cron instead, starting each site within the next few minutes. Both pass over the sites that have switched the sweep off.', 'field description', 'revision-retention' ); ?>
 					</p>
 				</form>
 				<?php

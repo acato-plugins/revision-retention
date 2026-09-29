@@ -46,7 +46,7 @@ There are also **Preview** and **Run one batch now** buttons on the settings scr
 
 = A log of every sweep =
 
-Switch on the log and every sweep that removes revisions gets an entry on the **Logs** tab: whether the schedule, somebody on the settings screen, or WP-CLI ran it, who that was, how many revisions it removed from how many posts, and per post type. A sweep spread over many batches is one entry. The tab shows them on a timeline, with a bar per day for the last month. Entries are kept for as long as you choose, from a week to a year, and older ones are deleted daily. Previews are never logged.
+The log is on from the start, and every sweep that removes revisions gets an entry on the **Logs** tab: whether the schedule, somebody on the settings screen, or WP-CLI ran it, who that was, how many revisions it removed from how many posts, and per post type. A sweep spread over many batches is one entry. The tab shows them on a timeline, with a bar per day for the last month. Entries are kept for as long as you choose, from a week to a year, and older ones are deleted daily. Previews are never logged, and the log can be switched off on the Logs tab.
 
 Each site keeps its own log, next to its own revisions. On multisite the network screen's **Logs** tab shows every site's log together on one timeline, with each entry naming the site it ran on and linking to that site's own log.
 
@@ -72,7 +72,7 @@ Settings travel the other way too. Once you have a policy on one site that you w
 
 When the network keeps the policy to itself, a site's screen can still **Preview** — reading what the policy would take away costs nothing — but only a network administrator can actually sweep that site. Otherwise a network could switch the scheduled sweep off and a site administrator could still delete by hand, which is the opposite of what locking the policy is for.
 
-The network screen can **Preview every site**, walking the whole network and reporting what the policy would remove without deleting anything, and **Sweep every site now**, which books a run on each site that has the scheduled sweep switched on. The sweep itself always runs per site, under whatever policy that site ends up with.
+The network screen can **Preview every site**, walking the whole network and reporting what the policy would remove without deleting anything, **Sweep every site now**, which does the same and deletes as it goes, site after site, with a progress bar and an entry in each site's log, and **Schedule a sweep on every site**, which leaves the work to WP-Cron on each site instead. Both pass over the sites that have switched the sweep off. The sweep itself always runs per site, under whatever policy that site ends up with.
 
 Its **Logs** tab brings the log of every site together, so you can see what was removed across the network, where, and by whom, without opening each site in turn.
 
@@ -145,9 +145,10 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 == Changelog ==
 
 = 1.1.0 =
-* An optional log of every sweep, who ran it and what it removed, shown as a timeline on its own tab.
+* A log of every sweep, who ran it and what it removed, shown as a timeline on its own tab. On by default; a site that saved its settings with the log switched off keeps it off.
 * Log entries are kept for a period you choose, from a week to a year, and older ones are deleted daily.
 * On multisite, the network screen shows the logs of every site together.
+* On multisite, the network screen can sweep every site right away, with a progress bar. Booking the sweep through WP-Cron is now labelled **Schedule a sweep on every site**.
 
 = 1.0.0 =
 * Initial release.

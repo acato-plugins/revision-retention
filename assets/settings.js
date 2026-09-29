@@ -329,7 +329,9 @@
 				totals.revisions += batch.revisions;
 				cursor = batch.cursor;
 				site = batch.site ?? 0;
-				log = batch.log || log;
+				// Always what the server hands back: a network run moves to
+				// another site's table, and its entry starts afresh there.
+				log = batch.log ?? 0;
 				finished = batch.finished;
 
 				addToList( batch.items ?? [] );

@@ -312,7 +312,7 @@ check( 'an unknown log retention falls back to three months', $s['log_retention'
 check( 'a known log retention is kept', Settings::sanitize( array( 'log_retention' => 'year' ) )['log_retention'], 'year' );
 
 reset_state();
-check( 'the log is off until switched on', Settings::get( 'log_enabled' ), false );
+check( 'the log is on until switched off', Settings::get( 'log_enabled' ), true );
 update_option( Settings::OPTION, array( 'log_retention' => 'week' ) );
 check( 'log retention resolves to days', Settings::log_retention_days(), 7 );
 check( 'unknown post types are dropped', Settings::sanitize( array( 'enable_revisions' => array( 'product', 'bogus' ) ) )['enable_revisions'], array( 'product' ) );
