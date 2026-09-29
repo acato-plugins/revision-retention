@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -144,11 +144,14 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 == Changelog ==
 
+= 1.2.0 =
+* The log is on by default. A site that saved its settings with the log switched off keeps it off.
+* On multisite, **Sweep every site now** sweeps every site right away, with a progress bar, and logs on each site. Booking the sweep through WP-Cron is now labelled **Schedule a sweep on every site**.
+
 = 1.1.0 =
-* A log of every sweep, who ran it and what it removed, shown as a timeline on its own tab. On by default; a site that saved its settings with the log switched off keeps it off.
+* An optional log of every sweep, who ran it and what it removed, shown as a timeline on its own tab.
 * Log entries are kept for a period you choose, from a week to a year, and older ones are deleted daily.
 * On multisite, the network screen shows the logs of every site together.
-* On multisite, the network screen can sweep every site right away, with a progress bar. Booking the sweep through WP-Cron is now labelled **Schedule a sweep on every site**.
 
 = 1.0.0 =
 * Initial release.
