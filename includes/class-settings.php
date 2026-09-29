@@ -117,7 +117,7 @@ class Settings {
 			'cron_interval'            => self::DEFAULT_INTERVAL,
 			'batch_size'               => 200,
 			'max_deletions'            => 1000,
-			'log_enabled'              => false,
+			'log_enabled'              => true,
 			'log_retention'            => self::DEFAULT_LOG_RETENTION,
 			'remove_data_on_uninstall' => false,
 		);
