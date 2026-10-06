@@ -1,5 +1,5 @@
 === Revision Retention ===
-Contributors: acato, paulacato
+Contributors: acato, paulacato, frankabeekman
 Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
