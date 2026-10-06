@@ -144,6 +144,15 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 == Changelog ==
 
+= 1.3.0 =
+* The **Schedule** tab says whether WP-Cron actually runs on the site, and warns under **Run automatically** when scheduled events are overdue, for instance because `DISABLE_WP_CRON` is set without a server cron job behind it. `wp revision-retention status` reports the same.
+* Saving the settings no longer pushes the scheduled sweep back. A sweep that was part way carries on a minute later instead of a whole interval later.
+* A sweep that is stopped and started again, or picked up by the schedule, stays one line in the log instead of leaving lines behind that read "In progress".
+* The sweep status counts sweeps finished with **Run now** and WP-CLI, not only scheduled ones.
+* The progress text counts every post checked, so a sweep with a small batch size no longer looks stuck.
+* **Sweep every site now** asks for confirmation first.
+* Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
+
 = 1.2.0 =
 * The log is on by default. A site that saved its settings with the log switched off keeps it off.
 * On multisite, **Sweep every site now** sweeps every site right away, with a progress bar, and logs on each site. Booking the sweep through WP-Cron is now labelled **Schedule a sweep on every site**.

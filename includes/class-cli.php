@@ -87,6 +87,10 @@ class CLI {
 					: sprintf( '%s, next run %s', (string) Settings::get( 'cron_interval' ), $next ? gmdate( 'Y-m-d H:i:s', (int) $next ) . ' GMT' : 'not booked' ),
 			),
 			array(
+				'setting' => 'wp_cron',
+				'value'   => self::describe_cron(),
+			),
+			array(
 				'setting' => 'revisions_stored',
 				'value'   => (string) array_sum( $counts ),
 			),
@@ -242,12 +246,10 @@ class CLI {
 		$cleaner = new Cleaner();
 		$total   = new Sweep_Result( $cursor, 0, 0, false, $dry_run );
 		$batches = 0;
-		$entry   = 0;
 
 		do {
 			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
 			$total  = $total->add( $result );
-			$entry  = Log::record( Log::SOURCE_CLI, $result, $entry );
 			++$batches;
 
 			\WP_CLI::log(
@@ -260,8 +262,10 @@ class CLI {
 				)
 			);
 
+			// The same sweep the schedule and the screen carry on: one cursor,
+			// one log entry and one total, whoever runs the next batch.
 			if ( ! $dry_run ) {
-				self::remember( $total );
+				Scheduler::advance( Log::SOURCE_CLI, $result );
 			}
 		} while ( ! $total->finished && ( 0 === $max || $batches < $max ) );
 
@@ -277,32 +281,21 @@ class CLI {
 	}
 
 	/**
-	 * Persist how far a real run got, so cron can carry on from there.
+	 * Whether anything runs the schedule, in one line.
 	 *
-	 * @param Sweep_Result $total Everything this run has done so far.
-	 *
-	 * @return void
+	 * @return string
 	 */
-	private static function remember( Sweep_Result $total ): void {
-		if ( $total->finished ) {
-			Scheduler::reset_cursor();
+	private static function describe_cron(): string {
+		$health = Cron_Health::check();
+		$how    = $health['visits'] ? 'started by visits' : 'DISABLE_WP_CRON set, needs a server cron job';
+		$ran    = Scheduler::last_run();
+		$last   = $ran > 0 ? sprintf( ', sweep last ran %s GMT', gmdate( 'Y-m-d H:i:s', $ran ) ) : '';
 
-			return;
+		if ( Cron_Health::STALLED === $health['status'] ) {
+			return sprintf( 'NOT RUNNING, events %d hours overdue (%s)%s', intdiv( $health['overdue'], HOUR_IN_SECONDS ), $how, $last );
 		}
 
-		$state = Scheduler::state();
-
-		update_option(
-			Scheduler::CURSOR_OPTION,
-			array(
-				'cursor'    => $total->cursor,
-				'revisions' => $total->revisions,
-				'posts'     => $total->posts,
-				'started'   => $state['started'] > 0 ? $state['started'] : time(),
-				'finished'  => $state['finished'],
-				'removed'   => $state['removed'],
-			)
-		);
+		return sprintf( 'running (%s)%s', $how, $last );
 	}
 
 	/**

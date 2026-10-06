@@ -8,7 +8,7 @@
 ( () => {
 	'use strict';
 
-	const strings = window.rvrtSettings ?? {};
+	const { _x, _nx, sprintf } = window.wp.i18n;
 
 	/**
 	 * Present a count the way the site writes numbers.
@@ -20,17 +20,42 @@
 	const count = ( value ) =>
 		Number( value ).toLocaleString( document.documentElement.lang || undefined );
 
-	/**
-	 * Fill a translated template, numbered placeholders or a single bare one.
-	 *
-	 * Translators reorder %1$s and %2$s, and a string with one placeholder is
-	 * written as plain %s, so both spellings have to work.
+	/*
+	 * The counts a sentence is built from, each in the plural its number asks
+	 * for. A sentence with two counts would otherwise have to agree with both
+	 * in one string, which no language's plural rules can express.
 	 */
-	const format = ( template, first, second ) =>
-		String( template ?? '' )
-			.replace( '%1$s', count( first ) )
-			.replace( '%2$s', count( second ) )
-			.replace( '%s', count( first ) );
+	const revisions = ( value ) =>
+		/* translators: %s: number of revisions. */
+		sprintf( _nx( '%s revision', '%s revisions', value, 'sweep count', 'revision-retention' ), count( value ) );
+
+	const posts = ( value ) =>
+		/* translators: %s: number of posts. */
+		sprintf( _nx( '%s post', '%s posts', value, 'sweep count', 'revision-retention' ), count( value ) );
+
+	/** What a sweep has done so far, for the small text beside the bar. */
+	const describeBusy = ( mode, totals ) =>
+		sprintf(
+			mode === 'run'
+				? /* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "120 posts". */
+				  _x( '%1$s removed, %2$s checked', 'sweep progress', 'revision-retention' )
+				: /* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "120 posts". */
+				  _x( '%1$s found, %2$s checked', 'sweep progress', 'revision-retention' ),
+			revisions( totals.revisions ),
+			posts( totals.checked )
+		);
+
+	/** What a sweep did, for the notice once it ends. */
+	const describeDone = ( mode, totals ) =>
+		sprintf(
+			mode === 'run'
+				? /* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts". */
+				  _x( '%1$s removed from %2$s.', 'sweep result', 'revision-retention' )
+				: /* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts". */
+				  _x( '%1$s would be removed from %2$s. Nothing has been deleted.', 'sweep result', 'revision-retention' ),
+			revisions( totals.revisions ),
+			posts( totals.posts )
+		);
 
 	/**
 	 * Dim the fields that depend on a switch while it is off.
@@ -238,10 +263,10 @@
 					const link = document.createElement( 'a' );
 
 					link.href = item.editUrl;
-					link.textContent = item.title || strings.untitled;
+					link.textContent = item.title || _x( '(no title)', 'affected posts list', 'revision-retention' );
 					title.append( link );
 				} else {
-					title.textContent = item.title || strings.untitled;
+					title.textContent = item.title || _x( '(no title)', 'affected posts list', 'revision-retention' );
 				}
 
 				site.textContent = item.site ?? '';
@@ -265,7 +290,11 @@
 
 			if ( omitted > 0 ) {
 				affectedMore.hidden = false;
-				affectedMore.textContent = format( strings.more, omitted );
+				affectedMore.textContent = sprintf(
+					/* translators: %s: number of posts. */
+					_nx( 'And %s more post.', 'And %s more posts.', omitted, 'affected posts list', 'revision-retention' ),
+					count( omitted )
+				);
 			}
 		};
 
@@ -275,7 +304,7 @@
 			text.textContent = message;
 		};
 
-		const requestBatch = async ( mode, cursor, site, log ) => {
+		const requestBatch = async ( mode, cursor, site ) => {
 			const response = await fetch( form.dataset.ajaxUrl, {
 				method: 'POST',
 				credentials: 'same-origin',
@@ -285,9 +314,6 @@
 					mode,
 					cursor: String( cursor ),
 					site: String( site ),
-					// The log entry the first batch opened, so the whole run is
-					// one entry however many batches it takes.
-					log: String( log ),
 				} ),
 			} );
 
@@ -300,50 +326,43 @@
 				// Anything that prints before the response lands in front of it
 				// and stops it being data at all. Say so, rather than showing a
 				// parser's complaint about an angle bracket.
-				throw new Error( strings.notJson );
+				throw new Error(
+					_x( 'The server answered with something other than data, which usually means another plugin printed a PHP warning. The site\'s error log will say what it was.', 'sweep error', 'revision-retention' )
+				);
 			}
 
 			if ( ! payload?.success ) {
-				throw new Error( payload?.data?.message ?? strings.failed );
+				throw new Error(
+					payload?.data?.message ?? _x( 'The sweep could not be completed.', 'sweep error', 'revision-retention' )
+				);
 			}
 
 			return payload.data;
 		};
 
 		const sweep = async ( mode ) => {
-			const totals = { posts: 0, revisions: 0 };
+			// Checked is every post a batch looked at, which is what keeps the
+			// progress moving; posts is only the ones that lost something.
+			const totals = { checked: 0, posts: 0, revisions: 0 };
 			let cursor = 0;
 			let site = 0;
-			let log = 0;
 			let finished = false;
 
 			while ( ! finished && ! cancelled ) {
 				// Each batch is awaited before the next is asked for, so the
 				// site is never handed more than one sweep at a time.
 				// eslint-disable-next-line no-await-in-loop
-				const batch = await requestBatch( mode, cursor, site, log );
+				const batch = await requestBatch( mode, cursor, site );
 
-				// The posts that actually lost something, which is what the list
-				// below shows and what the sentence is about.
-				totals.posts += batch.affected ?? batch.posts;
+				totals.checked += batch.posts;
+				totals.posts += batch.affected;
 				totals.revisions += batch.revisions;
 				cursor = batch.cursor;
 				site = batch.site ?? 0;
-				// Always what the server hands back: a network run moves to
-				// another site's table, and its entry starts afresh there.
-				log = batch.log ?? 0;
 				finished = batch.finished;
 
 				addToList( batch.items ?? [] );
-
-				report(
-					batch.progress,
-					format(
-						mode === 'run' ? strings.runBusy : strings.previewBusy,
-						totals.revisions,
-						totals.posts
-					)
-				);
+				report( batch.progress, describeBusy( mode, totals ) );
 			}
 
 			return { totals, finished };
@@ -352,7 +371,9 @@
 		form.addEventListener( 'click', async ( event ) => {
 			const button = event.target.closest( 'button[name="mode"]' );
 
-			if ( ! button || running ) {
+			// A press whose confirmation was declined has its default
+			// prevented by syncConfirms() before it gets here.
+			if ( ! button || running || event.defaultPrevented ) {
 				return;
 			}
 
@@ -360,20 +381,16 @@
 			cancelled = false;
 			resetList();
 			setBusy( true );
-			report( 0, strings.starting );
+			report( 0, _x( 'Starting…', 'sweep progress', 'revision-retention' ) );
 
 			try {
 				const { totals, finished } = await sweep( button.value );
-				const done = format(
-					button.value === 'run' ? strings.runDone : strings.previewDone,
-					totals.revisions,
-					totals.posts
-				);
+				const done = describeDone( button.value, totals );
 
 				report( finished ? 100 : Number( bar.getAttribute( 'aria-valuenow' ) ), '' );
 
 				if ( ! finished ) {
-					announce( `${ done } ${ strings.stoppedShort }`, 'warning' );
+					announce( `${ done } ${ _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' ) }`, 'warning' );
 				} else {
 					announce( done, button.value === 'run' ? 'success' : 'info' );
 				}
@@ -388,7 +405,7 @@
 		stop.addEventListener( 'click', () => {
 			cancelled = true;
 			stop.disabled = true;
-			text.textContent = strings.stopping;
+			text.textContent = _x( 'Stopping after this batch…', 'sweep progress', 'revision-retention' );
 		} );
 	};
 

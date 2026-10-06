@@ -794,3 +794,8 @@
 		inline-size: 28px;
 	}
 }
+
+/* The cron warning sits in a form row, under the switch it is about. */
+.rvrt-settings .rvrt-cron-health.notice {
+	margin: 0.75em 0 0;
+}

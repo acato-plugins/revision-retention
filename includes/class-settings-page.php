@@ -137,30 +137,8 @@ class Settings_Page {
 		$url = plugin_dir_url( RVRT_PLUGIN_FILE );
 
 		wp_enqueue_style( 'rvrt-settings', $url . 'assets/settings.css', array(), self::asset_version( 'assets/settings.css' ) );
-		wp_enqueue_script( 'rvrt-settings', $url . 'assets/settings.js', array(), self::asset_version( 'assets/settings.js' ), true );
-
-		wp_localize_script(
-			'rvrt-settings',
-			'rvrtSettings',
-			array(
-				'starting'     => _x( 'Starting…', 'sweep progress', 'revision-retention' ),
-				/* translators: 1: number of revisions, 2: number of posts. */
-				'previewBusy'  => _x( '%1$s revisions found, %2$s posts checked', 'sweep progress', 'revision-retention' ),
-				/* translators: 1: number of revisions, 2: number of posts. */
-				'runBusy'      => _x( '%1$s revisions removed, %2$s posts checked', 'sweep progress', 'revision-retention' ),
-				/* translators: 1: number of revisions, 2: number of posts. */
-				'previewDone'  => _x( '%1$s revisions would be removed from %2$s posts. Nothing has been deleted.', 'sweep result', 'revision-retention' ),
-				/* translators: 1: number of revisions, 2: number of posts. */
-				'runDone'      => _x( '%1$s revisions removed from %2$s posts.', 'sweep result', 'revision-retention' ),
-				'stoppedShort' => _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' ),
-				'stopping'     => _x( 'Stopping after this batch…', 'sweep progress', 'revision-retention' ),
-				'failed'       => _x( 'The sweep could not be completed.', 'sweep error', 'revision-retention' ),
-				'notJson'      => _x( 'The server answered with something other than data, which usually means another plugin printed a PHP warning. The site\'s error log will say what it was.', 'sweep error', 'revision-retention' ),
-				/* translators: %s: number of posts. */
-				'more'         => _x( 'And %s more posts.', 'affected posts list', 'revision-retention' ),
-				'untitled'     => _x( '(no title)', 'affected posts list', 'revision-retention' ),
-			)
-		);
+		wp_enqueue_script( 'rvrt-settings', $url . 'assets/settings.js', array( 'wp-i18n' ), self::asset_version( 'assets/settings.js' ), true );
+		wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
 	}
 
 	/**
@@ -520,24 +498,16 @@ class Settings_Page {
 				number_format_i18n( $booked )
 			),
 			'preview' => sprintf(
-				/* translators: 1: number of revisions, 2: number of posts. */
-				_nx(
-					'%1$s revision in %2$s post would be removed. Nothing has been deleted.',
-					'%1$s revisions across %2$s posts would be removed. Nothing has been deleted.',
-					$revisions, 'admin notice', 'revision-retention'
-				),
-				number_format_i18n( $revisions ),
-				number_format_i18n( $posts )
+				/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts". */
+				_x( '%1$s would be removed from %2$s. Nothing has been deleted.', 'sweep result', 'revision-retention' ),
+				self::count_revisions( $revisions ),
+				self::count_posts( $posts )
 			),
 			'swept' => sprintf(
-				/* translators: 1: number of revisions, 2: number of posts. */
-				_nx(
-					'Removed %1$s revision from %2$s post.',
-					'Removed %1$s revisions from %2$s posts.',
-					$revisions, 'admin notice', 'revision-retention'
-				),
-				number_format_i18n( $revisions ),
-				number_format_i18n( $posts )
+				/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts". */
+				_x( '%1$s removed from %2$s.', 'sweep result', 'revision-retention' ),
+				self::count_revisions( $revisions ),
+				self::count_posts( $posts )
 			),
 			default => '',
 		};
@@ -562,6 +532,34 @@ class Settings_Page {
 			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 			esc_html( $message )
 		);
+	}
+
+	/**
+	 * A number of revisions in the plural it asks for.
+	 *
+	 * Sentences with two counts take them as finished phrases, since a single
+	 * string cannot agree with two numbers at once. The screen's script builds
+	 * the same phrases from the same strings.
+	 *
+	 * @param int $value The count.
+	 *
+	 * @return string
+	 */
+	private static function count_revisions( int $value ): string {
+		/* translators: %s: number of revisions. */
+		return sprintf( _nx( '%s revision', '%s revisions', $value, 'sweep count', 'revision-retention' ), number_format_i18n( $value ) );
+	}
+
+	/**
+	 * A number of posts in the plural it asks for.
+	 *
+	 * @param int $value The count.
+	 *
+	 * @return string
+	 */
+	private static function count_posts( int $value ): string {
+		/* translators: %s: number of posts. */
+		return sprintf( _nx( '%s post', '%s posts', $value, 'sweep count', 'revision-retention' ), number_format_i18n( $value ) );
 	}
 
 	/**
@@ -653,8 +651,8 @@ class Settings_Page {
 			$this->render_panel(
 				'schedule',
 				$current,
-				function () use ( $stored, $inherited, $inheritable ) {
-					$this->render_schedule_section( $stored, $inherited, $inheritable );
+				function () use ( $stored, $inherited, $inheritable, $is_network ) {
+					$this->render_schedule_section( $stored, $inherited, $inheritable, $is_network );
 				}
 			);
 
@@ -784,10 +782,11 @@ class Settings_Page {
 	 * @param array<string, mixed> $stored      Values as stored for this screen.
 	 * @param array<string, mixed> $inherited   Network values to fall back to.
 	 * @param bool                 $inheritable Whether an empty field inherits.
+	 * @param bool                 $is_network  Whether the network screen is being rendered.
 	 *
 	 * @return void
 	 */
-	private function render_schedule_section( array $stored, array $inherited, bool $inheritable ): void {
+	private function render_schedule_section( array $stored, array $inherited, bool $inheritable, bool $is_network ): void {
 		?>
 		<table class="form-table" role="presentation">
 			<tr>
@@ -795,6 +794,7 @@ class Settings_Page {
 				<td>
 					<?php $this->render_bool( 'cron_enabled', 'rvrt-cron-enabled', _x( 'Sweep old revisions in the background', 'checkbox label', 'revision-retention' ), $stored, $inherited, $inheritable ); ?>
 					<p class="description"><?php echo esc_html_x( 'Each run works through the site in batches and books the next batch itself, so a large site is cleaned up over several runs instead of one long one.', 'field description', 'revision-retention' ); ?></p>
+					<?php $this->render_cron_health( $is_network ); ?>
 				</td>
 			</tr>
 			<tr>
@@ -825,6 +825,64 @@ class Settings_Page {
 			</tr>
 		</table>
 		<?php
+	}
+
+	/**
+	 * Say whether anything actually runs the schedule, under the switch for it.
+	 *
+	 * Switching the sweep on books it, but WP-Cron still has to fire. A site
+	 * with `DISABLE_WP_CRON` and no server job behind it books sweeps forever
+	 * and never runs one, and nothing else on the screen would show that.
+	 *
+	 * The switch itself is left alone. Whether cron runs is a guess from the
+	 * queue and can be wrong for a while, on a freshly copied database for
+	 * one, and a booked sweep does no harm: it simply waits for cron to come
+	 * back. Turning the setting off here would outlive the problem.
+	 *
+	 * @param bool $is_network Whether the network screen is being rendered.
+	 *
+	 * @return void
+	 */
+	private function render_cron_health( bool $is_network ): void {
+		$health = Cron_Health::check();
+
+		if ( Cron_Health::STALLED === $health['status'] ) {
+			$kind    = 'warning';
+			$message = sprintf(
+				/* translators: %s: how long the oldest scheduled event has been waiting, e.g. "3 hours". */
+				_x( 'WP-Cron does not seem to be running: scheduled events are %s overdue, so scheduled sweeps will not happen either.', 'cron health', 'revision-retention' ),
+				human_time_diff( time() - $health['overdue'] )
+			) . ' ' . ( $health['visits']
+				? _x( 'WP-Cron is started by visits to the site, so a site nobody visits, or a server that blocks requests to itself, holds it up. A server cron job that calls wp-cron.php, or runs "wp cron event run --due-now", fixes both.', 'cron health', 'revision-retention' )
+				: _x( 'DISABLE_WP_CRON is set, so visits do not start WP-Cron and a server cron job has to. Add one that calls wp-cron.php, or runs "wp cron event run --due-now", every few minutes.', 'cron health', 'revision-retention' ) );
+		} elseif ( Cron_Health::SYSTEM === $health['status'] ) {
+			$kind    = 'ok';
+			$message = _x( 'WP-Cron is running. DISABLE_WP_CRON is set, so it is started by a server cron job rather than by visits, and nothing in the schedule is overdue.', 'cron health', 'revision-retention' );
+		} else {
+			$kind    = 'ok';
+			$message = _x( 'WP-Cron is running. It is started by visits to the site, and nothing in the schedule is overdue.', 'cron health', 'revision-retention' );
+		}
+
+		// The network screen has no sweep of its own to report on.
+		$ran = $is_network ? 0 : Scheduler::last_run();
+
+		if ( $ran > 0 ) {
+			$message .= ' ' . sprintf(
+				/* translators: %s: how long ago, e.g. "2 hours". */
+				_x( 'The scheduled sweep last ran %s ago.', 'cron health', 'revision-retention' ),
+				human_time_diff( $ran )
+			);
+		}
+
+		// A problem gets a notice of its own; a working schedule is just a
+		// line of description, like the rest of the row.
+		if ( 'warning' === $kind ) {
+			printf( '<div class="notice notice-warning inline rvrt-cron-health"><p>%s</p></div>', esc_html( $message ) );
+
+			return;
+		}
+
+		printf( '<p class="description rvrt-cron-health">%s</p>', esc_html( $message ) );
 	}
 
 	/**
@@ -1138,7 +1196,7 @@ class Settings_Page {
 				} elseif ( $state['finished'] > 0 ) {
 					printf(
 						/* translators: 1: how long ago the last sweep finished, 2: number of revisions it removed. */
-						esc_html_x( 'The last sweep finished %1$s ago and removed %2$s revisions.', 'sweep status', 'revision-retention' ),
+						esc_html( _nx( 'The last sweep finished %1$s ago and removed %2$s revision.', 'The last sweep finished %1$s ago and removed %2$s revisions.', $state['removed'], 'sweep status', 'revision-retention' ) ),
 						esc_html( human_time_diff( $state['finished'] ) ),
 						esc_html( number_format_i18n( $state['removed'] ) )
 					);
@@ -1261,14 +1319,8 @@ class Settings_Page {
 			(int) Settings::get( 'max_deletions' )
 		);
 
-		$entry = 0;
-
 		if ( ! $dry_run ) {
 			$this->remember_sweep( $result );
-
-			// The script hands back the entry the first batch opened, so a run
-			// of any length is one line in the log.
-			$entry = Log::record( Log::SOURCE_SCREEN, $result, isset( $_POST['log'] ) ? absint( wp_unslash( $_POST['log'] ) ) : 0 );
 		}
 
 		$last = Cleaner::last_parent_id();
@@ -1281,7 +1333,6 @@ class Settings_Page {
 				'finished'  => $result->finished,
 				'items'     => $result->items,
 				'affected'  => $result->affected,
-				'log'       => $entry,
 				'progress'  => $result->finished || $last < 1
 					? 100
 					: min( 99, (int) floor( ( $result->cursor / $last ) * 100 ) ),
@@ -1315,6 +1366,7 @@ class Settings_Page {
 					'site'      => 0,
 					'cursor'    => 0,
 					'posts'     => 0,
+					'affected'  => 0,
 					'revisions' => 0,
 					'items'     => array(),
 					'finished'  => true,
@@ -1344,7 +1396,6 @@ class Settings_Page {
 		// A site that switched the sweep off is not overruled from here, the
 		// same as when a sweep is booked, and counts as done straight away.
 		$skipped = ! $dry_run && empty( Settings::get( 'cron_enabled' ) );
-		$entry   = 0;
 
 		// A real run resumes whatever the schedule was part way through.
 		if ( ! $dry_run && 0 === $cursor ) {
@@ -1363,8 +1414,6 @@ class Settings_Page {
 
 		if ( ! $dry_run && ! $skipped ) {
 			$this->remember_sweep( $result );
-
-			$entry = Log::record( Log::SOURCE_SCREEN, $result, isset( $_POST['log'] ) ? absint( wp_unslash( $_POST['log'] ) ) : 0 );
 		}
 
 		$name  = get_bloginfo( 'name' );
@@ -1389,12 +1438,10 @@ class Settings_Page {
 			array(
 				'site'      => $finished ? 0 : $sites[ $next_index ],
 				'cursor'    => $result->finished ? 0 : $result->cursor,
-				'posts'     => $result->affected,
+				'posts'     => $result->posts,
+				'affected'  => $result->affected,
 				'revisions' => $result->revisions,
 				'items'     => $items,
-				// The entry lives in this site's own table, so it is only handed
-				// back while the next batch stays on the same site.
-				'log'       => $result->finished ? 0 : $entry,
 				'finished'  => $finished,
 				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $next_index / count( $sites ) ) * 100 ) ),
 			)
@@ -1428,27 +1475,19 @@ class Settings_Page {
 	}
 
 	/**
-	 * Store where a real run got to, so the schedule carries on from there.
+	 * Log a real batch and store where it got to, so the schedule carries on
+	 * from there and the status reports it once it is done.
 	 *
 	 * @param Sweep_Result $result What the batch did.
 	 *
 	 * @return void
 	 */
 	private function remember_sweep( Sweep_Result $result ): void {
+		Scheduler::advance( Log::SOURCE_SCREEN, $result );
+
 		// Hand the rest back to the schedule rather than pushing on here, so a
 		// big site does not hold a request open.
 		Scheduler::reschedule( $result->finished ? 0 : MINUTE_IN_SECONDS );
-
-		if ( $result->finished ) {
-			Scheduler::reset_cursor();
-
-			return;
-		}
-
-		$state           = Scheduler::state();
-		$state['cursor'] = $result->cursor;
-
-		update_option( Scheduler::CURSOR_OPTION, $state );
 	}
 
 	/**
@@ -1497,7 +1536,13 @@ class Settings_Page {
 						<button type="button" name="mode" value="preview" class="button">
 							<?php echo esc_html_x( 'Preview every site', 'button label', 'revision-retention' ); ?>
 						</button>
-						<button type="button" name="mode" value="run" class="button button-primary">
+						<button
+							type="button"
+							name="mode"
+							value="run"
+							class="button button-primary"
+							data-confirm="<?php echo esc_attr_x( 'This permanently deletes revisions on every site on the network that has the sweep switched on, under each site\'s own policy. It cannot be undone. Continue?', 'confirmation', 'revision-retention' ); ?>"
+						>
 							<?php echo esc_html_x( 'Sweep every site now', 'button label', 'revision-retention' ); ?>
 						</button>
 						<button type="submit" class="button">
@@ -1796,7 +1841,9 @@ class Settings_Page {
 			Policy::flush();
 		}
 
-		Scheduler::reschedule();
+		// Never pushes a booked sweep back, so saving part way through a sweep
+		// leaves its continuation where it was.
+		Scheduler::sync();
 
 		$this->redirect( array( 'rvrt-notice' => $promote ? 'promoted' : 'saved' ) + self::posted_tab() );
 	}
@@ -1850,7 +1897,6 @@ class Settings_Page {
 
 		if ( ! $dry_run ) {
 			$this->remember_sweep( $result );
-			Log::record( Log::SOURCE_SCREEN, $result );
 		}
 
 		$this->redirect(

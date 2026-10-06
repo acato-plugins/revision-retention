@@ -37,6 +37,7 @@ function rvrt_uninstall_site(): void {
 
 	delete_option( Settings::OPTION );
 	delete_option( Scheduler::CURSOR_OPTION );
+	delete_option( Scheduler::LAST_RUN_OPTION );
 
 	Log::uninstall();
 }

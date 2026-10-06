@@ -18,8 +18,9 @@ defined( 'ABSPATH' ) || exit;
  * the screen asks for batch after batch, and WP-CLI loops. Logging each batch
  * would bury the one line somebody is looking for under dozens that say the
  * same thing, so a sweep opens an entry with its first deletion and every
- * later batch adds to it. The caller holds on to the entry's ID between
- * batches and hands it back.
+ * later batch adds to it. The scheduler keeps the entry's ID next to the
+ * cursor, so a sweep that is stopped and picked up again, from the screen,
+ * the schedule or WP-CLI, stays one entry, credited to whoever opened it.
  *
  * Only deletions are recorded. A preview takes nothing away and a sweep that
  * found nothing to remove has nothing to account for, so neither leaves a row.
@@ -211,7 +212,8 @@ class Log {
 	 *
 	 * @param string       $source One of the SOURCE_ constants.
 	 * @param Sweep_Result $result What the batch did.
-	 * @param int          $entry  Entry this batch continues, or 0 to start one.
+	 * @param int          $entry  Entry this batch continues, or 0 to start one. Only
+	 *                             ever an ID the plugin stored itself, never one posted.
 	 *
 	 * @return int The entry holding this sweep, or 0 while there is none.
 	 */
@@ -224,12 +226,6 @@ class Log {
 		$user_id = get_current_user_id();
 		$types   = self::count_types( $result );
 		$current = $entry > 0 ? self::find( $entry ) : null;
-
-		// An entry is only carried on by whoever opened it, so an ID posted by
-		// somebody else, or left over from another kind of run, starts afresh.
-		if ( null !== $current && ( $current['source'] !== $source || (int) $current['user_id'] !== $user_id ) ) {
-			$current = null;
-		}
 
 		global $wpdb;
 

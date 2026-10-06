@@ -89,13 +89,19 @@ class Log_View {
 			<div class="rvrt-log-head">
 				<p class="rvrt-log-totals">
 					<?php
-					printf(
-						/* translators: 1: number of revisions, 2: number of posts, 3: number of sweeps, 4: how long entries are kept. */
-						esc_html_x( '%1$s revisions removed from %2$s posts in %3$s sweeps over the last %4$s.', 'log summary', 'revision-retention' ),
-						'<strong>' . esc_html( number_format_i18n( $totals['revisions'] ) ) . '</strong>',
-						'<strong>' . esc_html( number_format_i18n( $totals['posts'] ) ) . '</strong>',
-						'<strong>' . esc_html( number_format_i18n( $totals['runs'] ) ) . '</strong>',
-						esc_html( mb_strtolower( Settings::log_retentions()[ (string) $setting ] ?? '' ) )
+					echo wp_kses(
+						sprintf(
+							/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: how long entries are kept. */
+							esc_html_x( '%1$s removed from %2$s in %3$s over the last %4$s.', 'log summary', 'revision-retention' ),
+							/* translators: %s: number of revisions. */
+							self::strong_count( _nx( '%s revision', '%s revisions', $totals['revisions'], 'log summary', 'revision-retention' ), $totals['revisions'] ),
+							/* translators: %s: number of posts. */
+							self::strong_count( _nx( '%s post', '%s posts', $totals['posts'], 'log summary', 'revision-retention' ), $totals['posts'] ),
+							/* translators: %s: number of sweeps. */
+							self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
+							esc_html( mb_strtolower( Settings::log_retentions()[ (string) $setting ] ?? '' ) )
+						),
+						array( 'strong' => array() )
 					);
 					?>
 				</p>
@@ -175,7 +181,7 @@ class Log_View {
 		$highest = max( 1, ...array_values( $days ) );
 		$summary = sprintf(
 			/* translators: 1: number of revisions, 2: number of days. */
-			_x( '%1$s revisions removed in the last %2$s days', 'accessibility label', 'revision-retention' ),
+			_nx( '%1$s revision removed in the last %2$s days', '%1$s revisions removed in the last %2$s days', array_sum( $days ), 'accessibility label', 'revision-retention' ),
 			number_format_i18n( array_sum( $days ) ),
 			number_format_i18n( self::CHART_DAYS )
 		);
@@ -187,7 +193,7 @@ class Log_View {
 					$time  = (int) strtotime( $day . ' 12:00:00' );
 					$label = sprintf(
 						/* translators: 1: date, 2: number of revisions. */
-						_x( '%1$s: %2$s revisions', 'chart tooltip', 'revision-retention' ),
+						_nx( '%1$s: %2$s revision', '%1$s: %2$s revisions', $revisions, 'chart tooltip', 'revision-retention' ),
 						wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ),
 						number_format_i18n( $revisions )
 					);
@@ -459,6 +465,18 @@ class Log_View {
 			Log::SOURCE_SCREEN => _x( 'Run now', 'log source', 'revision-retention' ),
 			Log::SOURCE_CLI    => _x( 'WP-CLI', 'log source', 'revision-retention' ),
 		);
+	}
+
+	/**
+	 * A count in its own plural, with the number in bold, ready to print.
+	 *
+	 * @param string $template Translated `%s` template, already in the right plural.
+	 * @param int    $value    The count.
+	 *
+	 * @return string Escaped HTML.
+	 */
+	private static function strong_count( string $template, int $value ): string {
+		return sprintf( esc_html( $template ), '<strong>' . esc_html( number_format_i18n( $value ) ) . '</strong>' );
 	}
 
 	/**
