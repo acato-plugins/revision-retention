@@ -52,6 +52,7 @@ final class Plugin {
 		( new Scheduler() )->register();
 		( new Log() )->register();
 		( new Settings_Page() )->register();
+		( new Rating_Notice() )->register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			CLI::register();

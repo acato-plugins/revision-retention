@@ -61,6 +61,7 @@ spl_autoload_register(
 
 register_activation_hook( RVRT_PLUGIN_FILE, array( Requirements::class, 'block_activation' ) );
 register_activation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_activation' ) );
+register_activation_hook( RVRT_PLUGIN_FILE, array( Rating_Notice::class, 'remember_install' ) );
 register_deactivation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_deactivation' ) );
 register_deactivation_hook( RVRT_PLUGIN_FILE, array( Log::class, 'on_deactivation' ) );
 

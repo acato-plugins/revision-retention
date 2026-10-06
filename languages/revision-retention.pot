@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-06T07:28:57+00:00\n"
+"POT-Creation-Date: 2026-10-06T07:37:43+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -244,6 +244,31 @@ msgid "revisions removed from %s post"
 msgid_plural "revisions removed from %s posts"
 msgstr[0] ""
 msgstr[1] ""
+
+#: includes/class-rating-notice.php:117
+msgctxt "rating notice"
+msgid "You have been using Revision Retention for a month now. If it keeps your database tidy, would you rate it on WordPress.org? A rating helps other sites find it, and takes a minute."
+msgstr ""
+
+#: includes/class-rating-notice.php:121
+msgctxt "rating notice"
+msgid "Rate Revision Retention"
+msgstr ""
+
+#: includes/class-rating-notice.php:122
+msgctxt "accessibility label"
+msgid "(opens in a new tab)"
+msgstr ""
+
+#: includes/class-rating-notice.php:125
+msgctxt "rating notice"
+msgid "Maybe later"
+msgstr ""
+
+#: includes/class-rating-notice.php:128
+msgctxt "rating notice"
+msgid "Don't ask again"
+msgstr ""
 
 #: includes/class-requirements.php:50
 msgctxt "activation error title"

@@ -18,8 +18,10 @@ require_once __DIR__ . '/includes/class-post-types.php';
 require_once __DIR__ . '/includes/class-settings.php';
 require_once __DIR__ . '/includes/class-scheduler.php';
 require_once __DIR__ . '/includes/class-log.php';
+require_once __DIR__ . '/includes/class-rating-notice.php';
 
 use Acato\RevisionRetention\Log;
+use Acato\RevisionRetention\Rating_Notice;
 use Acato\RevisionRetention\Scheduler;
 use Acato\RevisionRetention\Settings;
 
@@ -43,6 +45,10 @@ function rvrt_uninstall_site(): void {
 }
 
 if ( ! is_multisite() ) {
+	if ( ! empty( Settings::get( 'remove_data_on_uninstall' ) ) ) {
+		Rating_Notice::uninstall();
+	}
+
 	rvrt_uninstall_site();
 
 	return;
@@ -74,4 +80,5 @@ do {
 
 if ( ! empty( Settings::network()['remove_data_on_uninstall'] ) ) {
 	delete_site_option( Settings::NETWORK_OPTION );
+	Rating_Notice::uninstall();
 }
