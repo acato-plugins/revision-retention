@@ -69,6 +69,17 @@ class Log {
 	public const SOURCE_CLI = 'cli';
 
 	/**
+	 * What the finished column holds for an entry given up on part way.
+	 *
+	 * 1 is a sweep that got to the end, 0 one that may still be going. A
+	 * sweep that was restarted or cut off by deactivation will never get
+	 * another batch, so it is marked rather than left to go stale.
+	 *
+	 * @var int
+	 */
+	private const STOPPED = 2;
+
+	/**
 	 * Version of the table layout below.
 	 *
 	 * @var string
@@ -280,6 +291,33 @@ class Log {
 	}
 
 	/**
+	 * Mark an entry as given up on, so it no longer reads as in progress.
+	 *
+	 * @param int $entry Entry the plugin stored, or 0 for none.
+	 *
+	 * @return void
+	 */
+	public static function stop( int $entry ): void {
+		if ( $entry < 1 || ! self::installed() ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table has no API above it.
+		$wpdb->update(
+			self::table(),
+			array( 'finished' => self::STOPPED ),
+			array(
+				'id'       => $entry,
+				'finished' => 0,
+			),
+			array( '%d' ),
+			array( '%d', '%d' )
+		);
+	}
+
+	/**
 	 * Delete the entries older than the configured retention.
 	 *
 	 * @return void
@@ -446,7 +484,13 @@ class Log {
 	 * @return string One of `finished`, `running` or `stopped`.
 	 */
 	public static function status( array $entry ): string {
-		if ( ! empty( $entry['finished'] ) ) {
+		$finished = (int) ( $entry['finished'] ?? 0 );
+
+		if ( self::STOPPED === $finished ) {
+			return 'stopped';
+		}
+
+		if ( $finished > 0 ) {
 			return 'finished';
 		}
 

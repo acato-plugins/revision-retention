@@ -172,6 +172,10 @@ class CLI {
 	 * Runs batch after batch until the site is clean. A sweep already in
 	 * progress is continued rather than restarted, unless --restart is passed.
 	 *
+	 * A run limited with --post-type is a sweep of its own: it starts from the
+	 * first post, gets a log entry of its own, and leaves the schedule's sweep
+	 * and the last full sweep the status reports untouched.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [--dry-run]
@@ -240,14 +244,20 @@ class CLI {
 			);
 		}
 
-		if ( $restart ) {
+		// Only a full sweep shares the cursor the schedule and the screen carry
+		// on from. A partial one stored there would have the next full sweep
+		// skip every other post type below where it stopped.
+		$shared = ! $dry_run && array() === $post_types;
+
+		if ( $restart && $shared ) {
 			Scheduler::reset_cursor();
 		}
 
-		$cursor  = $dry_run ? 0 : Scheduler::state()['cursor'];
+		$cursor  = $shared ? Scheduler::state()['cursor'] : 0;
 		$cleaner = new Cleaner();
 		$total   = new Sweep_Result( $cursor, 0, 0, false, $dry_run );
 		$batches = 0;
+		$entry   = 0;
 
 		do {
 			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
@@ -266,8 +276,10 @@ class CLI {
 
 			// The same sweep the schedule and the screen carry on: one cursor,
 			// one log entry and one total, whoever runs the next batch.
-			if ( ! $dry_run ) {
+			if ( $shared ) {
 				Scheduler::advance( Log::SOURCE_CLI, $result );
+			} elseif ( ! $dry_run ) {
+				$entry = Log::record( Log::SOURCE_CLI, $result, $entry );
 			}
 		} while ( ! $total->finished && ( 0 === $max || $batches < $max ) );
 
@@ -277,7 +289,7 @@ class CLI {
 				$total->affected,
 				$total->revisions,
 				$dry_run ? 'would be removed' : 'removed',
-				$total->finished ? '' : ' Stopped early; run again to continue.'
+				$total->finished ? '' : ( $shared ? ' Stopped early; run again to continue.' : ' Stopped early; running it again starts from the first post.' )
 			)
 		);
 	}

@@ -20,6 +20,7 @@ require_once __DIR__ . '/includes/class-scheduler.php';
 require_once __DIR__ . '/includes/class-log.php';
 require_once __DIR__ . '/includes/class-rating-notice.php';
 
+use Acato\RevisionRetention\Cron_Health;
 use Acato\RevisionRetention\Log;
 use Acato\RevisionRetention\Rating_Notice;
 use Acato\RevisionRetention\Scheduler;
@@ -40,6 +41,7 @@ function rvrt_uninstall_site(): void {
 	delete_option( Settings::OPTION );
 	delete_option( Scheduler::CURSOR_OPTION );
 	delete_option( Scheduler::LAST_RUN_OPTION );
+	delete_transient( Cron_Health::EXCUSED );
 
 	Log::uninstall();
 }

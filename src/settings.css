@@ -1097,3 +1097,76 @@
 .rvrt-settings .rvrt-cron-health.notice {
 	margin: 0.75em 0 0;
 }
+
+/* The question asked before a press that reaches past this screen. */
+.rvrt-settings .rvrt-dialog {
+	background: var(--rvrt-surface);
+	border: 0;
+	border-radius: var(--rvrt-radius);
+	box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
+	box-sizing: border-box;
+	color: #1d2327;
+	inline-size: min(32em, calc(100vw - 32px));
+	padding: 24px;
+}
+
+.rvrt-settings .rvrt-dialog::backdrop {
+	background: rgb(0 0 0 / 0.35);
+}
+
+.rvrt-settings .rvrt-dialog-title {
+	font-size: 1.3em;
+	line-height: 1.4;
+	margin: 0 0 0.5em;
+}
+
+.rvrt-settings .rvrt-dialog-message {
+	color: var(--rvrt-muted);
+	font-size: 14px;
+	margin: 0 0 1.5em;
+}
+
+.rvrt-settings .rvrt-dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+/* The yes of a press that deletes is red, like the admin's delete buttons. */
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger {
+	background: #d63638;
+	border-color: #d63638;
+}
+
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:is(:hover, :focus) {
+	background: #b32d2e;
+	border-color: #b32d2e;
+}
+
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:focus {
+	box-shadow: 0 0 0 1px #fff, 0 0 0 3px #d63638;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.rvrt-settings .rvrt-dialog[open] {
+		animation: rvrt-dialog-in 160ms ease-out;
+	}
+
+	.rvrt-settings .rvrt-dialog[open]::backdrop {
+		animation: rvrt-backdrop-in 160ms ease-out;
+	}
+}
+
+@keyframes rvrt-dialog-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+}
+
+@keyframes rvrt-backdrop-in {
+	from {
+		opacity: 0;
+	}
+}

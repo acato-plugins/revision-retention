@@ -144,14 +144,15 @@ class Settings_Page {
 		$style  = Assets::url( 'src/settings.css' );
 		$script = Assets::url( 'src/settings.js' );
 
-		// Without a build there is nothing to load. The screen still works,
-		// unstyled and without the script, as it is built to.
+		// Assets::url() falls back to the sources when nothing was built, so
+		// this only comes up empty when the files are missing altogether. The
+		// screen still works then, unstyled and without the script.
 		if ( null !== $style ) {
-			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 
 		if ( null !== $script ) {
-			wp_enqueue_script( 'rvrt-settings', $script, array( 'wp-i18n' ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+			wp_enqueue_script( 'rvrt-settings', $script, array( 'wp-i18n' ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
 		}
 	}
@@ -737,7 +738,8 @@ class Settings_Page {
 				self::PROMOTE_FIELD,
 				false,
 				array(
-					'data-confirm' => _x( 'This makes the settings on this screen the defaults for every site on the network. Sites with settings of their own keep them. Continue?', 'confirmation', 'revision-retention' ),
+					'data-confirm'       => _x( 'This makes the settings on this screen the defaults for every site on the network. Sites with settings of their own keep them.', 'confirmation', 'revision-retention' ),
+					'data-confirm-title' => _x( 'Make these the network defaults?', 'confirmation title', 'revision-retention' ),
 				)
 			);
 		}
@@ -1567,7 +1569,7 @@ class Settings_Page {
 
 		check_ajax_referer( self::NETWORK_RUN_ACTION );
 
-		$sites = array_map( 'intval', (array) get_sites( array( 'fields' => 'ids' ) ) );
+		$sites = Plugin::sites();
 
 		if ( array() === $sites ) {
 			self::send_json(
@@ -1716,7 +1718,7 @@ class Settings_Page {
 	 * @return void
 	 */
 	private function render_network_sweep_form( string $current ): void {
-		$sites = (int) get_sites( array( 'count' => true ) );
+		$sites = count( Plugin::sites() );
 
 		$this->render_panel(
 			'sweep',
@@ -1737,8 +1739,8 @@ class Settings_Page {
 					<p class="rvrt-sweep-status">
 						<?php
 						printf(
-							/* translators: %s: number of sites on the network. */
-							esc_html( _nx( 'This network has %s site.', 'This network has %s sites.', $sites, 'sweep status', 'revision-retention' ) ),
+							/* translators: %s: number of sites on the network the plugin is active on. */
+							esc_html( _nx( 'Revision Retention is active on %s site.', 'Revision Retention is active on %s sites.', $sites, 'sweep status', 'revision-retention' ) ),
 							esc_html( number_format_i18n( $sites ) )
 						);
 						?>
@@ -1754,7 +1756,9 @@ class Settings_Page {
 							name="mode"
 							value="run"
 							class="button button-primary"
-							data-confirm="<?php echo esc_attr_x( 'This permanently deletes revisions on every site on the network that has the sweep switched on, under each site\'s own policy. It cannot be undone. Continue?', 'confirmation', 'revision-retention' ); ?>"
+							data-confirm="<?php echo esc_attr_x( 'This permanently deletes revisions on every site on the network that has the sweep switched on, under each site\'s own policy. It cannot be undone.', 'confirmation', 'revision-retention' ); ?>"
+							data-confirm-title="<?php echo esc_attr_x( 'Sweep every site now?', 'confirmation title', 'revision-retention' ); ?>"
+							data-confirm-danger="1"
 						>
 							<?php echo esc_html_x( 'Sweep every site now', 'button label', 'revision-retention' ); ?>
 						</button>
@@ -1821,42 +1825,29 @@ class Settings_Page {
 
 		$booked  = 0;
 		$skipped = 0;
-		$offset  = 0;
 		$stagger = 0;
 
-		do {
-			$sites = get_sites(
-				array(
-					'fields' => 'ids',
-					'number' => 100,
-					'offset' => $offset,
-				)
-			);
-			$found = count( $sites );
+		// Only the sites the plugin is active on; see Plugin::sites().
+		foreach ( Plugin::sites() as $site_id ) {
+			switch_to_blog( $site_id );
 
-			foreach ( $sites as $site_id ) {
-				switch_to_blog( (int) $site_id );
+			// A site that switched the sweep off is not overruled from here;
+			// Scheduler::reschedule() would refuse anyway, so it is asked
+			// first and counted honestly.
+			if ( empty( Settings::get( 'cron_enabled' ) ) ) {
+				++$skipped;
+			} else {
+				// Spread the runs out so a network with a system cron does
+				// not start every site in the same minute.
+				$stagger += 10;
 
-				// A site that switched the sweep off is not overruled from here;
-				// Scheduler::reschedule() would refuse anyway, so it is asked
-				// first and counted honestly.
-				if ( empty( Settings::get( 'cron_enabled' ) ) ) {
-					++$skipped;
-				} else {
-					// Spread the runs out so a network with a system cron does
-					// not start every site in the same minute.
-					$stagger += 10;
-
-					Scheduler::reschedule( min( $stagger, 15 * MINUTE_IN_SECONDS ) );
-					++$booked;
-				}
-
-				restore_current_blog();
-				Policy::flush();
+				Scheduler::reschedule( min( $stagger, 15 * MINUTE_IN_SECONDS ) );
+				++$booked;
 			}
 
-			$offset += 100;
-		} while ( 100 === $found );
+			restore_current_blog();
+			Policy::flush();
+		}
 
 		$this->redirect(
 			array(

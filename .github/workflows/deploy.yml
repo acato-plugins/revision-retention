@@ -21,10 +21,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # npm ci installs exactly what package-lock.json says. Should that fail,
-      # a plain install is the fallback, so a release is not held up by it.
+      # npm ci installs exactly what package-lock.json says, and nothing
+      # else will do for a release: should it fail, the job fails, rather than
+      # ship a build made with whatever versions resolve that day. The check
+      # workflow keeps a fallback, since it ships nothing.
       - name: Install build tools
-        run: npm ci --prefer-offline --no-audit --fund=false || npm i --prefer-offline --no-audit --fund=false
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Build assets
         run: npm run build

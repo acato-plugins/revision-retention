@@ -56,6 +56,14 @@ final class Cron_Health {
 	private const LATE_AFTER = HOUR_IN_SECONDS;
 
 	/**
+	 * Transient holding the overdue event a fresh spawn was given the benefit
+	 * of the doubt for.
+	 *
+	 * @var string
+	 */
+	public const EXCUSED = 'rvrt_cron_excused';
+
+	/**
 	 * Whether page visits trigger WP-Cron on this install.
 	 *
 	 * @return bool
@@ -70,15 +78,72 @@ final class Cron_Health {
 	 * @return int Seconds, or 0 when nothing is due.
 	 */
 	public static function overdue(): int {
+		$oldest = self::oldest();
+
+		return $oldest > 0 ? max( 0, time() - $oldest ) : 0;
+	}
+
+	/**
+	 * When the event at the front of the queue is due.
+	 *
+	 * @return int Unix timestamp, or 0 when the queue is empty.
+	 */
+	private static function oldest(): int {
 		$crons = _get_cron_array();
 
 		if ( ! is_array( $crons ) || array() === $crons ) {
 			return 0;
 		}
 
-		$oldest = (int) min( array_keys( $crons ) );
+		return (int) min( array_keys( $crons ) );
+	}
 
-		return max( 0, time() - $oldest );
+	/**
+	 * Whether this very request just set WP-Cron off.
+	 *
+	 * On a quiet site the first visit after a while finds every event late.
+	 * That visit is what fires them, but it does so with a request in the
+	 * background, so the queue it reads is still the late one. WordPress
+	 * locks cron with the time it spawned it, and a lock from this request
+	 * means the events are being run as the screen is drawn.
+	 *
+	 * @return bool
+	 */
+	private static function just_spawned(): bool {
+		// WordPress notes when it started loading, in timer_start().
+		$lock  = (float) get_transient( 'doing_cron' );
+		$start = (float) ( $GLOBALS['timestart'] ?? time() );
+
+		return $lock >= $start - 1;
+	}
+
+	/**
+	 * Whether a late queue is late only because a quiet site just woke up.
+	 *
+	 * The spawn is excused once per overdue event. Where it works, that event
+	 * is gone by the next visit; where the spawn never gets through, the
+	 * same event is still at the front of the queue and is reported then.
+	 *
+	 * @param int $oldest When the most overdue event was due.
+	 *
+	 * @return bool
+	 */
+	private static function excused( int $oldest ): bool {
+		// Asked more than once in a request, the answer stays the same.
+		static $granted = array();
+
+		if ( isset( $granted[ $oldest ] ) ) {
+			return true;
+		}
+
+		if ( ! self::just_spawned() || (int) get_transient( self::EXCUSED ) === $oldest ) {
+			return false;
+		}
+
+		set_transient( self::EXCUSED, $oldest, DAY_IN_SECONDS );
+		$granted[ $oldest ] = true;
+
+		return true;
 	}
 
 	/**
@@ -115,7 +180,7 @@ final class Cron_Health {
 		$overdue = self::overdue();
 		$visits  = self::triggered_by_visits();
 
-		if ( $overdue > self::LATE_AFTER ) {
+		if ( $overdue > self::LATE_AFTER && ! self::excused( self::oldest() ) ) {
 			$status = self::STALLED;
 		} else {
 			$status = $visits ? self::RUNNING : self::SYSTEM;

@@ -44,6 +44,42 @@ final class Plugin {
 	private function __construct() {}
 
 	/**
+	 * The sites on the network the plugin is active on.
+	 *
+	 * Activated on the network, that is every site. Activated per site, the
+	 * network screen still sets the defaults, but a sweep from there must
+	 * leave alone the sites that never turned the plugin on: nothing there
+	 * would handle the event it books, and it should not delete revisions or
+	 * create a log table on a site that did not ask for it.
+	 *
+	 * @return array<int, int> Site IDs, in the order get_sites() gives them.
+	 */
+	public static function sites(): array {
+		$ids      = array_map(
+			'intval',
+			(array) get_sites(
+				array(
+					'fields' => 'ids',
+					'number' => 0,
+				)
+			)
+		);
+		$basename = plugin_basename( RVRT_PLUGIN_FILE );
+		$network  = (array) get_site_option( 'active_sitewide_plugins', array() );
+
+		if ( isset( $network[ $basename ] ) ) {
+			return $ids;
+		}
+
+		return array_values(
+			array_filter(
+				$ids,
+				static fn( int $id ): bool => in_array( $basename, (array) get_blog_option( $id, 'active_plugins', array() ), true )
+			)
+		);
+	}
+
+	/**
 	 * Register every feature of the plugin.
 	 *
 	 * @return void

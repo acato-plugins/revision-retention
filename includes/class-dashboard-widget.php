@@ -84,13 +84,13 @@ class Dashboard_Widget {
 		$style = Assets::url( 'src/settings.css' );
 
 		if ( null !== $style ) {
-			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 
 		$script = Assets::url( 'src/widget.js' );
 
 		if ( null !== $script && self::has_network_tab() ) {
-			wp_enqueue_script( 'rvrt-widget', $script, array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+			wp_enqueue_script( 'rvrt-widget', $script, array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 	}
 

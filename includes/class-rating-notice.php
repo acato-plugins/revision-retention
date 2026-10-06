@@ -118,7 +118,15 @@ class Rating_Notice {
 		?>
 		<div class="notice notice-info rvrt-rating">
 			<p>
-				<?php echo esc_html_x( 'You have been using Revision Retention for a month now. If it keeps your database tidy, would you rate it on WordPress.org? A rating helps other sites find it, and takes a minute.', 'rating notice', 'revision-retention' ); ?>
+				<?php
+				// After "Maybe later" it has been a while longer than a month,
+				// so the second ask does not repeat the first.
+				echo esc_html(
+					is_numeric( get_user_meta( get_current_user_id(), self::USER_META, true ) )
+						? _x( 'Revision Retention has been keeping your database tidy for a while now. If it does the job, would you rate it on WordPress.org? A rating helps other sites find it, and takes a minute.', 'rating notice', 'revision-retention' )
+						: _x( 'You have been using Revision Retention for a month now. If it keeps your database tidy, would you rate it on WordPress.org? A rating helps other sites find it, and takes a minute.', 'rating notice', 'revision-retention' )
+				);
+				?>
 			</p>
 			<p>
 				<a class="button button-primary" href="<?php echo esc_url( $link( 'rate' ) ); ?>" target="_blank" rel="noopener">

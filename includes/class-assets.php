@@ -12,7 +12,8 @@ namespace Acato\RevisionRetention;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Resolves the sources in src/ to the files Vite built from them in dist/.
+ * Resolves the sources in src/ to the files Vite built from them in dist/,
+ * or to the sources themselves when nothing was built.
  *
  * The built files carry a hash in their names, and the manifest Vite writes
  * next to them says which is which. The hash changes whenever the file does,
@@ -48,14 +49,31 @@ final class Assets {
 	/**
 	 * The URL of what was built from a source file.
 	 *
+	 * A copy of the plugin straight from git, a GitHub zip or a Composer VCS
+	 * checkout has no dist/, and without a fallback its settings screen came
+	 * up unstyled and without its script, with nothing to say why. The
+	 * sources are plain CSS and a script that imports nothing, so they run as
+	 * they are; they are only larger, and carry their modification time as
+	 * the cache buster in place of the hash.
+	 *
 	 * @param string $source Path of the source inside the plugin, e.g. `src/settings.js`.
 	 *
-	 * @return string|null Null when the assets have not been built.
+	 * @return string|null Null when neither a build nor the source is there.
 	 */
 	public static function url( string $source ): ?string {
 		$file = self::manifest()[ $source ]['file'] ?? null;
 
-		return is_string( $file ) ? plugin_dir_url( RVRT_PLUGIN_FILE ) . self::DIST . $file : null;
+		if ( is_string( $file ) ) {
+			return plugin_dir_url( RVRT_PLUGIN_FILE ) . self::DIST . $file;
+		}
+
+		$path = plugin_dir_path( RVRT_PLUGIN_FILE ) . $source;
+
+		if ( ! is_readable( $path ) ) {
+			return null;
+		}
+
+		return add_query_arg( 'ver', (string) filemtime( $path ), plugin_dir_url( RVRT_PLUGIN_FILE ) . $source );
 	}
 
 	/**

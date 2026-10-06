@@ -279,7 +279,7 @@
 				const title = document.createElement( 'th' );
 				const site = document.createElement( 'td' );
 				const type = document.createElement( 'td' );
-				const count = document.createElement( 'td' );
+				const number = document.createElement( 'td' );
 				const kept = document.createElement( 'td' );
 
 				title.scope = 'row';
@@ -297,15 +297,15 @@
 				site.textContent = item.site ?? '';
 				site.className = 'rvrt-col-site';
 				type.textContent = item.type;
-				count.textContent = item.revisions;
-				count.className = 'rvrt-col-number';
+				number.textContent = item.revisions;
+				number.className = 'rvrt-col-number';
 				// What the post keeps, so the floor is visible next to the loss.
 				kept.textContent = item.kept ?? '';
 				kept.className = 'rvrt-col-number rvrt-kept';
 
 				// The network list says which site each post belongs to; a
 				// single site's list has no such column to fill.
-				row.append( ...( network ? [ title, site, type, count, kept ] : [ title, type, count, kept ] ) );
+				row.append( ...( network ? [ title, site, type, number, kept ] : [ title, type, number, kept ] ) );
 				affectedBody.append( row );
 				listed += 1;
 			}
@@ -324,6 +324,23 @@
 			}
 		};
 
+		/*
+		 * A request whose answer never arrived. It is told apart from a batch
+		 * the server refused, because the server may well have done the work:
+		 * the bar keeps where it got to, and the message says how to find out.
+		 */
+		const lost = ( mode ) => {
+			const error = new Error(
+				mode === 'run'
+					? _x( 'The connection dropped before the server answered. The batch may still have run, so a reload of this page shows where the sweep stands.', 'sweep error', 'revision-retention' )
+					: _x( 'The connection dropped before the server answered. A preview deletes nothing, so it is safe to start it again.', 'sweep error', 'revision-retention' )
+			);
+
+			error.lost = true;
+
+			return error;
+		};
+
 		const report = ( percent, message ) => {
 			fill.style.inlineSize = `${ percent }%`;
 			bar.setAttribute( 'aria-valuenow', String( percent ) );
@@ -331,19 +348,34 @@
 		};
 
 		const requestBatch = async ( mode, cursor, site ) => {
-			const response = await fetch( form.dataset.ajaxUrl, {
-				method: 'POST',
-				credentials: 'same-origin',
-				body: new URLSearchParams( {
-					action: form.dataset.request,
-					_wpnonce: form.dataset.nonce,
-					mode,
-					cursor: String( cursor ),
-					site: String( site ),
-				} ),
-			} );
+			let response;
 
-			const text = await response.text();
+			try {
+				response = await fetch( form.dataset.ajaxUrl, {
+					method: 'POST',
+					credentials: 'same-origin',
+					body: new URLSearchParams( {
+						action: form.dataset.request,
+						_wpnonce: form.dataset.nonce,
+						mode,
+						cursor: String( cursor ),
+						site: String( site ),
+					} ),
+				} );
+			} catch {
+				// The request went out, so the batch may well have run on the
+				// server; only its answer was lost on the way back.
+				throw lost( mode );
+			}
+
+			let text;
+
+			try {
+				text = await response.text();
+			} catch {
+				throw lost( mode );
+			}
+
 			let payload;
 
 			try {
@@ -416,15 +448,21 @@
 				report( finished ? 100 : Number( bar.getAttribute( 'aria-valuenow' ) ), '' );
 
 				if ( ! finished ) {
-					announce( `${ done } ${ _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' ) }`, 'warning' );
+					// A preview leaves nothing behind for the schedule to pick up;
+					// what it can say is that its count is not the whole site.
+					const rest = button.value === 'run'
+						? _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' )
+						: _x( 'Stopped part way, so this covers only the posts checked so far.', 'sweep result', 'revision-retention' );
+
+					announce( `${ done } ${ rest }`, 'warning' );
 				} else {
 					// A preview that got all the way through has succeeded too;
 					// its sentence already says nothing was deleted.
 					announce( done, 'success' );
 				}
 			} catch ( error ) {
-				report( 0, '' );
-				announce( error.message, 'error' );
+				report( error.lost ? Number( bar.getAttribute( 'aria-valuenow' ) ) : 0, '' );
+				announce( error.message, error.lost ? 'warning' : 'error' );
 			} finally {
 				setBusy( false );
 			}
@@ -441,17 +479,121 @@
 	 * Ask before a press that reaches past this screen.
 	 *
 	 * Promoting a site's settings rewrites the defaults every other site
-	 * starts from, which is not something to do by brushing past a button.
+	 * starts from, and a network sweep deletes on every site, which is not
+	 * something to do by brushing past a button. The question is asked in a
+	 * modal dialog rather than the browser's own prompt, so it reads as part
+	 * of the screen and can name the action on its button.
+	 *
+	 * A dialog does not block the way window.confirm() does, so the press is
+	 * held back, and once the answer is yes the button is pressed again and
+	 * let through, which keeps whatever the press does on its own.
 	 */
 	const syncConfirms = () => {
 		for ( const control of document.querySelectorAll( '[data-confirm]' ) ) {
-			control.addEventListener( 'click', ( event ) => {
-				// eslint-disable-next-line no-alert
-				if ( ! window.confirm( control.dataset.confirm ) ) {
-					event.preventDefault();
+			let confirmed = false;
+
+			control.addEventListener( 'click', async ( event ) => {
+				if ( confirmed ) {
+					confirmed = false;
+
+					return;
+				}
+
+				event.preventDefault();
+
+				if ( await ask( control ) ) {
+					confirmed = true;
+					control.click();
 				}
 			} );
 		}
+	};
+
+	/** Put the question of a press to the user, and answer whether to go on. */
+	const ask = ( control ) => {
+		if ( ! window.HTMLDialogElement ) {
+			// eslint-disable-next-line no-alert
+			return Promise.resolve( window.confirm( control.dataset.confirm ) );
+		}
+
+		const dialog = document.createElement( 'dialog' );
+		const title = document.createElement( 'h2' );
+		const message = document.createElement( 'p' );
+		const actions = document.createElement( 'form' );
+		const cancel = document.createElement( 'button' );
+		const proceed = document.createElement( 'button' );
+
+		dialog.className = 'rvrt-dialog';
+		dialog.setAttribute( 'aria-labelledby', 'rvrt-dialog-title' );
+		dialog.setAttribute( 'aria-describedby', 'rvrt-dialog-message' );
+		title.id = 'rvrt-dialog-title';
+		title.className = 'rvrt-dialog-title';
+		title.textContent = control.dataset.confirmTitle || control.textContent.trim();
+		message.id = 'rvrt-dialog-message';
+		message.className = 'rvrt-dialog-message';
+		message.textContent = control.dataset.confirm;
+
+		// A form of method dialog closes the dialog without a request, should
+		// the submit handler below ever not get to it.
+		actions.method = 'dialog';
+		actions.className = 'rvrt-dialog-actions';
+		cancel.className = 'button';
+		cancel.value = 'cancel';
+		cancel.textContent = _x( 'Cancel', 'button label', 'revision-retention' );
+		proceed.className = 'button button-primary' + ( control.dataset.confirmDanger ? ' rvrt-dialog-danger' : '' );
+		proceed.value = 'proceed';
+		proceed.textContent = control.value && control.tagName === 'INPUT' ? control.value : control.textContent.trim();
+
+		actions.append( cancel, proceed );
+		dialog.append( title, message, actions );
+		( control.closest( '.rvrt-settings' ) ?? document.body ).append( dialog );
+
+		return new Promise( ( resolve ) => {
+			let answered = false;
+
+			// Every way out comes through here, once. The answer is taken from
+			// the event that ends it rather than from the dialog's close event,
+			// which Chrome holds back while the tab is in the background.
+			const answer = ( yes ) => {
+				if ( answered ) {
+					return;
+				}
+
+				answered = true;
+				dialog.close();
+				dialog.remove();
+				control.focus();
+				resolve( yes );
+			};
+
+			actions.addEventListener( 'submit', ( event ) => {
+				event.preventDefault();
+				answer( event.submitter === proceed );
+			} );
+
+			// Escape.
+			dialog.addEventListener( 'cancel', ( event ) => {
+				event.preventDefault();
+				answer( false );
+			} );
+
+			// A click on the backdrop lands on the dialog itself, outside its
+			// box, and counts as a no.
+			dialog.addEventListener( 'click', ( event ) => {
+				const box = dialog.getBoundingClientRect();
+				const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
+
+				if ( event.target === dialog && outside ) {
+					answer( false );
+				}
+			} );
+
+			dialog.addEventListener( 'close', () => answer( dialog.returnValue === 'proceed' ) );
+
+			dialog.showModal();
+			// The safe answer gets the focus.
+			cancel.focus();
+		} );
 	};
 
 	document.addEventListener( 'DOMContentLoaded', () => {

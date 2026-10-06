@@ -316,12 +316,14 @@ class Cleaner {
 	/**
 	 * How far through the site a sweep at this cursor is, from 0 to 1.
 	 *
-	 * Counted in posts rather than IDs: the share of the posts holding
-	 * revisions, of the types the policy sweeps, that lie at or before the
-	 * cursor. Post IDs are spread unevenly, so measuring the cursor against
-	 * the highest ID crawled through a dense stretch and then leapt ahead.
-	 * Every post is counted, not only the ones with revisions old enough to
-	 * go, so what a real run deletes behind the cursor does not move it.
+	 * Counted in posts rather than IDs: the share of the posts of the types
+	 * the policy sweeps that lie at or before the cursor. Post IDs are spread
+	 * unevenly, so measuring the cursor against the highest ID crawled
+	 * through a dense stretch and then leapt ahead. Every post is counted,
+	 * whether it has revisions or not, so what a real run deletes behind the
+	 * cursor does not move it; counting only posts with revisions let a policy
+	 * that keeps none take swept posts out of both sides, and the bar sat near
+	 * the start until it jumped to the end.
 	 *
 	 * @param int                $cursor     Parent post ID the sweep has got to.
 	 * @param array<int, string> $post_types Limit to these post types, empty for all the policy sweeps.
@@ -346,12 +348,10 @@ class Cleaner {
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The only interpolation is a generated list of %s placeholders; read per batch to size its progress, where a cached value would freeze the bar.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT COUNT( DISTINCT r.post_parent ) AS total,
-					COUNT( DISTINCT CASE WHEN r.post_parent <= %d THEN r.post_parent END ) AS done
-				FROM {$wpdb->posts} r
-				INNER JOIN {$wpdb->posts} p ON p.ID = r.post_parent
-				WHERE r.post_type = 'revision'
-					AND p.post_type IN ( {$placeholders} )",
+				"SELECT COUNT(*) AS total,
+					SUM( CASE WHEN ID <= %d THEN 1 ELSE 0 END ) AS done
+				FROM {$wpdb->posts}
+				WHERE post_type IN ( {$placeholders} )",
 				...array_merge( array( $cursor ), $types )
 			),
 			ARRAY_A

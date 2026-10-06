@@ -81,6 +81,9 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function on_deactivation(): void {
+		// The sweep part way is dropped along with its cursor, so its log
+		// entry would otherwise read as in progress.
+		Log::stop( self::state()['log'] );
 		wp_clear_scheduled_hook( self::HOOK );
 		delete_option( self::CURSOR_OPTION );
 		delete_option( self::LAST_RUN_OPTION );
@@ -114,6 +117,10 @@ class Scheduler {
 	 * where it is, so a shorter interval pulls the next sweep forward and a
 	 * longer one takes effect from the sweep after it.
 	 *
+	 * A site that never finished a sweep counts from now, the same as on
+	 * activation, so the first save of a fresh install does not start deleting
+	 * within the minute.
+	 *
 	 * @return void
 	 */
 	public static function sync(): void {
@@ -123,9 +130,17 @@ class Scheduler {
 			return;
 		}
 
-		$state  = self::state();
-		$soon   = time() + self::CONTINUE_DELAY;
-		$due    = $state['cursor'] > 0 || $state['finished'] < 1 ? $soon : max( $soon, $state['finished'] + Settings::interval_seconds() );
+		$state = self::state();
+		$soon  = time() + self::CONTINUE_DELAY;
+
+		if ( $state['cursor'] > 0 ) {
+			$due = $soon;
+		} elseif ( $state['finished'] < 1 ) {
+			$due = time() + Settings::interval_seconds();
+		} else {
+			$due = max( $soon, $state['finished'] + Settings::interval_seconds() );
+		}
+
 		$booked = (int) wp_next_scheduled( self::HOOK );
 
 		if ( $booked > 0 && $booked <= $due ) {
@@ -275,6 +290,9 @@ class Scheduler {
 	 */
 	public static function reset_cursor(): void {
 		$state = self::state();
+
+		// The restart opens a log entry of its own; the old one ends here.
+		Log::stop( $state['log'] );
 
 		update_option(
 			self::CURSOR_OPTION,

@@ -147,21 +147,25 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 = 1.3.0 =
 * The **Schedule** tab says whether WP-Cron actually runs on the site, and warns under **Run automatically** when scheduled events are overdue, for instance because `DISABLE_WP_CRON` is set without a server cron job behind it. `wp revision-retention status` reports the same.
 * With WP Crontrol active, the **Schedule** tab lists the plugin's cron events with their next run, and links each one to WP Crontrol, where it can be run straight away or removed.
-* Saving the settings no longer pushes the scheduled sweep back. A sweep that was part way carries on a minute later instead of a whole interval later.
-* A sweep that is stopped and started again, or picked up by the schedule, stays one line in the log instead of leaving lines behind that read "In progress".
+* Saving the settings no longer pushes the scheduled sweep back. A sweep that was part way carries on a minute later instead of a whole interval later. On a fresh install, the first sweep still waits an interval from activation rather than starting with the first save.
+* A sweep that is stopped and started again, or picked up by the schedule, stays one line in the log instead of leaving lines behind that read "In progress". A sweep cut off by `--restart` or by deactivating the plugin reads as stopped straight away.
+* `wp revision-retention run --post-type=…` is a sweep of its own: it no longer moves the schedule's place in the full sweep, or reports itself as the last full sweep.
 * The sweep status counts sweeps finished with **Run now** and WP-CLI, not only scheduled ones.
 * The progress text counts every post checked, so a sweep with a small batch size no longer looks stuck.
-* The progress bar moves steadily through a site, and on the network it moves within each site rather than only when a whole site is done.
-* A preview that runs to the end is reported as a success.
+* The progress bar moves steadily through a site, also with a policy that keeps no revisions, and on the network it moves within each site rather than only when a whole site is done.
+* A connection that drops part way through a sweep no longer reads as a failure; the screen says the batch may still have run and keeps the bar where it was.
+* A preview that runs to the end is reported as a success, and one that is stopped no longer says the schedule will finish it.
 * A refreshed settings screen: tabs that read as one card with the panel, lighter tables, and a post types table whose headings stay in view while scrolling.
-* **Sweep every site now** asks for confirmation first.
+* **Sweep every site now** and **Save as network default** ask for confirmation first, in a dialog of the screen's own rather than the browser's prompt.
+* On a network where the plugin is activated per site, the network sweep only touches the sites it is active on.
+* The warning that WP-Cron does not run no longer shows on the first visit after a quiet spell, when that visit is what sets cron off.
 * An optional Dashboard widget with the sweeps of the last 14 days: totals, a bar per day and a link to the Logs tab. Switch it on and pick the roles that see it under **Advanced**; administrators always do. Network administrators get a Site and a Network tab in it.
 * The roles picked for the widget may also open the Logs tab, read only, without seeing any of the settings.
 * Fields that depend on a switch that is off can no longer be changed, rather than only being dimmed.
 * A scheduled sweep that is already late reads as overdue instead of "due in".
-* A month after activation, the Dashboard and the plugin's settings ask administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down.
+* A month after activation, the Dashboard and the plugin's settings ask administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down. Asked again after **Maybe later**, it no longer says "for a month now".
 * Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
-* The settings screen loads a minified stylesheet and script, built from the readable sources in `src/` that ship with the plugin.
+* The settings screen loads a minified stylesheet and script, built from the readable sources in `src/` that ship with the plugin. A copy without the build, such as a git checkout, loads those sources instead.
 
 = 1.2.0 =
 * The log is on by default. A site that saved its settings with the log switched off keeps it off.
