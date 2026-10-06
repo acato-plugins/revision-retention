@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
  * The built files carry a hash in their names, and the manifest Vite writes
  * next to them says which is which. The hash changes whenever the file does,
  * so it is the cache buster, and no version is hung on the URL.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 final class Assets {
 

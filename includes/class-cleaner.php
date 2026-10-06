@@ -20,6 +20,8 @@ defined( 'ABSPATH' ) || exit;
  * and other plugins see the hooks they are listening for. That is slower per
  * revision, which is exactly why the work is batched and resumable: a sweep
  * that runs out of time picks up where it left off instead of starting over.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Cleaner {
 

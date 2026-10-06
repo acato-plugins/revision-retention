@@ -19,6 +19,8 @@ defined( 'ABSPATH' ) || exit;
  * server cron job calling wp-cron.php or WP-CLI. Neither can be asked
  * directly whether it happens, so the queue is read instead. When cron runs,
  * nothing in it is long overdue; when it does not, everything is.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 final class Cron_Health {
 

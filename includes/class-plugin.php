@@ -13,6 +13,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Wires the plugin features into WordPress.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 final class Plugin {
 
@@ -54,6 +56,7 @@ final class Plugin {
 		( new Assets() )->register();
 		( new Settings_Page() )->register();
 		( new Rating_Notice() )->register();
+		( new Dashboard_Widget() )->register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			CLI::register();

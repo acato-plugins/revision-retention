@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
  * Everything here is a thin wrapper over the same Cleaner the scheduled sweep
  * uses, so a run from the command line and a run from cron do the same thing
  * to the same data. On multisite, pass `--url=` to pick the site.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class CLI {
 

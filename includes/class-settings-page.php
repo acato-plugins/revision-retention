@@ -20,6 +20,8 @@ defined( 'ABSPATH' ) || exit;
  * a site on that network gets either an override form, where an empty field
  * inherits the network value shown behind it, or a read only summary when the
  * network keeps the policy to itself.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Settings_Page {
 
@@ -97,10 +99,15 @@ class Settings_Page {
 	 * @return void
 	 */
 	public function add_page(): void {
+		// Somebody who may only read the log still needs a way in, so the page
+		// asks no more of them than being logged in; render_page() decides
+		// what they get to see. Anybody else meets WordPress's own refusal.
+		$capability = ! current_user_can( Settings::capability() ) && Settings::may_view_log() ? 'read' : Settings::capability();
+
 		add_options_page(
 			_x( 'Revision Retention', 'admin menu and page title', 'revision-retention' ),
 			_x( 'Revision Retention', 'admin menu and page title', 'revision-retention' ),
-			Settings::capability(),
+			$capability,
 			self::PAGE_SLUG,
 			array( $this, 'render_page' )
 		);
@@ -212,6 +219,10 @@ class Settings_Page {
 		$is_network = is_network_admin();
 
 		if ( ! current_user_can( Settings::capability( $is_network ) ) ) {
+			if ( ! $is_network && Settings::may_view_log() ) {
+				$this->render_log_only();
+			}
+
 			return;
 		}
 
@@ -257,6 +268,35 @@ class Settings_Page {
 			} else {
 				$this->render_sweep_form( $current );
 			}
+			?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The screen for somebody who may read the log but not change anything.
+	 *
+	 * The tabs stay in view, so the screen reads the same as it does for an
+	 * administrator, but only Logs can be opened. The log's own settings are
+	 * left out; the totals at the top are information, not settings, and stay.
+	 *
+	 * @return void
+	 */
+	private function render_log_only(): void {
+		$tabs = self::tabs( false, false );
+		?>
+		<div class="wrap rvrt-settings">
+			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<?php
+			$this->render_stats();
+			$this->render_tab_nav( $tabs, 'logs', array_diff( array_keys( $tabs ), array( 'logs' ) ) );
+			$this->render_panel(
+				'logs',
+				'logs',
+				function () {
+					( new Log_View( self::tab_url( 'logs' ) ) )->render();
+				}
+			);
 			?>
 		</div>
 		<?php
@@ -319,15 +359,27 @@ class Settings_Page {
 	 * unsaved changes in the other sections from being thrown away.
 	 *
 	 * @param array<string, string> $tabs    Available tabs.
-	 * @param string                $current Tab being shown.
+	 * @param string                $current  Tab being shown.
+	 * @param array<int, string>    $disabled Tabs shown but not to be opened.
 	 *
 	 * @return void
 	 */
-	private function render_tab_nav( array $tabs, string $current ): void {
+	private function render_tab_nav( array $tabs, string $current, array $disabled = array() ): void {
 		echo '<nav class="nav-tab-wrapper rvrt-tabs" role="tablist">';
 
 		foreach ( $tabs as $slug => $label ) {
 			$active = $slug === $current;
+
+			// Not a link, so there is nothing to follow, and left out of the
+			// keyboard order the script gives the tabs.
+			if ( in_array( $slug, $disabled, true ) ) {
+				printf(
+					'<span class="nav-tab rvrt-tab-disabled" role="tab" aria-disabled="true" aria-selected="false">%s</span>',
+					esc_html( $label )
+				);
+
+				continue;
+			}
 
 			printf(
 				'<a href="%1$s" class="nav-tab%2$s" id="rvrt-tab-%3$s" role="tab" aria-controls="rvrt-panel-%3$s" aria-selected="%4$s" tabindex="%5$s">%6$s</a>',
@@ -665,8 +717,8 @@ class Settings_Page {
 			$this->render_panel(
 				'advanced',
 				$current,
-				function () use ( $stored, $inherited, $inheritable ) {
-					$this->render_advanced_section( $stored, $inherited, $inheritable );
+				function () use ( $stored, $inherited, $inheritable, $is_network ) {
+					$this->render_advanced_section( $stored, $inherited, $inheritable, $is_network );
 				}
 			);
 
@@ -1036,11 +1088,32 @@ class Settings_Page {
 	 * @param array<string, mixed> $inherited   Network values to fall back to.
 	 * @param bool                 $inheritable Whether an empty field inherits.
 	 *
+	 * @param bool                 $is_network  Whether the network screen is being rendered.
+	 *
 	 * @return void
 	 */
-	private function render_advanced_section( array $stored, array $inherited, bool $inheritable ): void {
+	private function render_advanced_section( array $stored, array $inherited, bool $inheritable, bool $is_network ): void {
 		?>
 		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php echo esc_html_x( 'Dashboard widget', 'field label', 'revision-retention' ); ?></th>
+				<td>
+					<?php $this->render_bool( 'dashboard_widget', 'rvrt-dashboard-widget', _x( 'Enable dashboard widget', 'checkbox label', 'revision-retention' ), $stored, $inherited, $inheritable ); ?>
+					<p class="description">
+						<?php
+						echo esc_html(
+							$is_network
+								? _x( 'Shows the sweeps of the last two weeks, totals and a bar per day, on the Dashboard of every site that does not switch it off, and the sweeps of every site on the network Dashboard.', 'field description', 'revision-retention' )
+								: _x( 'Shows the sweeps of the last two weeks, totals and a bar per day, on the Dashboard, with a link to the Logs tab.', 'field description', 'revision-retention' )
+						);
+						?>
+					</p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><?php echo esc_html_x( 'Who sees it', 'field label', 'revision-retention' ); ?></th>
+				<td><?php $this->render_widget_roles( $stored, $inheritable ); ?></td>
+			</tr>
 			<tr>
 				<th scope="row"><?php echo esc_html_x( 'On removal', 'field label', 'revision-retention' ); ?></th>
 				<td>
@@ -1049,6 +1122,60 @@ class Settings_Page {
 				</td>
 			</tr>
 		</table>
+		<?php
+	}
+
+	/**
+	 * Render a checkbox per role that may see the widget and the log.
+	 *
+	 * Administrators, and network administrators on a network, always do, so
+	 * their boxes are ticked and cannot be unticked. On a site, the roles the
+	 * network ticked are locked the same way: the two lists add up rather than
+	 * one replacing the other.
+	 *
+	 * @param array<string, mixed> $stored      Values as stored for this screen.
+	 * @param bool                 $inheritable Whether this site adds to network defaults.
+	 *
+	 * @return void
+	 */
+	private function render_widget_roles( array $stored, bool $inheritable ): void {
+		$own     = isset( $stored['widget_roles'] ) && is_array( $stored['widget_roles'] ) ? $stored['widget_roles'] : array();
+		$network = $inheritable && is_array( Settings::network()['widget_roles'] ?? null ) ? Settings::network()['widget_roles'] : array();
+		$locked  = array();
+
+		if ( is_multisite() ) {
+			$locked['rvrt-network-admin'] = _x( 'Network administrator', 'user role', 'revision-retention' );
+		}
+		?>
+		<fieldset id="rvrt-widget-roles" class="rvrt-roles">
+			<legend class="screen-reader-text"><?php echo esc_html_x( 'Roles that see the dashboard widget and the log', 'accessibility label', 'revision-retention' ); ?></legend>
+			<?php foreach ( $locked as $key => $label ) : ?>
+				<label class="rvrt-role is-locked">
+					<input type="checkbox" checked disabled />
+					<?php echo esc_html( $label ); ?>
+				</label>
+			<?php endforeach; ?>
+			<?php
+			foreach ( wp_roles()->get_names() as $role => $name ) :
+				$always  = Settings::ADMIN_ROLE === $role;
+				$from_up = in_array( $role, $network, true );
+				?>
+				<label class="rvrt-role<?php echo $always || $from_up ? ' is-locked' : ''; ?>">
+					<?php if ( $always || $from_up ) : ?>
+						<input type="checkbox" checked disabled />
+					<?php else : ?>
+						<input type="checkbox" name="rvrt_settings[widget_roles][]" value="<?php echo esc_attr( $role ); ?>" <?php checked( in_array( $role, $own, true ) ); ?> />
+					<?php endif; ?>
+					<?php echo esc_html( translate_user_role( $name ) ); ?>
+					<?php if ( $from_up && ! $always ) : ?>
+						<span class="rvrt-role-note"><?php echo esc_html_x( '(set by the network)', 'user role note', 'revision-retention' ); ?></span>
+					<?php endif; ?>
+				</label>
+			<?php endforeach; ?>
+		</fieldset>
+		<p class="description">
+			<?php echo esc_html_x( 'Besides the widget, these roles may open the Logs tab, read only, without seeing any of the settings. Administrators always can. Nothing is shown to anybody while the widget is switched off.', 'field description', 'revision-retention' ); ?>
+		</p>
 		<?php
 	}
 
@@ -1281,11 +1408,22 @@ class Settings_Page {
 
 				if ( $next ) {
 					echo ' ';
-					printf(
-						/* translators: %s: time until the next scheduled sweep. */
-						esc_html_x( 'The next one is due in %s.', 'sweep status', 'revision-retention' ),
-						esc_html( human_time_diff( (int) $next ) )
-					);
+
+					// human_time_diff() gives the distance either way, so a sweep that
+					// is already late would otherwise read as one still to come.
+					if ( $next <= time() ) {
+						printf(
+							/* translators: %s: how long ago the next scheduled sweep was due, e.g. "2 minutes". */
+							esc_html_x( 'The next one was due %s ago and runs as soon as WP-Cron does.', 'sweep status', 'revision-retention' ),
+							esc_html( human_time_diff( (int) $next ) )
+						);
+					} else {
+						printf(
+							/* translators: %s: time until the next scheduled sweep. */
+							esc_html_x( 'The next one is due in %s.', 'sweep status', 'revision-retention' ),
+							esc_html( human_time_diff( (int) $next ) )
+						);
+					}
 				}
 				?>
 			</p>
@@ -1833,7 +1971,8 @@ class Settings_Page {
 		$value = isset( $stored[ $key ] ) ? ( $stored[ $key ] ? '1' : '0' ) : '';
 		?>
 		<label for="<?php echo esc_attr( $id ); ?>" class="rvrt-choice">
-			<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]">
+			<?php // What "Inherit" amounts to, for the script that dims the fields depending on this one. ?>
+			<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]" data-inherited="<?php echo empty( $inherited[ $key ] ) ? '0' : '1'; ?>">
 				<option value="" <?php selected( '', $value ); ?>>
 					<?php
 					printf(

@@ -21,6 +21,8 @@ defined( 'ABSPATH' ) || exit;
  * plugin. The answer is kept per user, so
  * one administrator saying no does not speak for another, and on multisite
  * a user's answer holds on the network and every site alike.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Rating_Notice {
 

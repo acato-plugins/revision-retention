@@ -28,6 +28,8 @@ defined( 'ABSPATH' ) || exit;
  * The table is per site, like the revisions it reports on, and is created the
  * first time there is something to write to it. The network screen reads the
  * tables of every site at once, so the readers below take a flag for that.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Log {
 
@@ -389,13 +391,14 @@ class Log {
 	}
 
 	/**
-	 * Totals over everything the log still holds.
+	 * Totals over everything the log still holds, or over the last few days.
 	 *
 	 * @param bool $network Whether to read every site on the network instead of this one.
+	 * @param int  $days    Only entries that ended in this many days, today included, or 0 for all.
 	 *
 	 * @return array{runs: int, revisions: int, posts: int}
 	 */
-	public static function totals( bool $network = false ): array {
+	public static function totals( bool $network = false, int $days = 0 ): array {
 		$totals = array(
 			'runs'      => 0,
 			'revisions' => 0,
@@ -410,12 +413,21 @@ class Log {
 
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- The plugin's own tables; the FROM clause is built from placeholders in from().
+		// The same days the chart counts: from the start of the oldest one, in
+		// the site's timezone, so the two never disagree.
+		$since = $days > 0
+			? gmdate( 'Y-m-d H:i:s', ( new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() )
+			: '0000-00-00 00:00:00';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]}", ...$from[1] ),
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]} WHERE ended_gmt >= %s",
+				...array_merge( $from[1], array( $since ) )
+			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		if ( is_array( $row ) ) {
 			$totals['runs']      = (int) $row['runs'];

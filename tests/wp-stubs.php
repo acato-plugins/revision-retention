@@ -92,8 +92,12 @@ function get_post_types( $args = array(), $output = 'names' ) {
 class WP_Post { public $ID = 0; public $post_type = 'post'; }
 class WP_Post_Type { public $name = ''; public $labels; }
 
-// A wpdb that answers from fixtures instead of MySQL, so the sweep's own
-// selection logic (the keep floor and the age cutoff) can be exercised.
+/**
+ * A wpdb that answers from fixtures instead of MySQL, so the sweep's own
+ * selection logic (the keep floor and the age cutoff) can be exercised.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
+ */
 class Test_WPDB {
 	public $posts = 'wp_posts';
 	public $candidates = array();

@@ -26,7 +26,7 @@ export default defineConfig( {
 		rollupOptions: {
 			// Listed rather than named, so each output takes its source's name:
 			// settings-<hash>.js and settings-<hash>.css.
-			input: [ 'src/settings.js', 'src/settings.css' ],
+			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js' ],
 		},
 	},
 } );

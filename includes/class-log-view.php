@@ -20,6 +20,8 @@ defined( 'ABSPATH' ) || exit;
  *
  * On the network screen the same timeline runs over every site's log at once,
  * and each entry names the site it was swept on.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Log_View {
 
@@ -108,7 +110,7 @@ class Log_View {
 				<?php $this->render_filter( $source ); ?>
 			</div>
 
-			<?php $this->render_chart(); ?>
+			<?php $this->render_chart( self::CHART_DAYS ); ?>
 
 			<?php if ( array() === $entries['rows'] ) : ?>
 				<p class="rvrt-log-nothing"><?php echo esc_html_x( 'Nothing in the log matches this filter.', 'log empty state', 'revision-retention' ); ?></p>
@@ -116,6 +118,57 @@ class Log_View {
 				<?php $this->render_timeline( $entries['rows'] ); ?>
 				<?php $this->render_pages( $page, $entries['total'], $source ); ?>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The last few days at a glance: the totals and the chart, nothing else.
+	 *
+	 * For the dashboard widget. The filter and the timeline are left to the
+	 * Logs tab, which the widget links to.
+	 *
+	 * @param int    $days     How many days to cover, today included.
+	 * @param string $more_url Where the whole log is.
+	 *
+	 * @return void
+	 */
+	public function render_recent( int $days, string $more_url ): void {
+		$totals = Log::totals( $this->network, $days );
+		?>
+		<div class="rvrt-log rvrt-log-recent">
+			<p class="rvrt-log-totals">
+				<?php
+				if ( 0 === $totals['runs'] ) {
+					printf(
+						/* translators: %s: number of days. */
+						esc_html( _nx( 'No revisions were removed in the last %s day.', 'No revisions were removed in the last %s days.', $days, 'log summary', 'revision-retention' ) ),
+						esc_html( number_format_i18n( $days ) )
+					);
+				} else {
+					echo wp_kses(
+						sprintf(
+							/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: number of days. */
+							esc_html( _nx( '%1$s removed from %2$s in %3$s over the last %4$s day.', '%1$s removed from %2$s in %3$s over the last %4$s days.', $days, 'log summary', 'revision-retention' ) ),
+							/* translators: %s: number of revisions. */
+							self::strong_count( _nx( '%s revision', '%s revisions', $totals['revisions'], 'log summary', 'revision-retention' ), $totals['revisions'] ),
+							/* translators: %s: number of posts. */
+							self::strong_count( _nx( '%s post', '%s posts', $totals['posts'], 'log summary', 'revision-retention' ), $totals['posts'] ),
+							/* translators: %s: number of sweeps. */
+							self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
+							esc_html( number_format_i18n( $days ) )
+						),
+						array( 'strong' => array() )
+					);
+				}
+				?>
+			</p>
+
+			<?php $this->render_chart( $days ); ?>
+
+			<p class="rvrt-log-more">
+				<a href="<?php echo esc_url( $more_url ); ?>"><?php echo esc_html_x( 'View the log', 'dashboard widget link', 'revision-retention' ); ?></a>
+			</p>
 		</div>
 		<?php
 	}
@@ -174,16 +227,18 @@ class Log_View {
 	/**
 	 * A bar per day for the last month, so a pattern shows at a glance.
 	 *
+	 * @param int $span How many days the chart covers, today included.
+	 *
 	 * @return void
 	 */
-	private function render_chart(): void {
-		$days    = Log::daily( self::CHART_DAYS, $this->network );
+	private function render_chart( int $span ): void {
+		$days    = Log::daily( $span, $this->network );
 		$highest = max( 1, ...array_values( $days ) );
 		$summary = sprintf(
 			/* translators: 1: number of revisions, 2: number of days. */
 			_nx( '%1$s revision removed in the last %2$s days', '%1$s revisions removed in the last %2$s days', array_sum( $days ), 'accessibility label', 'revision-retention' ),
 			number_format_i18n( array_sum( $days ) ),
-			number_format_i18n( self::CHART_DAYS )
+			number_format_i18n( $span )
 		);
 		?>
 		<figure class="rvrt-chart">
@@ -206,7 +261,7 @@ class Log_View {
 				<?php endforeach; ?>
 			</div>
 			<figcaption class="rvrt-chart-caption">
-				<span><?php echo esc_html( sprintf( /* translators: %s: number of days. */ _x( '%s days ago', 'chart axis', 'revision-retention' ), number_format_i18n( self::CHART_DAYS - 1 ) ) ); ?></span>
+				<span><?php echo esc_html( sprintf( /* translators: %s: number of days. */ _x( '%s days ago', 'chart axis', 'revision-retention' ), number_format_i18n( $span - 1 ) ) ); ?></span>
 				<span><?php echo esc_html_x( 'Today', 'chart axis', 'revision-retention' ); ?></span>
 			</figcaption>
 		</figure>

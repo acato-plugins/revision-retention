@@ -13,6 +13,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * The outcome of a single batch, and where the next one should pick up.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 final class Sweep_Result {
 

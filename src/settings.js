@@ -58,10 +58,15 @@
 		);
 
 	/**
-	 * Dim the fields that depend on a switch while it is off.
+	 * Switch off the fields that depend on a switch while it is off.
 	 *
-	 * Cosmetic only: the values are still submitted and still saved, and the
-	 * server decides what they mean.
+	 * The fields are disabled rather than the row made inert, so a screen
+	 * reader still announces them, as unavailable, instead of skipping a
+	 * setting that is plainly on screen. A disabled field is not submitted,
+	 * though, and saving with the switch off must not wipe what was set, so
+	 * they are enabled again on their way out; the server decides what the
+	 * values mean. A field that was disabled from the start, such as a role
+	 * that is always ticked, is left alone throughout.
 	 */
 	const syncDependent = ( toggleId, ids ) => {
 		const toggle = document.getElementById( toggleId );
@@ -71,21 +76,39 @@
 		}
 
 		// A checkbox on a site that owns its settings, a three way select when
-		// the value can be inherited from the network instead.
-		const isEnabled = () =>
-			toggle.type === 'checkbox' ? toggle.checked : toggle.value !== '0';
+		// the value can be inherited from the network instead, where Inherit
+		// means whatever the network has.
+		const isEnabled = () => {
+			if ( toggle.type === 'checkbox' ) {
+				return toggle.checked;
+			}
+
+			return toggle.value === '' ? toggle.dataset.inherited === '1' : toggle.value !== '0';
+		};
+
+		const rows = ids.map( ( id ) => document.getElementById( id )?.closest( 'tr' ) ).filter( Boolean );
+		const fields = rows.flatMap( ( row ) =>
+			[ ...row.querySelectorAll( 'input, select, textarea, button' ) ].filter( ( field ) => ! field.disabled )
+		);
 
 		const apply = () => {
 			const enabled = isEnabled();
 
-			for ( const id of ids ) {
-				const row = document.getElementById( id )?.closest( 'tr' );
+			for ( const row of rows ) {
+				row.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
+			}
 
-				row?.setAttribute( 'aria-disabled', enabled ? 'false' : 'true' );
+			for ( const field of fields ) {
+				field.disabled = ! enabled;
 			}
 		};
 
 		toggle.addEventListener( 'change', apply );
+		toggle.form?.addEventListener( 'submit', () => {
+			for ( const field of fields ) {
+				field.disabled = false;
+			}
+		} );
 		apply();
 	};
 
@@ -118,7 +141,9 @@
 	 * the one form.
 	 */
 	const syncTabs = () => {
-		const tabs = [ ...document.querySelectorAll( '.rvrt-tabs .nav-tab' ) ];
+		// Links only: a tab somebody may not open is a plain span, with no
+		// panel behind it, and stays out of the keyboard order.
+		const tabs = [ ...document.querySelectorAll( '.rvrt-tabs a.nav-tab' ) ];
 
 		if ( ! tabs.length ) {
 			return;
@@ -434,6 +459,7 @@
 		syncConfirms();
 		syncDependent( 'rvrt-cron-enabled', [ 'rvrt-cron-interval', 'rvrt-max-deletions', 'rvrt-batch-size' ] );
 		syncDependent( 'rvrt-log-enabled', [ 'rvrt-log-retention' ] );
+		syncDependent( 'rvrt-dashboard-widget', [ 'rvrt-widget-roles' ] );
 		syncQuietRows();
 
 		if ( window.fetch ) {

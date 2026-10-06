@@ -23,6 +23,8 @@ defined( 'ABSPATH' ) || exit;
  *
  * WP-Cron is per site, so on multisite every site sweeps itself under whatever
  * policy the network hands it. Nothing here loops over sites.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Scheduler {
 
