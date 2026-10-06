@@ -1,0 +1,17 @@
+{
+  "name": "revision-retention",
+  "private": true,
+  "type": "module",
+  "description": "Builds the assets of the Revision Retention plugin.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "vite build",
+    "production": "vite build",
+    "watch": "vite build --watch",
+    "start": "vite build --watch",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "vite": "^8.3.3"
+  }
+}

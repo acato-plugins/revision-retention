@@ -51,6 +51,7 @@ final class Plugin {
 		( new Limits() )->register();
 		( new Scheduler() )->register();
 		( new Log() )->register();
+		( new Assets() )->register();
 		( new Settings_Page() )->register();
 		( new Rating_Notice() )->register();
 

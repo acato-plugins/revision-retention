@@ -1,7 +1,9 @@
 # See: https://github.com/10up/action-wordpress-plugin-deploy
 #
-# The plugin has no build step: what is in the repository is what ships, minus
-# whatever .distignore excludes.
+# The settings screen's script and stylesheet are built by Vite into dist/,
+# which is not in the repository, so the job builds them first. What ships is
+# the checkout plus that build, minus whatever .distignore excludes. The
+# sources in src/ ship too, so the minified files can be read and rebuilt.
 name: Deploy to WordPress.org
 on:
   push:
@@ -13,6 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Build assets
+        run: npm ci && npm run build
 
       - name: WordPress Plugin Deploy
         uses: 10up/action-wordpress-plugin-deploy@stable

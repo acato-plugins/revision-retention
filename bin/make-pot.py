@@ -54,7 +54,7 @@ def sources() -> list[str]:
     files += sorted(f"includes/{name}" for name in os.listdir(ROOT / "includes") if name.endswith(".php"))
     # The screen's script translates through wp.i18n with the same functions
     # and argument order, so the same patterns find its strings.
-    files += sorted(f"assets/{name}" for name in os.listdir(ROOT / "assets") if name.endswith(".js"))
+    files += sorted(f"src/{name}" for name in os.listdir(ROOT / "src") if name.endswith(".js"))
     return files
 
 

@@ -20,9 +20,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # dist/ is not in the repository; check what the deploy would build.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Build assets
+        run: npm ci && npm run build
+
       - name: Run Plugin Check
         uses: wordpress/plugin-check-action@v1
         with:
           build-dir: "./"
           exclude-directories: ".github,.idea,.phpstan,.wordpress-org,node_modules,tests,vendor"
-          exclude-files: ".distignore,.editorconfig,.gitattributes,.gitignore,composer.json,composer.lock,phpcs.xml.dist,phpstan.neon"
+          exclude-files: ".distignore,.editorconfig,.gitattributes,.gitignore,.nvmrc,composer.json,composer.lock,package.json,package-lock.json,phpcs.xml.dist,phpstan.neon,vite.config.js"

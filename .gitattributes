@@ -12,6 +12,10 @@
 /.gitignore export-ignore
 /composer.json export-ignore
 /composer.lock export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/vite.config.js export-ignore
+/.nvmrc export-ignore
 /phpcs.xml.dist export-ignore
 /phpstan.neon export-ignore
 /.phpstan export-ignore

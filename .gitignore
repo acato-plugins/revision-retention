@@ -1,4 +1,6 @@
 node_modules/
+# Built by Vite from src/; the deploy builds it fresh.
+dist/
 vendor/
 .idea/
 .DS_Store

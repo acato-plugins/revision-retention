@@ -134,31 +134,19 @@ class Settings_Page {
 			return;
 		}
 
-		$url = plugin_dir_url( RVRT_PLUGIN_FILE );
+		$style  = Assets::url( 'src/settings.css' );
+		$script = Assets::url( 'src/settings.js' );
 
-		wp_enqueue_style( 'rvrt-settings', $url . 'assets/settings.css', array(), self::asset_version( 'assets/settings.css' ) );
-		wp_enqueue_script( 'rvrt-settings', $url . 'assets/settings.js', array( 'wp-i18n' ), self::asset_version( 'assets/settings.js' ), true );
-		wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
-	}
+		// Without a build there is nothing to load. The screen still works,
+		// unstyled and without the script, as it is built to.
+		if ( null !== $style ) {
+			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+		}
 
-	/**
-	 * The version to hang on an asset's URL.
-	 *
-	 * The plugin version alone is not enough: an asset edited between releases
-	 * keeps the same URL and browsers go on serving the copy they already have.
-	 * The file's own modification time changes whenever the file does, which is
-	 * exactly the question a cache buster is asking.
-	 *
-	 * @param string $relative Path of the asset inside the plugin.
-	 *
-	 * @return string
-	 */
-	private static function asset_version( string $relative ): string {
-		// Derived from the plugin file the way the URL above is, rather than
-		// from RVRT_PLUGIN_DIR, so the two always agree.
-		$modified = @filemtime( plugin_dir_path( RVRT_PLUGIN_FILE ) . $relative ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A missing or unreadable asset falls back to the plugin version rather than warning.
-
-		return false === $modified ? RVRT_VERSION : (string) $modified;
+		if ( null !== $script ) {
+			wp_enqueue_script( 'rvrt-settings', $script, array( 'wp-i18n' ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name is the version.
+			wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
+		}
 	}
 
 	/**
