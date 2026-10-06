@@ -270,6 +270,7 @@
 				}
 
 				site.textContent = item.site ?? '';
+				site.className = 'rvrt-col-site';
 				type.textContent = item.type;
 				count.textContent = item.revisions;
 				count.className = 'rvrt-col-number';
@@ -392,7 +393,9 @@
 				if ( ! finished ) {
 					announce( `${ done } ${ _x( 'Stopped. The schedule will finish the rest.', 'sweep result', 'revision-retention' ) }`, 'warning' );
 				} else {
-					announce( done, button.value === 'run' ? 'success' : 'info' );
+					// A preview that got all the way through has succeeded too;
+					// its sentence already says nothing was deleted.
+					announce( done, 'success' );
 				}
 			} catch ( error ) {
 				report( 0, '' );

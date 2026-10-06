@@ -1323,8 +1323,6 @@ class Settings_Page {
 			$this->remember_sweep( $result );
 		}
 
-		$last = Cleaner::last_parent_id();
-
 		self::send_json(
 			array(
 				'cursor'    => $result->cursor,
@@ -1333,9 +1331,7 @@ class Settings_Page {
 				'finished'  => $result->finished,
 				'items'     => $result->items,
 				'affected'  => $result->affected,
-				'progress'  => $result->finished || $last < 1
-					? 100
-					: min( 99, (int) floor( ( $result->cursor / $last ) * 100 ) ),
+				'progress'  => $result->finished ? 100 : min( 99, (int) floor( Cleaner::progress( $result->cursor ) * 100 ) ),
 			)
 		);
 	}
@@ -1416,6 +1412,8 @@ class Settings_Page {
 			$this->remember_sweep( $result );
 		}
 
+		// How far through this site, measured while still on it.
+		$share = $result->finished ? 1.0 : Cleaner::progress( $result->cursor );
 		$name  = get_bloginfo( 'name' );
 		$items = array_map(
 			static function ( array $item ) use ( $name ): array {
@@ -1443,7 +1441,9 @@ class Settings_Page {
 				'revisions' => $result->revisions,
 				'items'     => $items,
 				'finished'  => $finished,
-				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $next_index / count( $sites ) ) * 100 ) ),
+				// The sites already done, plus how far this one has got, so the bar
+				// moves while a large site is being worked through.
+				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $index + $share ) / count( $sites ) * 100 ) ),
 			)
 		);
 	}
@@ -1573,7 +1573,7 @@ class Settings_Page {
 								<thead>
 									<tr>
 										<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
-										<th scope="col"><?php echo esc_html_x( 'Site', 'column heading', 'revision-retention' ); ?></th>
+										<th scope="col" class="rvrt-col-site"><?php echo esc_html_x( 'Site', 'column heading', 'revision-retention' ); ?></th>
 										<th scope="col"><?php echo esc_html_x( 'Type', 'column heading', 'revision-retention' ); ?></th>
 										<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Removing', 'column heading', 'revision-retention' ); ?></th>
 								<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Remaining', 'column heading', 'revision-retention' ); ?></th>

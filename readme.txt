@@ -150,6 +150,9 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * A sweep that is stopped and started again, or picked up by the schedule, stays one line in the log instead of leaving lines behind that read "In progress".
 * The sweep status counts sweeps finished with **Run now** and WP-CLI, not only scheduled ones.
 * The progress text counts every post checked, so a sweep with a small batch size no longer looks stuck.
+* The progress bar moves steadily through a site, and on the network it moves within each site rather than only when a whole site is done.
+* A preview that runs to the end is reported as a success.
+* A refreshed settings screen: tabs that read as one card with the panel, lighter tables, and a post types table whose headings stay in view while scrolling.
 * **Sweep every site now** asks for confirmation first.
 * Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
 

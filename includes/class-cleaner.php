@@ -312,21 +312,53 @@ class Cleaner {
 	}
 
 	/**
-	 * The highest post ID that has revisions at all.
+	 * How far through the site a sweep at this cursor is, from 0 to 1.
 	 *
-	 * The sweep walks posts in ID order, so the cursor against this is a fair
-	 * measure of how far through a run is. It is an estimate, not a count of
-	 * work left, which is all a progress bar needs.
+	 * Counted in posts rather than IDs: the share of the posts holding
+	 * revisions, of the types the policy sweeps, that lie at or before the
+	 * cursor. Post IDs are spread unevenly, so measuring the cursor against
+	 * the highest ID crawled through a dense stretch and then leapt ahead.
+	 * Every post is counted, not only the ones with revisions old enough to
+	 * go, so what a real run deletes behind the cursor does not move it.
 	 *
-	 * @return int
+	 * @param int                $cursor     Parent post ID the sweep has got to.
+	 * @param array<int, string> $post_types Limit to these post types, empty for all the policy sweeps.
+	 *
+	 * @return float
 	 */
-	public static function last_parent_id(): int {
+	public static function progress( int $cursor, array $post_types = array() ): float {
+		$types = array_keys( Policy::sweepable() );
+
+		if ( array() !== $post_types ) {
+			$types = array_values( array_intersect( $types, $post_types ) );
+		}
+
+		if ( array() === $types ) {
+			return 1.0;
+		}
+
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read once per sweep to size its progress; a stale value would misreport it.
-		return (int) $wpdb->get_var(
-			"SELECT MAX( post_parent ) FROM {$wpdb->posts} WHERE post_type = 'revision'"
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The only interpolation is a generated list of %s placeholders; read per batch to size its progress, where a cached value would freeze the bar.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT( DISTINCT r.post_parent ) AS total,
+					COUNT( DISTINCT CASE WHEN r.post_parent <= %d THEN r.post_parent END ) AS done
+				FROM {$wpdb->posts} r
+				INNER JOIN {$wpdb->posts} p ON p.ID = r.post_parent
+				WHERE r.post_type = 'revision'
+					AND p.post_type IN ( {$placeholders} )",
+				...array_merge( array( $cursor ), $types )
+			),
+			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		$total = is_array( $row ) ? (int) $row['total'] : 0;
+
+		return $total > 0 ? min( 1.0, (int) $row['done'] / $total ) : 1.0;
 	}
 
 	/**
