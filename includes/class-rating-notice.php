@@ -12,12 +12,13 @@ namespace Acato\RevisionRetention;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * A notice on the Dashboard, a month after activation, asking for a rating.
+ * A notice a month after activation, asking for a rating.
  *
  * A month is long enough for a scheduled sweep or two to have run, so the
  * question comes from somebody who has seen what the plugin does. It only
- * appears on the Dashboard, never on the screens people come to work on,
- * and only to those who manage the plugin. The answer is kept per user, so
+ * appears on the Dashboard and the plugin's own settings, never on the
+ * screens people come to do other work on, and only to those who manage the
+ * plugin. The answer is kept per user, so
  * one administrator saying no does not speak for another, and on multisite
  * a user's answer holds on the network and every site alike.
  */
@@ -94,11 +95,11 @@ class Rating_Notice {
 	public function render(): void {
 		$screen = get_current_screen();
 
-		if ( null === $screen || ! in_array( $screen->id, array( 'dashboard', 'dashboard-network' ), true ) ) {
+		if ( null === $screen || ! self::is_place( $screen->id ) ) {
 			return;
 		}
 
-		if ( ! self::is_due( 'dashboard-network' === $screen->id ) ) {
+		if ( ! self::is_due( is_network_admin() ) ) {
 			return;
 		}
 
@@ -125,7 +126,8 @@ class Rating_Notice {
 				<a class="button" href="<?php echo esc_url( $link( 'later' ) ); ?>">
 					<?php echo esc_html_x( 'Maybe later', 'rating notice', 'revision-retention' ); ?>
 				</a>
-				<a class="button-link" href="<?php echo esc_url( $link( 'never' ) ); ?>">
+				<?php // WordPress's own red link style, so it shows on the Dashboard too, where the plugin's stylesheet is not loaded. ?>
+				<a class="button-link button-link-delete" href="<?php echo esc_url( $link( 'never' ) ); ?>">
 					<?php echo esc_html_x( 'Don\'t ask again', 'rating notice', 'revision-retention' ); ?>
 				</a>
 			</p>
@@ -159,6 +161,22 @@ class Rating_Notice {
 
 		wp_safe_redirect( wp_get_referer() ? wp_get_referer() : admin_url() );
 		exit;
+	}
+
+	/**
+	 * Whether a screen is one the question belongs on.
+	 *
+	 * The Dashboard, and the plugin's own settings, where somebody who looks
+	 * after it comes anyway. Nowhere else, so it never gets in the way of
+	 * other work.
+	 *
+	 * @param string $screen_id ID of the current admin screen.
+	 *
+	 * @return bool
+	 */
+	private static function is_place( string $screen_id ): bool {
+		return in_array( $screen_id, array( 'dashboard', 'dashboard-network' ), true )
+			|| str_contains( $screen_id, Settings_Page::PAGE_SLUG );
 	}
 
 	/**

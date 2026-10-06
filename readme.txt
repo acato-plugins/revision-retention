@@ -155,7 +155,7 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * A preview that runs to the end is reported as a success.
 * A refreshed settings screen: tabs that read as one card with the panel, lighter tables, and a post types table whose headings stay in view while scrolling.
 * **Sweep every site now** asks for confirmation first.
-* A month after activation, the Dashboard asks administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down.
+* A month after activation, the Dashboard and the plugin's settings ask administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down.
 * Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
 
 = 1.2.0 =
