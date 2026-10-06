@@ -570,7 +570,7 @@ class Settings_Page {
 	private function render_summary(): void {
 		$counts = Cleaner::counts();
 		?>
-		<table class="widefat striped rvrt-summary">
+		<table class="widefat rvrt-table rvrt-summary">
 			<thead>
 				<tr>
 					<th scope="col"><?php echo esc_html_x( 'Post type', 'column heading', 'revision-retention' ); ?></th>
@@ -825,6 +825,93 @@ class Settings_Page {
 			</tr>
 		</table>
 		<?php
+		// Cron is per site, so the network screen has no events of its own to show.
+		if ( ! $is_network ) {
+			$this->render_crontrol_section();
+		}
+	}
+
+	/**
+	 * This plugin's cron events, with a way into WP Crontrol for each.
+	 *
+	 * Only shown while WP Crontrol is active: it is where an administrator can
+	 * see an event's next run, run it now or remove it, and without it there
+	 * is nowhere to send them.
+	 *
+	 * @return void
+	 */
+	private function render_crontrol_section(): void {
+		$all = Cron_Health::crontrol_url( 'rvrt_' );
+
+		if ( null === $all ) {
+			return;
+		}
+
+		$events = array(
+			Scheduler::HOOK => _x( 'Sweeps the next batch, or starts the next full sweep.', 'cron event description', 'revision-retention' ),
+			Log::PRUNE_HOOK => _x( 'Deletes log entries older than the retention, once a day.', 'cron event description', 'revision-retention' ),
+		);
+		?>
+		<div class="rvrt-events">
+			<h2 class="rvrt-events-title"><?php echo esc_html_x( 'Cron events', 'section heading', 'revision-retention' ); ?></h2>
+			<p class="description">
+				<?php echo esc_html_x( 'WP Crontrol is active, so these events can be inspected, run straight away or removed from its Cron Events screen.', 'section description', 'revision-retention' ); ?>
+			</p>
+
+			<table class="widefat rvrt-table rvrt-events-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php echo esc_html_x( 'Event', 'column heading', 'revision-retention' ); ?></th>
+						<th scope="col"><?php echo esc_html_x( 'Next run', 'column heading', 'revision-retention' ); ?></th>
+						<th scope="col"><span class="screen-reader-text"><?php echo esc_html_x( 'Actions', 'column heading', 'revision-retention' ); ?></span></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					foreach ( $events as $hook => $description ) :
+						$next = (int) wp_next_scheduled( $hook );
+						?>
+						<tr>
+							<th scope="row">
+								<code><?php echo esc_html( $hook ); ?></code>
+								<span class="rvrt-events-description"><?php echo esc_html( $description ); ?></span>
+							</th>
+							<td>
+								<?php
+								if ( $next < 1 ) {
+									echo '<span class="rvrt-none">' . esc_html_x( 'Not booked', 'cron event state', 'revision-retention' ) . '</span>';
+								} elseif ( $next <= time() ) {
+									printf(
+										/* translators: %s: how long ago the event was due, e.g. "3 hours". */
+										esc_html_x( 'Overdue by %s', 'cron event state', 'revision-retention' ),
+										esc_html( human_time_diff( $next ) )
+									);
+								} else {
+									printf(
+										/* translators: %s: time until the event runs, e.g. "5 minutes". */
+										esc_html_x( 'In %s', 'cron event state', 'revision-retention' ),
+										esc_html( human_time_diff( $next ) )
+									);
+								}
+								?>
+							</td>
+							<td class="rvrt-events-action">
+								<a href="<?php echo esc_url( (string) Cron_Health::crontrol_url( $hook ) ); ?>">
+									<?php echo esc_html_x( 'View in WP Crontrol', 'link label', 'revision-retention' ); ?>
+								</a>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+
+			<p>
+				<a class="button" href="<?php echo esc_url( $all ); ?>">
+					<?php echo esc_html_x( 'Open all in WP Crontrol', 'button label', 'revision-retention' ); ?>
+				</a>
+			</p>
+		</div>
+		<?php
 	}
 
 	/**
@@ -1000,7 +1087,7 @@ class Settings_Page {
 			}
 		}
 		?>
-		<table class="widefat striped rvrt-post-types">
+		<table class="widefat rvrt-table rvrt-post-types">
 			<thead>
 				<tr>
 					<th scope="col" class="rvrt-col-type"><?php echo esc_html_x( 'Post type', 'column heading', 'revision-retention' ); ?></th>
@@ -1245,7 +1332,7 @@ class Settings_Page {
 
 			<div class="rvrt-affected" hidden>
 				<div class="rvrt-affected-scroll">
-					<table class="widefat striped">
+					<table class="widefat rvrt-table">
 						<thead>
 							<tr>
 								<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>
@@ -1569,7 +1656,7 @@ class Settings_Page {
 
 					<div class="rvrt-affected" hidden>
 						<div class="rvrt-affected-scroll">
-							<table class="widefat striped">
+							<table class="widefat rvrt-table">
 								<thead>
 									<tr>
 										<th scope="col"><?php echo esc_html_x( 'Post', 'column heading', 'revision-retention' ); ?></th>

@@ -174,13 +174,11 @@
 	color: #1d2327;
 }
 
-/* Post types -------------------------------------------------------------- */
+/* Tables ------------------------------------------------------------------ */
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) {
-	margin-block-end: 0.75em;
-}
-
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) {
+/* Every list on the screen shares one look: a rounded frame, a muted heading
+   band, and plain rows split by a hairline instead of WordPress's stripes. */
+.rvrt-settings .rvrt-table {
 	/* Separate borders, so the corners can be rounded without an overflow
 	   that would stop the header from sticking. */
 	border: 1px solid var(--rvrt-rule);
@@ -190,13 +188,13 @@
 	box-shadow: none;
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) :is(th, td) {
+.rvrt-settings .rvrt-table :is(th, td) {
 	padding-block: 8px;
 	padding-inline: 12px;
 	vertical-align: middle;
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary, .rvrt-affected table) thead th {
+.rvrt-settings .rvrt-table thead th {
 	background: var(--rvrt-soft);
 	border-block-end: 1px solid var(--rvrt-rule);
 	color: var(--rvrt-muted);
@@ -207,37 +205,42 @@
 	text-transform: uppercase;
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) thead th:first-child {
+.rvrt-settings .rvrt-table thead th:first-child {
 	border-start-start-radius: var(--rvrt-radius);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) thead th:last-child {
+.rvrt-settings .rvrt-table thead th:last-child {
 	border-start-end-radius: var(--rvrt-radius);
 }
 
-/* Plain rows split by a hairline instead of WordPress's stripes. */
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary, .rvrt-affected table) tbody tr {
+.rvrt-settings .rvrt-table tbody tr {
 	background: var(--rvrt-surface);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary, .rvrt-affected table) tbody tr + tr > * {
+.rvrt-settings .rvrt-table tbody tr + tr > * {
 	border-block-start: 1px solid var(--rvrt-divider);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary, .rvrt-affected table) tbody tr:hover > * {
+.rvrt-settings .rvrt-table tbody tr:hover > * {
 	background: var(--rvrt-soft);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) tbody tr:last-child > :first-child {
+.rvrt-settings .rvrt-table tbody tr:last-child > :first-child {
 	border-end-start-radius: var(--rvrt-radius);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) tbody tr:last-child > :last-child {
+.rvrt-settings .rvrt-table tbody tr:last-child > :last-child {
 	border-end-end-radius: var(--rvrt-radius);
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary, .rvrt-affected table) .rvrt-col-number {
+.rvrt-settings .rvrt-table .rvrt-col-number {
 	font-variant-numeric: tabular-nums;
+}
+
+/* Post types -------------------------------------------------------------- */
+
+.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) {
+	margin-block-end: 0.75em;
 }
 
 .rvrt-settings .rvrt-col-type {
@@ -280,6 +283,7 @@
 	line-height: 30px;
 	min-block-size: 32px;
 	padding-block: 0;
+	padding-inline-end: 32px;
 }
 
 .rvrt-settings .rvrt-label {
@@ -403,16 +407,8 @@
 	scrollbar-gutter: stable;
 }
 
-.rvrt-settings .rvrt-affected table {
+.rvrt-settings .rvrt-affected .rvrt-table {
 	border: 0;
-	border-collapse: separate;
-	border-spacing: 0;
-	box-shadow: none;
-}
-
-.rvrt-settings .rvrt-affected :is(th, td) {
-	padding-block: 8px;
-	padding-inline: 12px;
 }
 
 /* Stuck to the top of the scrolling box; the heading band is opaque, so the
@@ -972,6 +968,37 @@
 	.rvrt-settings :is(.rvrt-day-label, .rvrt-post-types thead th) {
 		inset-block-start: 0;
 	}
+}
+
+/* This plugin's cron events, when WP Crontrol is there to manage them. */
+.rvrt-settings .rvrt-events {
+	border-block-start: 1px solid var(--rvrt-divider);
+	margin-block-start: 1.5em;
+	padding-block-start: 0.5em;
+}
+
+.rvrt-settings .rvrt-events-title {
+	font-size: 14px;
+	margin-block: 1em 0.25em;
+}
+
+.rvrt-settings .rvrt-events-table {
+	margin-block-start: 1em;
+}
+
+.rvrt-settings .rvrt-events-table tbody th {
+	font-weight: 400;
+}
+
+.rvrt-settings .rvrt-events-description {
+	color: var(--rvrt-muted);
+	display: block;
+	margin-block-start: 0.25em;
+}
+
+.rvrt-settings .rvrt-events-action {
+	text-align: end;
+	white-space: nowrap;
 }
 
 /* The cron warning sits in a form row, under the switch it is about. */

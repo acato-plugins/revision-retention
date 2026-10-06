@@ -146,6 +146,7 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 = 1.3.0 =
 * The **Schedule** tab says whether WP-Cron actually runs on the site, and warns under **Run automatically** when scheduled events are overdue, for instance because `DISABLE_WP_CRON` is set without a server cron job behind it. `wp revision-retention status` reports the same.
+* With WP Crontrol active, the **Schedule** tab lists the plugin's cron events with their next run, and links each one to WP Crontrol, where it can be run straight away or removed.
 * Saving the settings no longer pushes the scheduled sweep back. A sweep that was part way carries on a minute later instead of a whole interval later.
 * A sweep that is stopped and started again, or picked up by the schedule, stays one line in the log instead of leaving lines behind that read "In progress".
 * The sweep status counts sweeps finished with **Run now** and WP-CLI, not only scheduled ones.

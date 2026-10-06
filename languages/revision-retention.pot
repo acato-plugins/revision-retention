@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-06T07:08:31+00:00\n"
+"POT-Creation-Date: 2026-10-06T07:28:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -388,12 +388,12 @@ msgctxt "admin notice"
 msgid "There is more to do; the rest continues in the background."
 msgstr ""
 
-#: includes/class-settings-page.php:576 includes/class-settings-page.php:997
+#: includes/class-settings-page.php:576 includes/class-settings-page.php:1093
 msgctxt "column heading"
 msgid "Post type"
 msgstr ""
 
-#: includes/class-settings-page.php:577 includes/class-settings-page.php:1001
+#: includes/class-settings-page.php:577 includes/class-settings-page.php:1097
 msgctxt "column heading"
 msgid "Revisions"
 msgstr ""
@@ -403,7 +403,7 @@ msgctxt "column heading"
 msgid "Keep"
 msgstr ""
 
-#: includes/class-settings-page.php:579 includes/class-settings-page.php:751 includes/class-settings-page.php:1003
+#: includes/class-settings-page.php:579 includes/class-settings-page.php:751 includes/class-settings-page.php:1099
 msgctxt "field label"
 msgid "Remove older than"
 msgstr ""
@@ -413,12 +413,12 @@ msgctxt "column heading"
 msgid "Stored now"
 msgstr ""
 
-#: includes/class-settings-page.php:588 includes/class-settings-page.php:1031 includes/class-settings-page.php:1762
+#: includes/class-settings-page.php:588 includes/class-settings-page.php:1127 includes/class-settings-page.php:1858
 msgctxt "revision support state"
 msgid "On"
 msgstr ""
 
-#: includes/class-settings-page.php:588 includes/class-settings-page.php:1763
+#: includes/class-settings-page.php:588 includes/class-settings-page.php:1859
 msgctxt "revision support state"
 msgid "Off"
 msgstr ""
@@ -443,7 +443,7 @@ msgctxt "confirmation"
 msgid "This makes the settings on this screen the defaults for every site on the network. Sites with settings of their own keep them. Continue?"
 msgstr ""
 
-#: includes/class-settings-page.php:740 includes/class-settings-page.php:1002
+#: includes/class-settings-page.php:740 includes/class-settings-page.php:1098
 msgctxt "field label"
 msgid "Always keep"
 msgstr ""
@@ -455,7 +455,7 @@ msgstr ""
 
 #. translators: %s: the age inherited from the network.
 #. translators: %s: the value inherited from the network.
-#: includes/class-settings-page.php:763 includes/class-settings-page.php:1757 includes/class-settings-page.php:1791
+#: includes/class-settings-page.php:763 includes/class-settings-page.php:1853 includes/class-settings-page.php:1887
 msgctxt "inherited setting option"
 msgid "Inherit (%s)"
 msgstr ""
@@ -465,17 +465,17 @@ msgctxt "field description"
 msgid "Revisions past this age are removed by the sweep, except for the newest ones above. Choose Never to switch the age threshold off and only cap the count."
 msgstr ""
 
-#: includes/class-settings-page.php:794
+#: includes/class-settings-page.php:793
 msgctxt "field label"
 msgid "Run automatically"
 msgstr ""
 
-#: includes/class-settings-page.php:796
+#: includes/class-settings-page.php:795
 msgctxt "checkbox label"
 msgid "Sweep old revisions in the background"
 msgstr ""
 
-#: includes/class-settings-page.php:797
+#: includes/class-settings-page.php:796
 msgctxt "field description"
 msgid "Each run works through the site in batches and books the next batch itself, so a large site is cleaned up over several runs instead of one long one."
 msgstr ""
@@ -505,279 +505,341 @@ msgctxt "field description"
 msgid "The most a single batch may delete. It stops once it gets there and carries on next time, which keeps one post with thousands of revisions from turning a batch into a long job. The post being worked on is always finished first, so the count can overshoot a little. Use 0 for no cap."
 msgstr ""
 
+#: includes/class-settings-page.php:851
+msgctxt "cron event description"
+msgid "Sweeps the next batch, or starts the next full sweep."
+msgstr ""
+
+#: includes/class-settings-page.php:852
+msgctxt "cron event description"
+msgid "Deletes log entries older than the retention, once a day."
+msgstr ""
+
+#: includes/class-settings-page.php:856
+msgctxt "section heading"
+msgid "Cron events"
+msgstr ""
+
+#: includes/class-settings-page.php:858
+msgctxt "section description"
+msgid "WP Crontrol is active, so these events can be inspected, run straight away or removed from its Cron Events screen."
+msgstr ""
+
+#: includes/class-settings-page.php:864
+msgctxt "column heading"
+msgid "Event"
+msgstr ""
+
+#: includes/class-settings-page.php:865
+msgctxt "column heading"
+msgid "Next run"
+msgstr ""
+
+#: includes/class-settings-page.php:866
+msgctxt "column heading"
+msgid "Actions"
+msgstr ""
+
+#: includes/class-settings-page.php:882
+msgctxt "cron event state"
+msgid "Not booked"
+msgstr ""
+
+#. translators: %s: how long ago the event was due, e.g. "3 hours".
+#: includes/class-settings-page.php:886
+msgctxt "cron event state"
+msgid "Overdue by %s"
+msgstr ""
+
+#. translators: %s: time until the event runs, e.g. "5 minutes".
+#: includes/class-settings-page.php:892
+msgctxt "cron event state"
+msgid "In %s"
+msgstr ""
+
+#: includes/class-settings-page.php:900
+msgctxt "link label"
+msgid "View in WP Crontrol"
+msgstr ""
+
+#: includes/class-settings-page.php:910
+msgctxt "button label"
+msgid "Open all in WP Crontrol"
+msgstr ""
+
 #. translators: %s: how long the oldest scheduled event has been waiting, e.g. "3 hours".
-#: includes/class-settings-page.php:848
+#: includes/class-settings-page.php:940
 msgctxt "cron health"
 msgid "WP-Cron does not seem to be running: scheduled events are %s overdue, so scheduled sweeps will not happen either."
 msgstr ""
 
-#: includes/class-settings-page.php:851
+#: includes/class-settings-page.php:943
 msgctxt "cron health"
 msgid "WP-Cron is started by visits to the site, so a site nobody visits, or a server that blocks requests to itself, holds it up. A server cron job that calls wp-cron.php, or runs \"wp cron event run --due-now\", fixes both."
 msgstr ""
 
-#: includes/class-settings-page.php:852
+#: includes/class-settings-page.php:944
 msgctxt "cron health"
 msgid "DISABLE_WP_CRON is set, so visits do not start WP-Cron and a server cron job has to. Add one that calls wp-cron.php, or runs \"wp cron event run --due-now\", every few minutes."
 msgstr ""
 
-#: includes/class-settings-page.php:855
+#: includes/class-settings-page.php:947
 msgctxt "cron health"
 msgid "WP-Cron is running. DISABLE_WP_CRON is set, so it is started by a server cron job rather than by visits, and nothing in the schedule is overdue."
 msgstr ""
 
-#: includes/class-settings-page.php:858
+#: includes/class-settings-page.php:950
 msgctxt "cron health"
 msgid "WP-Cron is running. It is started by visits to the site, and nothing in the schedule is overdue."
 msgstr ""
 
 #. translators: %s: how long ago, e.g. "2 hours".
-#: includes/class-settings-page.php:867
+#: includes/class-settings-page.php:959
 msgctxt "cron health"
 msgid "The scheduled sweep last ran %s ago."
 msgstr ""
 
-#: includes/class-settings-page.php:893
+#: includes/class-settings-page.php:989
 msgctxt "field label"
 msgid "Log"
 msgstr ""
 
-#: includes/class-settings-page.php:895
+#: includes/class-settings-page.php:991
 msgctxt "checkbox label"
 msgid "Keep a log of every sweep that removes revisions"
 msgstr ""
 
-#: includes/class-settings-page.php:896
+#: includes/class-settings-page.php:992
 msgctxt "field description"
 msgid "Records who or what ran each sweep, the schedule, somebody on this screen or WP-CLI, and how many revisions it removed. Previews are never logged."
 msgstr ""
 
-#: includes/class-settings-page.php:901
+#: includes/class-settings-page.php:997
 msgctxt "field label"
 msgid "Keep entries for"
 msgstr ""
 
-#: includes/class-settings-page.php:905
+#: includes/class-settings-page.php:1001
 msgctxt "field description"
 msgid "Older entries are deleted once a day."
 msgstr ""
 
-#: includes/class-settings-page.php:913
+#: includes/class-settings-page.php:1009
 msgctxt "field description"
 msgid "Each site keeps its own log, next to its own revisions. Below are the logs of every site together; a site's own screen shows just that site."
 msgstr ""
 
-#: includes/class-settings-page.php:935
+#: includes/class-settings-page.php:1031
 msgctxt "field label"
 msgid "Overrides"
 msgstr ""
 
-#: includes/class-settings-page.php:939
+#: includes/class-settings-page.php:1035
 msgctxt "checkbox label"
 msgid "Let each site override these defaults"
 msgstr ""
 
-#: includes/class-settings-page.php:941
+#: includes/class-settings-page.php:1037
 msgctxt "field description"
 msgid "With this off, every site follows the policy above and its own screen only reports it. Overrides a site saved earlier are kept and take effect again when this is switched back on."
 msgstr ""
 
-#: includes/class-settings-page.php:961
+#: includes/class-settings-page.php:1057
 msgctxt "field label"
 msgid "On removal"
 msgstr ""
 
-#: includes/class-settings-page.php:963
+#: includes/class-settings-page.php:1059
 msgctxt "checkbox label"
 msgid "Remove all data of this plugin when it is uninstalled"
 msgstr ""
 
-#: includes/class-settings-page.php:964
+#: includes/class-settings-page.php:1060
 msgctxt "field description"
 msgid "Deletes these settings. Revisions already removed cannot be brought back either way."
 msgstr ""
 
-#: includes/class-settings-page.php:999
+#: includes/class-settings-page.php:1095
 msgctxt "column heading"
 msgid "Stored"
 msgstr ""
 
-#: includes/class-settings-page.php:1025 includes/class-settings-page.php:1959
+#: includes/class-settings-page.php:1121 includes/class-settings-page.php:2055
 msgctxt "stored revision count"
 msgid "None"
 msgstr ""
 
 #. translators: %s: post type label.
-#: includes/class-settings-page.php:1039
+#: includes/class-settings-page.php:1135
 msgctxt "accessibility label"
 msgid "Store revisions for %s"
 msgstr ""
 
 #. translators: %s: post type label.
-#: includes/class-settings-page.php:1044
+#: includes/class-settings-page.php:1140
 msgctxt "checkbox label"
 msgid "Enable"
 msgstr ""
 
 #. translators: %s: post type label.
-#: includes/class-settings-page.php:1057
+#: includes/class-settings-page.php:1153
 msgctxt "accessibility label"
 msgid "Revisions to always keep for %s"
 msgstr ""
 
 #. translators: %s: the age set for the whole site.
-#: includes/class-settings-page.php:1068
+#: includes/class-settings-page.php:1164
 msgctxt "inherited setting option"
 msgid "Policy above (%s)"
 msgstr ""
 
 #. translators: %s: post type label.
-#: includes/class-settings-page.php:1073
+#: includes/class-settings-page.php:1169
 msgctxt "accessibility label"
 msgid "Age after which revisions of %s are removed"
 msgstr ""
 
 #. translators: %s: number of post types.
-#: includes/class-settings-page.php:1089
+#: includes/class-settings-page.php:1185
 msgctxt "button label"
 msgid "Hide the post types without revisions"
 msgstr ""
 
-#: includes/class-settings-page.php:1186
+#: includes/class-settings-page.php:1282
 msgctxt "sweep status"
 msgid "A sweep is part way through this site and continues from where it stopped."
 msgstr ""
 
-#: includes/class-settings-page.php:1195
+#: includes/class-settings-page.php:1291
 msgctxt "sweep status"
 msgid "No sweep has finished on this site yet."
 msgstr ""
 
 #. translators: %s: time until the next scheduled sweep.
-#: includes/class-settings-page.php:1202
+#: includes/class-settings-page.php:1298
 msgctxt "sweep status"
 msgid "The next one is due in %s."
 msgstr ""
 
-#: includes/class-settings-page.php:1211
+#: includes/class-settings-page.php:1307
 msgctxt "button label"
 msgid "Preview"
 msgstr ""
 
-#: includes/class-settings-page.php:1215
+#: includes/class-settings-page.php:1311
 msgctxt "button label"
 msgid "Run now"
 msgstr ""
 
-#: includes/class-settings-page.php:1219 includes/class-settings-page.php:1543
+#: includes/class-settings-page.php:1315 includes/class-settings-page.php:1639
 msgctxt "button label"
 msgid "Stop"
 msgstr ""
 
-#: includes/class-settings-page.php:1230 includes/class-settings-page.php:1554
+#: includes/class-settings-page.php:1326 includes/class-settings-page.php:1650
 msgctxt "accessibility label"
 msgid "Sweep progress"
 msgstr ""
 
-#: includes/class-settings-page.php:1242 includes/class-settings-page.php:1566
+#: includes/class-settings-page.php:1338 includes/class-settings-page.php:1662
 msgctxt "column heading"
 msgid "Post"
 msgstr ""
 
-#: includes/class-settings-page.php:1243 includes/class-settings-page.php:1568
+#: includes/class-settings-page.php:1339 includes/class-settings-page.php:1664
 msgctxt "column heading"
 msgid "Type"
 msgstr ""
 
-#: includes/class-settings-page.php:1244 includes/class-settings-page.php:1569
+#: includes/class-settings-page.php:1340 includes/class-settings-page.php:1665
 msgctxt "column heading"
 msgid "Removing"
 msgstr ""
 
-#: includes/class-settings-page.php:1245 includes/class-settings-page.php:1570
+#: includes/class-settings-page.php:1341 includes/class-settings-page.php:1666
 msgctxt "column heading"
 msgid "Remaining"
 msgstr ""
 
-#: includes/class-settings-page.php:1255
+#: includes/class-settings-page.php:1351
 msgctxt "field description"
 msgid "Preview goes through the whole site and reports what the policy would remove, without deleting anything. Run now does the same and deletes as it goes, batch after batch, until the site is clean. Either one can be stopped, and the schedule picks up whatever is left."
 msgstr ""
 
-#: includes/class-settings-page.php:1259
+#: includes/class-settings-page.php:1355
 msgctxt "field description"
 msgid "This network keeps the retention policy to itself, so only a network administrator can sweep this site. The scheduled sweep still runs if the network has it switched on."
 msgstr ""
 
-#: includes/class-settings-page.php:1282 includes/class-settings-page.php:1347 includes/class-settings-page.php:1595 includes/class-settings-page.php:1869
+#: includes/class-settings-page.php:1378 includes/class-settings-page.php:1439 includes/class-settings-page.php:1691 includes/class-settings-page.php:1965
 msgctxt "permission error"
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: includes/class-settings-page.php:1291 includes/class-settings-page.php:1877
+#: includes/class-settings-page.php:1387 includes/class-settings-page.php:1973
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide, so only a network administrator can sweep it."
 msgstr ""
 
 #. translators: %s: number of sites on the network.
-#: includes/class-settings-page.php:1523
+#: includes/class-settings-page.php:1619
 msgctxt "sweep status"
 msgid "Revisions live in each site's own database, so a sweep belongs to the site rather than to the network."
 msgstr ""
 
-#: includes/class-settings-page.php:1528
+#: includes/class-settings-page.php:1624
 msgctxt "button label"
 msgid "Preview every site"
 msgstr ""
 
-#: includes/class-settings-page.php:1535
+#: includes/class-settings-page.php:1631
 msgctxt "confirmation"
 msgid "This permanently deletes revisions on every site on the network that has the sweep switched on, under each site's own policy. It cannot be undone. Continue?"
 msgstr ""
 
-#: includes/class-settings-page.php:1537
+#: includes/class-settings-page.php:1633
 msgctxt "button label"
 msgid "Sweep every site now"
 msgstr ""
 
-#: includes/class-settings-page.php:1540
+#: includes/class-settings-page.php:1636
 msgctxt "button label"
 msgid "Schedule a sweep on every site"
 msgstr ""
 
-#: includes/class-settings-page.php:1567
+#: includes/class-settings-page.php:1663
 msgctxt "column heading"
 msgid "Site"
 msgstr ""
 
-#: includes/class-settings-page.php:1580
+#: includes/class-settings-page.php:1676
 msgctxt "field description"
 msgid "Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Sweep every site now does the same and deletes as it goes, site after site, and logs what it removed on each one. It can be stopped, and the schedule picks up whatever is left. Schedule a sweep on every site leaves the work to WP-Cron instead, starting each site within the next few minutes. Both pass over the sites that have switched the sweep off."
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: includes/class-settings-page.php:1758
+#: includes/class-settings-page.php:1854
 msgctxt "inherited boolean value"
 msgid "off"
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: includes/class-settings-page.php:1758
+#: includes/class-settings-page.php:1854
 msgctxt "inherited boolean value"
 msgid "on"
 msgstr ""
 
-#: includes/class-settings-page.php:1813 includes/class-settings-page.php:1851
+#: includes/class-settings-page.php:1909 includes/class-settings-page.php:1947
 msgctxt "permission error"
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: includes/class-settings-page.php:1819
+#: includes/class-settings-page.php:1915
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide."
 msgstr ""
 
-#: includes/class-settings-page.php:1956
+#: includes/class-settings-page.php:2052
 msgctxt "revisions kept"
 msgid "All"
 msgstr ""
@@ -815,7 +877,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of post types.
-#: includes/class-settings-page.php:1088 includes/class-settings-page.php:1093
+#: includes/class-settings-page.php:1184 includes/class-settings-page.php:1189
 msgctxt "button label"
 msgid "Show %s post type without revisions"
 msgid_plural "Show %s post types without revisions"
@@ -823,7 +885,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: how long ago the last sweep finished, 2: number of revisions it removed.
-#: includes/class-settings-page.php:1190
+#: includes/class-settings-page.php:1286
 msgctxt "sweep status"
 msgid "The last sweep finished %1$s ago and removed %2$s revision."
 msgid_plural "The last sweep finished %1$s ago and removed %2$s revisions."
@@ -831,7 +893,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites on the network.
-#: includes/class-settings-page.php:1519
+#: includes/class-settings-page.php:1615
 msgctxt "sweep status"
 msgid "This network has %s site."
 msgid_plural "This network has %s sites."
@@ -963,33 +1025,33 @@ msgctxt "affected posts list"
 msgid "(no title)"
 msgstr ""
 
-#: assets/settings.js:330
+#: assets/settings.js:331
 msgctxt "sweep error"
 msgid "The server answered with something other than data, which usually means another plugin printed a PHP warning. The site's error log will say what it was."
 msgstr ""
 
-#: assets/settings.js:336
+#: assets/settings.js:337
 msgctxt "sweep error"
 msgid "The sweep could not be completed."
 msgstr ""
 
-#: assets/settings.js:384
+#: assets/settings.js:385
 msgctxt "sweep progress"
 msgid "Starting…"
 msgstr ""
 
-#: assets/settings.js:393
+#: assets/settings.js:394
 msgctxt "sweep result"
 msgid "Stopped. The schedule will finish the rest."
 msgstr ""
 
-#: assets/settings.js:408
+#: assets/settings.js:411
 msgctxt "sweep progress"
 msgid "Stopping after this batch…"
 msgstr ""
 
 #. translators: %s: number of posts.
-#: assets/settings.js:295
+#: assets/settings.js:296
 msgctxt "affected posts list"
 msgid "And %s more post."
 msgid_plural "And %s more posts."

@@ -80,6 +80,31 @@ final class Cron_Health {
 	}
 
 	/**
+	 * A link to this plugin's events in WP Crontrol, when it is there to use.
+	 *
+	 * WP Crontrol lists, runs and edits cron events, and its search matches
+	 * any part of a hook name, so a search for one hook, or for the shared
+	 * prefix, shows exactly the events asked for.
+	 *
+	 * @param string $search Hook name, or part of one.
+	 *
+	 * @return string|null Null when WP Crontrol is not active, or its screen is out of the user's reach.
+	 */
+	public static function crontrol_url( string $search ): ?string {
+		if ( ! defined( 'Crontrol\WP_CRONTROL_VERSION' ) || ! current_user_can( 'manage_options' ) ) {
+			return null;
+		}
+
+		return add_query_arg(
+			array(
+				'page' => 'wp-crontrol',
+				's'    => $search,
+			),
+			admin_url( 'tools.php' )
+		);
+	}
+
+	/**
 	 * Where the schedule stands.
 	 *
 	 * @return array{status: string, overdue: int, visits: bool}
