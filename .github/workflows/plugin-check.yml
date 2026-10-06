@@ -26,8 +26,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # npm ci installs exactly what package-lock.json says. Should that fail,
+      # a plain install is the fallback, so a release is not held up by it.
+      - name: Install build tools
+        run: npm ci --prefer-offline --no-audit --fund=false || npm i --prefer-offline --no-audit --fund=false
+
       - name: Build assets
-        run: npm ci && npm run build
+        run: npm run build
 
       - name: Run Plugin Check
         uses: wordpress/plugin-check-action@v1
