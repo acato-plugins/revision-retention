@@ -1569,7 +1569,13 @@ class Settings_Page {
 
 		check_ajax_referer( self::NETWORK_RUN_ACTION );
 
-		$sites = Plugin::sites();
+		$dry_run   = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
+		$requested = isset( $_POST['site'] ) ? absint( wp_unslash( $_POST['site'] ) ) : 0;
+		$cursor    = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
+
+		// The first batch of a sweep looks the sites up again; the rest of the
+		// sweep goes by that list rather than reading every site per batch.
+		$sites = Plugin::sites( 0 === $requested && 0 === $cursor );
 
 		if ( array() === $sites ) {
 			self::send_json(
@@ -1586,10 +1592,7 @@ class Settings_Page {
 			);
 		}
 
-		$dry_run   = ! isset( $_POST['mode'] ) || 'run' !== sanitize_key( wp_unslash( $_POST['mode'] ) );
-		$requested = isset( $_POST['site'] ) ? absint( wp_unslash( $_POST['site'] ) ) : 0;
-		$cursor    = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
-		$index     = 0 === $requested ? 0 : array_search( $requested, $sites, true );
+		$index = 0 === $requested ? 0 : array_search( $requested, $sites, true );
 
 		if ( false === $index ) {
 			$index  = 0;
@@ -1828,7 +1831,7 @@ class Settings_Page {
 		$stagger = 0;
 
 		// Only the sites the plugin is active on; see Plugin::sites().
-		foreach ( Plugin::sites() as $site_id ) {
+		foreach ( Plugin::sites( true ) as $site_id ) {
 			switch_to_blog( $site_id );
 
 			// A site that switched the sweep off is not overruled from here;

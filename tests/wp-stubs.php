@@ -33,6 +33,7 @@ function update_option( $k, $v ) { $GLOBALS['t_options'][ $k ] = $v; return true
 function delete_option( $k ) { unset( $GLOBALS['t_options'][ $k ] ); return true; }
 function get_site_option( $k, $d = false ) { return $GLOBALS['t_site_options'][ $k ] ?? $d; }
 function update_site_option( $k, $v ) { $GLOBALS['t_site_options'][ $k ] = $v; return true; }
+function delete_site_option( $k ) { unset( $GLOBALS['t_site_options'][ $k ] ); return true; }
 function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['t_filters'][ $h ][] = $cb; }
 function add_action( $h, $cb, $p = 10, $a = 1 ) {}
 function apply_filters( $h, $v, ...$rest ) {

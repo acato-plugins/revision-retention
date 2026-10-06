@@ -475,9 +475,23 @@ $GLOBALS['t_sites'] = array(
 	2 => array( 'active_plugins' => array( 'other/other.php' ) ),
 	3 => array( 'active_plugins' => array( 'other/other.php', $basename ) ),
 );
-check( 'activated per site, only the sites that turned it on', Plugin::sites(), array( 1, 3 ) );
+$GLOBALS['t_multisite'] = true;
+check( 'activated per site, only the sites that turned it on', Plugin::sites( true ), array( 1, 3 ) );
+
+// Site 2 turns the plugin on without the list being told.
+$GLOBALS['t_sites'][2]['active_plugins'][] = $basename;
+check( 'the rest of a sweep goes by the list its first batch made', Plugin::sites(), array( 1, 3 ) );
+check( 'the next sweep looks again', Plugin::sites( true ), array( 1, 2, 3 ) );
+
+unset( $GLOBALS['t_sites'][3] );
+check( 'a site deleted since drops out of the kept list', Plugin::sites(), array( 1, 2 ) );
+
+$GLOBALS['t_sites'][2]['active_plugins'] = array();
+Plugin::forget_sites();
+check( 'activating or deactivating anywhere makes it look again', Plugin::sites(), array( 1 ) );
+
 $GLOBALS['t_site_options']['active_sitewide_plugins'] = array( $basename => time() );
-check( 'activated on the network, every site', Plugin::sites(), array( 1, 2, 3 ) );
+check( 'activated on the network, every site', Plugin::sites(), array( 1, 2 ) );
 
 /* --------------------------------------------------- 20. Cleaner::progress */
 echo "\nCleaner::progress\n";
@@ -487,6 +501,16 @@ $GLOBALS['wpdb']->row     = array( 'total' => 200, 'done' => 50 );
 check( 'progress is the share of posts at or before the cursor', Cleaner::progress( 500 ), 0.25 );
 $sql = (string) ( end( $GLOBALS['wpdb']->queries )['query'] ?? '' );
 check( 'counted over posts, not posts with revisions, so a keep of 0 cannot empty both sides', str_contains( $sql, "'revision'" ), false );
+
+/* ------------------------------------------------------- 21. Uninstall */
+echo "\nuninstall.php\n";
+// Uninstall runs without the plugin's autoloader, so every class it names
+// has to be required by hand, or it stops with a fatal half way.
+$uninstall = (string) file_get_contents( __DIR__ . '/../uninstall.php' );
+preg_match_all( '/\b([A-Z][A-Za-z_]+)::/', $uninstall, $used );
+preg_match_all( "#includes/class-([a-z-]+)\.php#", $uninstall, $loaded );
+$missing = array_values( array_diff( array_unique( $used[1] ), array_map( static fn( string $f ): string => str_replace( ' ', '_', ucwords( str_replace( '-', ' ', $f ) ) ), $loaded[1] ) ) );
+check( 'every class uninstall.php uses is required by it', $missing, array() );
 
 echo "\n" . str_repeat( '-', 52 ) . "\n";
 printf( "%d passed, %d failed\n", $pass, $fail );
