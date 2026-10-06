@@ -23,6 +23,8 @@ defined( 'ABSPATH' ) || exit;
  *
  * WP-Cron is per site, so on multisite every site sweeps itself under whatever
  * policy the network hands it. Nothing here loops over sites.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Scheduler {
 
@@ -39,6 +41,13 @@ class Scheduler {
 	 * @var string
 	 */
 	public const CURSOR_OPTION = 'rvrt_cursor';
+
+	/**
+	 * Option holding when the schedule last ran a batch.
+	 *
+	 * @var string
+	 */
+	public const LAST_RUN_OPTION = 'rvrt_last_cron';
 
 	/**
 	 * How long to wait before continuing a sweep that has more to do.
@@ -72,15 +81,19 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function on_deactivation(): void {
+		// The sweep part way is dropped along with its cursor, so its log
+		// entry would otherwise read as in progress.
+		Log::stop( self::state()['log'] );
 		wp_clear_scheduled_hook( self::HOOK );
 		delete_option( self::CURSOR_OPTION );
+		delete_option( self::LAST_RUN_OPTION );
 	}
 
 	/**
 	 * Make sure a sweep is booked whenever one should be.
 	 *
-	 * Covers a site whose scheduled event was lost, and picks up a change to
-	 * the settings without the save handler having to think about it.
+	 * Covers a site whose scheduled event was lost, and a network that turned
+	 * the schedule on or off for every site at once.
 	 *
 	 * @return void
 	 */
@@ -88,17 +101,54 @@ class Scheduler {
 		$enabled = ! empty( Settings::get( 'cron_enabled' ) );
 		$booked  = (bool) wp_next_scheduled( self::HOOK );
 
-		if ( $enabled === $booked ) {
+		if ( $enabled !== $booked ) {
+			self::sync();
+		}
+	}
+
+	/**
+	 * Bring what is booked in line with the settings, without pushing it back.
+	 *
+	 * Saving the settings used to book the next full sweep an interval from
+	 * the save, which threw away the continuation of a sweep that was part way
+	 * and moved the rest of it a week out. A sweep part way through now keeps
+	 * its continuation, and the next full sweep falls due an interval after
+	 * the last one finished. A booking that is already sooner than that stays
+	 * where it is, so a shorter interval pulls the next sweep forward and a
+	 * longer one takes effect from the sweep after it.
+	 *
+	 * A site that never finished a sweep counts from now, the same as on
+	 * activation, so the first save of a fresh install does not start deleting
+	 * within the minute.
+	 *
+	 * @return void
+	 */
+	public static function sync(): void {
+		if ( empty( Settings::get( 'cron_enabled' ) ) ) {
+			wp_clear_scheduled_hook( self::HOOK );
+
 			return;
 		}
 
-		if ( $enabled ) {
-			self::reschedule();
+		$state = self::state();
+		$soon  = time() + self::CONTINUE_DELAY;
 
+		if ( $state['cursor'] > 0 ) {
+			$due = $soon;
+		} elseif ( $state['finished'] < 1 ) {
+			$due = time() + Settings::interval_seconds();
+		} else {
+			$due = max( $soon, $state['finished'] + Settings::interval_seconds() );
+		}
+
+		$booked = (int) wp_next_scheduled( self::HOOK );
+
+		if ( $booked > 0 && $booked <= $due ) {
 			return;
 		}
 
 		wp_clear_scheduled_hook( self::HOOK );
+		wp_schedule_single_event( $due, self::HOOK );
 	}
 
 	/**
@@ -129,7 +179,19 @@ class Scheduler {
 	 * @return void
 	 */
 	public function handle_scheduled_event(): void {
+		// Proof that cron actually fires, which the settings screen reports.
+		update_option( self::LAST_RUN_OPTION, time(), false );
+
 		$this->run();
+	}
+
+	/**
+	 * When the schedule last ran a batch on this site.
+	 *
+	 * @return int Unix timestamp, or 0 when it never has.
+	 */
+	public static function last_run(): int {
+		return (int) get_option( self::LAST_RUN_OPTION, 0 );
 	}
 
 	/**
@@ -147,15 +209,44 @@ class Scheduler {
 			(int) Settings::get( 'max_deletions' )
 		);
 
-		// The whole sweep is one entry in the log, however many batches it takes,
-		// so the entry this run opened is carried along with the cursor.
-		$entry = Log::record( Log::SOURCE_CRON, $result, $state['log'] );
+		self::advance( Log::SOURCE_CRON, $result );
+		self::reschedule( $result->finished ? 0 : self::CONTINUE_DELAY );
+
+		return $result;
+	}
+
+	/**
+	 * Log a real batch and store where the sweep got to.
+	 *
+	 * A sweep is one thing however it is driven. The schedule, Run now and
+	 * WP-CLI all carry on from the same cursor, so they also carry on the same
+	 * log entry and add to the same totals. That is what keeps a sweep that was
+	 * stopped and started again on one line in the log, and what lets the
+	 * status say what the last sweep did whoever finished it.
+	 *
+	 * @param string       $source One of the Log::SOURCE_ constants, used when this batch opens the entry.
+	 * @param Sweep_Result $result What the batch did.
+	 *
+	 * @return void
+	 */
+	public static function advance( string $source, Sweep_Result $result ): void {
+		$state = self::state();
+		$entry = Log::record( $source, $result, $state['log'] );
 
 		if ( $result->finished ) {
-			self::remember_finished_run( $state, $result );
-			self::reschedule();
+			update_option(
+				self::CURSOR_OPTION,
+				array(
+					'cursor'    => 0,
+					'revisions' => 0,
+					'posts'     => 0,
+					'started'   => 0,
+					'finished'  => time(),
+					'removed'   => $state['revisions'] + $result->revisions,
+				)
+			);
 
-			return $result;
+			return;
 		}
 
 		update_option(
@@ -170,10 +261,6 @@ class Scheduler {
 				'log'       => $entry,
 			)
 		);
-
-		self::reschedule( self::CONTINUE_DELAY );
-
-		return $result;
 	}
 
 	/**
@@ -204,6 +291,9 @@ class Scheduler {
 	public static function reset_cursor(): void {
 		$state = self::state();
 
+		// The restart opens a log entry of its own; the old one ends here.
+		Log::stop( $state['log'] );
+
 		update_option(
 			self::CURSOR_OPTION,
 			array(
@@ -213,28 +303,6 @@ class Scheduler {
 				'started'   => 0,
 				'finished'  => $state['finished'],
 				'removed'   => $state['removed'],
-			)
-		);
-	}
-
-	/**
-	 * Record a completed sweep and clear the cursor for the next one.
-	 *
-	 * @param array{cursor: int, revisions: int, posts: int, started: int, finished: int, removed: int, log: int} $state  State before this batch.
-	 * @param Sweep_Result                                                                                        $result What the last batch did.
-	 *
-	 * @return void
-	 */
-	private static function remember_finished_run( array $state, Sweep_Result $result ): void {
-		update_option(
-			self::CURSOR_OPTION,
-			array(
-				'cursor'    => 0,
-				'revisions' => 0,
-				'posts'     => 0,
-				'started'   => 0,
-				'finished'  => time(),
-				'removed'   => $state['revisions'] + $result->revisions,
 			)
 		);
 	}

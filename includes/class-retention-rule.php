@@ -24,6 +24,8 @@ defined( 'ABSPATH' ) || exit;
  *
  * An unlimited floor therefore beats any ceiling: when `keep` is -1 nothing is
  * ever purged for that post type.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 final class Retention_Rule {
 

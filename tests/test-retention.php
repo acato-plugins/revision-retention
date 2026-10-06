@@ -1,7 +1,14 @@
 <?php
 require_once __DIR__ . '/wp-stubs.php';
 
+use Acato\RevisionRetention\Assets;
 use Acato\RevisionRetention\Cleaner;
+use Acato\RevisionRetention\Cron_Health;
+use Acato\RevisionRetention\Log;
+use Acato\RevisionRetention\Plugin;
+use Acato\RevisionRetention\Rating_Notice;
+use Acato\RevisionRetention\Scheduler;
+use Acato\RevisionRetention\Sweep_Result;
 use Acato\RevisionRetention\Policy;
 use Acato\RevisionRetention\Retention_Rule;
 use Acato\RevisionRetention\Settings;
@@ -26,6 +33,12 @@ function reset_state(): void {
 	$GLOBALS['t_multisite']    = false;
 	$GLOBALS['t_caps']         = array( 'manage_options', 'manage_network_options', 'activate_plugins' );
 	$GLOBALS['t_deleted']      = array();
+	$GLOBALS['t_cron']         = array();
+	$GLOBALS['t_transients']   = array();
+	$GLOBALS['t_user_meta']    = array();
+	$GLOBALS['t_sites']        = array();
+	$GLOBALS['wpdb']->updates  = array();
+	$GLOBALS['wpdb']->row      = null;
 	Policy::flush();
 }
 
@@ -327,6 +340,177 @@ $GLOBALS['t_multisite'] = true;
 $s = Settings::sanitize( array( 'keep' => '', 'max_age_days' => '30' ) );
 check( 'an empty site field inherits rather than storing a default', isset( $s['keep'] ), false );
 check( 'a filled site field is stored', $s['max_age_days'], 30 );
+
+/* ------------------------------------------------- 13. Scheduler::sync */
+echo "\nScheduler::sync\n";
+reset_state();
+Scheduler::sync();
+$booked = (int) wp_next_scheduled( Scheduler::HOOK );
+check( 'a fresh install books its first sweep an interval out, not in a minute', abs( $booked - ( time() + WEEK_IN_SECONDS ) ) <= 2, true );
+
+reset_state();
+Scheduler::on_activation();
+$activated = (int) wp_next_scheduled( Scheduler::HOOK );
+Scheduler::sync();
+check( 'the first save after activation leaves the booking where it was', (int) wp_next_scheduled( Scheduler::HOOK ), $activated );
+
+reset_state();
+update_option( Scheduler::CURSOR_OPTION, array( 'cursor' => 40 ) );
+$GLOBALS['t_cron'][ Scheduler::HOOK ] = time() + DAY_IN_SECONDS;
+Scheduler::sync();
+check( 'a sweep part way continues within the minute', (int) wp_next_scheduled( Scheduler::HOOK ) <= time() + MINUTE_IN_SECONDS, true );
+
+reset_state();
+$finished = time() - 2 * DAY_IN_SECONDS;
+update_option( Scheduler::CURSOR_OPTION, array( 'finished' => $finished ) );
+Scheduler::sync();
+check( 'the next full sweep falls due an interval after the last one finished', (int) wp_next_scheduled( Scheduler::HOOK ), $finished + WEEK_IN_SECONDS );
+
+$GLOBALS['t_cron'][ Scheduler::HOOK ] = time() + HOUR_IN_SECONDS;
+Scheduler::sync();
+check( 'a booking sooner than that stays', (int) wp_next_scheduled( Scheduler::HOOK ), time() + HOUR_IN_SECONDS );
+
+update_option( Settings::OPTION, array( 'cron_enabled' => false ) );
+Scheduler::sync();
+check( 'switching the schedule off clears the booking', wp_next_scheduled( Scheduler::HOOK ), false );
+
+/* ---------------------------------------------- 14. Scheduler::advance */
+echo "\nScheduler::advance\n";
+reset_state();
+update_option( Settings::OPTION, array( 'log_enabled' => false ) );
+Scheduler::advance( Log::SOURCE_CLI, new Sweep_Result( 120, 4, 9, false, false ) );
+$state = Scheduler::state();
+check( 'a batch part way stores the cursor and the running totals', [ $state['cursor'], $state['revisions'], $state['finished'] ], [ 120, 9, 0 ] );
+
+Scheduler::advance( Log::SOURCE_CLI, new Sweep_Result( 0, 2, 3, true, false ) );
+$state = Scheduler::state();
+check( 'the batch that finishes resets the cursor and reports the whole sweep', [ $state['cursor'], $state['removed'], $state['finished'] > 0 ], [ 0, 12, true ] );
+
+/* -------------------------------------------- 15. A sweep given up on */
+echo "\nLog::stop\n";
+reset_state();
+update_option( Log::DB_VERSION_OPTION, '1' );
+update_option( Scheduler::CURSOR_OPTION, array( 'cursor' => 40, 'log' => 7 ) );
+Scheduler::reset_cursor();
+$update = $GLOBALS['wpdb']->updates[0] ?? array( array(), array() );
+check( 'a restart marks the entry it leaves behind as stopped', [ $update[0]['finished'] ?? null, $update[1]['id'] ?? null ], [ 2, 7 ] );
+check( 'and only while that entry is still open', $update[1]['finished'] ?? null, 0 );
+check( 'the restart forgets the entry', Scheduler::state()['log'], 0 );
+
+reset_state();
+update_option( Log::DB_VERSION_OPTION, '1' );
+update_option( Scheduler::CURSOR_OPTION, array( 'cursor' => 40, 'log' => 8 ) );
+Scheduler::on_deactivation();
+check( 'deactivation part way marks the entry as stopped too', $GLOBALS['wpdb']->updates[0][1]['id'] ?? null, 8 );
+
+$now = gmdate( 'Y-m-d H:i:s' );
+check( 'a stopped entry reads as stopped straight away', Log::status( array( 'finished' => 2, 'ended_gmt' => $now ) ), 'stopped' );
+check( 'a finished entry reads as finished', Log::status( array( 'finished' => 1, 'ended_gmt' => $now ) ), 'finished' );
+check( 'an open entry with a recent batch reads as running', Log::status( array( 'finished' => 0, 'ended_gmt' => $now ) ), 'running' );
+
+/* ------------------------------------------------------- 16. Cron_Health */
+echo "\nCron_Health\n";
+reset_state();
+check( 'an empty queue is never overdue', Cron_Health::overdue(), 0 );
+check( 'and cron counts as running', Cron_Health::check()['status'], Cron_Health::RUNNING );
+
+$GLOBALS['t_cron']['rvrt_sweep'] = time() - 2 * HOUR_IN_SECONDS;
+check( 'an event two hours late with nothing firing it is stalled', Cron_Health::check()['status'], Cron_Health::STALLED );
+
+$GLOBALS['timestart'] = microtime( true );
+set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) ) );
+check( 'the visit that just woke a quiet site is not a false alarm', Cron_Health::check()['status'], Cron_Health::RUNNING );
+check( 'asked again in the same request, the answer holds', Cron_Health::check()['status'], Cron_Health::RUNNING );
+
+reset_state();
+$late = time() - 3 * HOUR_IN_SECONDS;
+$GLOBALS['t_cron']['rvrt_sweep'] = $late;
+set_transient( Cron_Health::EXCUSED, $late );
+set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) ) );
+check( 'the same event still late after it was excused once is stalled', Cron_Health::check()['status'], Cron_Health::STALLED );
+
+reset_state();
+$GLOBALS['t_cron']['rvrt_sweep'] = time() - 5 * HOUR_IN_SECONDS;
+set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) - 300 ) );
+check( 'a lock from an earlier request excuses nothing', Cron_Health::check()['status'], Cron_Health::STALLED );
+
+/* ----------------------------------------------------- 17. Rating_Notice */
+echo "\nRating_Notice::is_due\n";
+reset_state();
+check( 'not before the plugin knows when it was installed', Rating_Notice::is_due( false ), false );
+$installed_option = ( new ReflectionClassConstant( Rating_Notice::class, 'INSTALLED_OPTION' ) )->getValue();
+$GLOBALS['t_site_options'] = array( $installed_option => time() - 10 * DAY_IN_SECONDS );
+check( 'not within the first month', Rating_Notice::is_due( false ), false );
+$GLOBALS['t_site_options'][ $installed_option ] = time() - 40 * DAY_IN_SECONDS;
+check( 'due a month after activation', Rating_Notice::is_due( false ), true );
+$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = (string) ( time() + DAY_IN_SECONDS );
+check( 'not while "Maybe later" is running', Rating_Notice::is_due( false ), false );
+$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = (string) ( time() - 1 );
+check( 'due again once it has run out', Rating_Notice::is_due( false ), true );
+$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = 'done';
+check( 'never again after an answer', Rating_Notice::is_due( false ), false );
+$GLOBALS['t_caps'] = array();
+$GLOBALS['t_user_meta'] = array();
+check( 'never for a user who cannot change the settings', Rating_Notice::is_due( false ), false );
+
+/* ------------------------------------------------------------ 18. Assets */
+echo "\nAssets::url\n";
+reset_state();
+$built = is_readable( __DIR__ . '/../dist/manifest.json' );
+$css   = (string) Assets::url( 'src/settings.css' );
+check( 'the stylesheet resolves, built or not', '' !== $css, true );
+check(
+	$built ? 'with a build, the hashed file in dist/' : 'without a build, the source with its modification time',
+	$built ? str_contains( $css, '/dist/settings-' ) : str_contains( $css, '/src/settings.css?ver=' ),
+	true
+);
+check( 'a file that is neither built nor there is null', Assets::url( 'src/missing.js' ), null );
+
+/* --------------------------------------------------------- 19. Plugin::sites */
+echo "\nPlugin::sites\n";
+reset_state();
+$basename = plugin_basename( RVRT_PLUGIN_FILE );
+$GLOBALS['t_sites'] = array(
+	1 => array( 'active_plugins' => array( $basename ) ),
+	2 => array( 'active_plugins' => array( 'other/other.php' ) ),
+	3 => array( 'active_plugins' => array( 'other/other.php', $basename ) ),
+);
+$GLOBALS['t_multisite'] = true;
+check( 'activated per site, only the sites that turned it on', Plugin::sites( true ), array( 1, 3 ) );
+
+// Site 2 turns the plugin on without the list being told.
+$GLOBALS['t_sites'][2]['active_plugins'][] = $basename;
+check( 'the rest of a sweep goes by the list its first batch made', Plugin::sites(), array( 1, 3 ) );
+check( 'the next sweep looks again', Plugin::sites( true ), array( 1, 2, 3 ) );
+
+unset( $GLOBALS['t_sites'][3] );
+check( 'a site deleted since drops out of the kept list', Plugin::sites(), array( 1, 2 ) );
+
+$GLOBALS['t_sites'][2]['active_plugins'] = array();
+Plugin::forget_sites();
+check( 'activating or deactivating anywhere makes it look again', Plugin::sites(), array( 1 ) );
+
+$GLOBALS['t_site_options']['active_sitewide_plugins'] = array( $basename => time() );
+check( 'activated on the network, every site', Plugin::sites(), array( 1, 2 ) );
+
+/* --------------------------------------------------- 20. Cleaner::progress */
+echo "\nCleaner::progress\n";
+reset_state();
+$GLOBALS['wpdb']->queries = array();
+$GLOBALS['wpdb']->row     = array( 'total' => 200, 'done' => 50 );
+check( 'progress is the share of posts at or before the cursor', Cleaner::progress( 500 ), 0.25 );
+$sql = (string) ( end( $GLOBALS['wpdb']->queries )['query'] ?? '' );
+check( 'counted over posts, not posts with revisions, so a keep of 0 cannot empty both sides', str_contains( $sql, "'revision'" ), false );
+
+/* ------------------------------------------------------- 21. Uninstall */
+echo "\nuninstall.php\n";
+// Uninstall runs without the plugin's autoloader, so every class it names
+// has to be required by hand, or it stops with a fatal half way.
+$uninstall = (string) file_get_contents( __DIR__ . '/../uninstall.php' );
+preg_match_all( '/\b([A-Z][A-Za-z_]+)::/', $uninstall, $used );
+preg_match_all( "#includes/class-([a-z-]+)\.php#", $uninstall, $loaded );
+$missing = array_values( array_diff( array_unique( $used[1] ), array_map( static fn( string $f ): string => str_replace( ' ', '_', ucwords( str_replace( '-', ' ', $f ) ) ), $loaded[1] ) ) );
+check( 'every class uninstall.php uses is required by it', $missing, array() );
 
 echo "\n" . str_repeat( '-', 52 ) . "\n";
 printf( "%d passed, %d failed\n", $pass, $fail );

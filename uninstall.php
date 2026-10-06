@@ -17,9 +17,15 @@ require_once __DIR__ . '/includes/class-retention-rule.php';
 require_once __DIR__ . '/includes/class-post-types.php';
 require_once __DIR__ . '/includes/class-settings.php';
 require_once __DIR__ . '/includes/class-scheduler.php';
+require_once __DIR__ . '/includes/class-cron-health.php';
 require_once __DIR__ . '/includes/class-log.php';
+require_once __DIR__ . '/includes/class-rating-notice.php';
+require_once __DIR__ . '/includes/class-plugin.php';
 
+use Acato\RevisionRetention\Cron_Health;
 use Acato\RevisionRetention\Log;
+use Acato\RevisionRetention\Plugin;
+use Acato\RevisionRetention\Rating_Notice;
 use Acato\RevisionRetention\Scheduler;
 use Acato\RevisionRetention\Settings;
 
@@ -37,11 +43,17 @@ function rvrt_uninstall_site(): void {
 
 	delete_option( Settings::OPTION );
 	delete_option( Scheduler::CURSOR_OPTION );
+	delete_option( Scheduler::LAST_RUN_OPTION );
+	delete_transient( Cron_Health::EXCUSED );
 
 	Log::uninstall();
 }
 
 if ( ! is_multisite() ) {
+	if ( ! empty( Settings::get( 'remove_data_on_uninstall' ) ) ) {
+		Rating_Notice::uninstall();
+	}
+
 	rvrt_uninstall_site();
 
 	return;
@@ -71,6 +83,10 @@ do {
 	$rvrt_offset += 100;
 } while ( 100 === $rvrt_found );
 
+// Only a cache of where the plugin was active, so it goes whatever was chosen.
+delete_site_option( Plugin::SITES_OPTION );
+
 if ( ! empty( Settings::network()['remove_data_on_uninstall'] ) ) {
 	delete_site_option( Settings::NETWORK_OPTION );
+	Rating_Notice::uninstall();
 }

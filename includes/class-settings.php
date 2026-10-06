@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * multisite there are two: the network sets the defaults, and every site may
  * override them field by field when the network allows it. A site field left
  * empty inherits, which is why the stored site values are nullable.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Settings {
 
@@ -34,6 +36,13 @@ class Settings {
 	 * @var string
 	 */
 	public const NETWORK_OPTION = 'rvrt_network_settings';
+
+	/**
+	 * The role that always sees the log, and can never be unticked.
+	 *
+	 * @var string
+	 */
+	public const ADMIN_ROLE = 'administrator';
 
 	/**
 	 * How often a full sweep may be scheduled.
@@ -120,6 +129,8 @@ class Settings {
 			'log_enabled'              => true,
 			'log_retention'            => self::DEFAULT_LOG_RETENTION,
 			'remove_data_on_uninstall' => false,
+			'dashboard_widget'         => false,
+			'widget_roles'             => array(),
 		);
 	}
 
@@ -135,9 +146,10 @@ class Settings {
 	/**
 	 * The keys a site may override, and the type each one holds.
 	 *
-	 * `enable_revisions` is deliberately absent: it is merged as a union rather
-	 * than overridden, so a network can switch revisions on everywhere without
-	 * stopping a site from adding post types of its own.
+	 * `enable_revisions` and `widget_roles` are deliberately absent: they are
+	 * merged as a union rather than overridden, so a network can switch
+	 * revisions on, or let a role see the log, everywhere without stopping a
+	 * site from adding post types or roles of its own.
 	 *
 	 * @return array<string, string>
 	 */
@@ -152,6 +164,7 @@ class Settings {
 			'log_enabled'              => 'bool',
 			'log_retention'            => 'enum',
 			'remove_data_on_uninstall' => 'bool',
+			'dashboard_widget'         => 'bool',
 		);
 	}
 
@@ -314,18 +327,20 @@ class Settings {
 			}
 		}
 
-		$resolved['post_types']       = self::merge_post_types(
+		$resolved['post_types'] = self::merge_post_types(
 			is_array( $network['post_types'] ) ? $network['post_types'] : array(),
 			isset( $site['post_types'] ) && is_array( $site['post_types'] ) ? $site['post_types'] : array()
 		);
-		$resolved['enable_revisions'] = array_values(
-			array_unique(
-				array_merge(
-					is_array( $network['enable_revisions'] ) ? $network['enable_revisions'] : array(),
-					isset( $site['enable_revisions'] ) && is_array( $site['enable_revisions'] ) ? $site['enable_revisions'] : array()
+		foreach ( array( 'enable_revisions', 'widget_roles' ) as $key ) {
+			$resolved[ $key ] = array_values(
+				array_unique(
+					array_merge(
+						is_array( $network[ $key ] ?? null ) ? $network[ $key ] : array(),
+						isset( $site[ $key ] ) && is_array( $site[ $key ] ) ? $site[ $key ] : array()
+					)
 				)
-			)
-		);
+			);
+		}
 
 		return $resolved;
 	}
@@ -419,6 +434,35 @@ class Settings {
 
 
 	/**
+	 * Whether the current user may see the log without managing the plugin.
+	 *
+	 * Only while the dashboard widget is switched on: the roles ticked for it
+	 * get the widget and a read only Logs tab, and switching the widget off
+	 * takes both away again. Administrators always qualify, through the
+	 * capability to manage the plugin.
+	 *
+	 * @param bool $network Whether the network is meant.
+	 *
+	 * @return bool
+	 */
+	public static function may_view_log( bool $network = false ): bool {
+		if ( current_user_can( self::capability( $network ) ) ) {
+			return true;
+		}
+
+		// The network admin is for network administrators only, and they
+		// already passed above.
+		if ( $network || empty( self::get( 'dashboard_widget' ) ) ) {
+			return false;
+		}
+
+		$roles = (array) self::get( 'widget_roles' );
+		$user  = wp_get_current_user();
+
+		return array() !== array_intersect( $roles, (array) $user->roles );
+	}
+
+	/**
 	 * Capability required to change the settings on the current screen.
 	 *
 	 * @param bool $network Whether the network screen is meant.
@@ -463,6 +507,7 @@ class Settings {
 
 		$sanitized['post_types']       = self::sanitize_post_types( $input['post_types'] ?? null );
 		$sanitized['enable_revisions'] = self::sanitize_post_type_list( $input['enable_revisions'] ?? null );
+		$sanitized['widget_roles']     = self::sanitize_roles( $input['widget_roles'] ?? null );
 
 		if ( $is_network ) {
 			$sanitized['allow_site_override'] = ! empty( $input['allow_site_override'] );
@@ -576,6 +621,35 @@ class Settings {
 
 			if ( isset( $eligible[ $post_type ] ) ) {
 				$list[] = $post_type;
+			}
+		}
+
+		return array_values( array_unique( $list ) );
+	}
+
+	/**
+	 * Keep the roles that exist on this site, administrators left out.
+	 *
+	 * Administrators always see the log, so storing the role would only
+	 * suggest it could be taken away.
+	 *
+	 * @param mixed $input Raw submitted value.
+	 *
+	 * @return array<int, string>
+	 */
+	private static function sanitize_roles( $input ): array {
+		if ( ! is_array( $input ) ) {
+			return array();
+		}
+
+		$known = wp_roles()->get_names();
+		$list  = array();
+
+		foreach ( $input as $role ) {
+			$role = sanitize_key( (string) $role );
+
+			if ( isset( $known[ $role ] ) && self::ADMIN_ROLE !== $role ) {
+				$list[] = $role;
 			}
 		}
 

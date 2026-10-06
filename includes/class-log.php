@@ -18,8 +18,9 @@ defined( 'ABSPATH' ) || exit;
  * the screen asks for batch after batch, and WP-CLI loops. Logging each batch
  * would bury the one line somebody is looking for under dozens that say the
  * same thing, so a sweep opens an entry with its first deletion and every
- * later batch adds to it. The caller holds on to the entry's ID between
- * batches and hands it back.
+ * later batch adds to it. The scheduler keeps the entry's ID next to the
+ * cursor, so a sweep that is stopped and picked up again, from the screen,
+ * the schedule or WP-CLI, stays one entry, credited to whoever opened it.
  *
  * Only deletions are recorded. A preview takes nothing away and a sweep that
  * found nothing to remove has nothing to account for, so neither leaves a row.
@@ -27,6 +28,8 @@ defined( 'ABSPATH' ) || exit;
  * The table is per site, like the revisions it reports on, and is created the
  * first time there is something to write to it. The network screen reads the
  * tables of every site at once, so the readers below take a flag for that.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Log {
 
@@ -64,6 +67,17 @@ class Log {
 	 * @var string
 	 */
 	public const SOURCE_CLI = 'cli';
+
+	/**
+	 * What the finished column holds for an entry given up on part way.
+	 *
+	 * 1 is a sweep that got to the end, 0 one that may still be going. A
+	 * sweep that was restarted or cut off by deactivation will never get
+	 * another batch, so it is marked rather than left to go stale.
+	 *
+	 * @var int
+	 */
+	private const STOPPED = 2;
 
 	/**
 	 * Version of the table layout below.
@@ -211,7 +225,8 @@ class Log {
 	 *
 	 * @param string       $source One of the SOURCE_ constants.
 	 * @param Sweep_Result $result What the batch did.
-	 * @param int          $entry  Entry this batch continues, or 0 to start one.
+	 * @param int          $entry  Entry this batch continues, or 0 to start one. Only
+	 *                             ever an ID the plugin stored itself, never one posted.
 	 *
 	 * @return int The entry holding this sweep, or 0 while there is none.
 	 */
@@ -224,12 +239,6 @@ class Log {
 		$user_id = get_current_user_id();
 		$types   = self::count_types( $result );
 		$current = $entry > 0 ? self::find( $entry ) : null;
-
-		// An entry is only carried on by whoever opened it, so an ID posted by
-		// somebody else, or left over from another kind of run, starts afresh.
-		if ( null !== $current && ( $current['source'] !== $source || (int) $current['user_id'] !== $user_id ) ) {
-			$current = null;
-		}
 
 		global $wpdb;
 
@@ -279,6 +288,33 @@ class Log {
 		);
 
 		return false === $inserted ? 0 : (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Mark an entry as given up on, so it no longer reads as in progress.
+	 *
+	 * @param int $entry Entry the plugin stored, or 0 for none.
+	 *
+	 * @return void
+	 */
+	public static function stop( int $entry ): void {
+		if ( $entry < 1 || ! self::installed() ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table has no API above it.
+		$wpdb->update(
+			self::table(),
+			array( 'finished' => self::STOPPED ),
+			array(
+				'id'       => $entry,
+				'finished' => 0,
+			),
+			array( '%d' ),
+			array( '%d', '%d' )
+		);
 	}
 
 	/**
@@ -393,13 +429,14 @@ class Log {
 	}
 
 	/**
-	 * Totals over everything the log still holds.
+	 * Totals over everything the log still holds, or over the last few days.
 	 *
 	 * @param bool $network Whether to read every site on the network instead of this one.
+	 * @param int  $days    Only entries that ended in this many days, today included, or 0 for all.
 	 *
 	 * @return array{runs: int, revisions: int, posts: int}
 	 */
-	public static function totals( bool $network = false ): array {
+	public static function totals( bool $network = false, int $days = 0 ): array {
 		$totals = array(
 			'runs'      => 0,
 			'revisions' => 0,
@@ -414,12 +451,21 @@ class Log {
 
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- The plugin's own tables; the FROM clause is built from placeholders in from().
+		// The same days the chart counts: from the start of the oldest one, in
+		// the site's timezone, so the two never disagree.
+		$since = $days > 0
+			? gmdate( 'Y-m-d H:i:s', ( new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() )
+			: '0000-00-00 00:00:00';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]}", ...$from[1] ),
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]} WHERE ended_gmt >= %s",
+				...array_merge( $from[1], array( $since ) )
+			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		if ( is_array( $row ) ) {
 			$totals['runs']      = (int) $row['runs'];
@@ -438,7 +484,13 @@ class Log {
 	 * @return string One of `finished`, `running` or `stopped`.
 	 */
 	public static function status( array $entry ): string {
-		if ( ! empty( $entry['finished'] ) ) {
+		$finished = (int) ( $entry['finished'] ?? 0 );
+
+		if ( self::STOPPED === $finished ) {
+			return 'stopped';
+		}
+
+		if ( $finished > 0 ) {
 			return 'finished';
 		}
 

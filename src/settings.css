@@ -13,6 +13,9 @@
 	--rvrt-rule: #dcdcde;
 	--rvrt-muted: #646970;
 	--rvrt-surface: #fff;
+	--rvrt-soft: #f6f7f7;
+	--rvrt-divider: #f0f0f1;
+	--rvrt-radius: 8px;
 
 	/* The admin colour scheme sets this; the fallback is the default scheme's
 	   blue, for the few screens that do not. */
@@ -27,15 +30,64 @@
 
 /* Tabs and panels --------------------------------------------------------- */
 
+/* The tabs and the open panel read as one card: the tabs are its header bar,
+   and the active one is marked by an underline rather than by a raised box. */
 .rvrt-settings .rvrt-tabs {
-	margin-block-end: 0;
-	padding-block-end: 0;
+	background: var(--rvrt-surface);
+	border: 1px solid var(--rvrt-rule);
+	border-start-end-radius: var(--rvrt-radius);
+	border-start-start-radius: var(--rvrt-radius);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 0.25em;
+	margin: 0;
+	padding-block: 0;
+	padding-inline: 0.75em;
+}
+
+.rvrt-settings .rvrt-tabs .nav-tab {
+	background: none;
+	border: 0;
+	border-block-end: 2px solid transparent;
+	color: var(--rvrt-muted);
+	float: none;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.4;
+	/* Over the bar's own bottom border, so the underline replaces it. */
+	margin: 0 0 -1px;
+	padding-block: 0.9em calc(0.9em - 1px);
+	padding-inline: 0.75em;
+	transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rvrt-settings .rvrt-tabs .nav-tab:hover {
+	background: none;
+	border-block-end-color: var(--rvrt-border);
+	color: #1d2327;
+}
+
+.rvrt-settings .rvrt-tabs .nav-tab-active,
+.rvrt-settings .rvrt-tabs .nav-tab-active:hover {
+	background: none;
+	border-block-end-color: var(--rvrt-accent);
+	color: #1d2327;
+	font-weight: 600;
+}
+
+.rvrt-settings .rvrt-tabs .nav-tab:focus-visible {
+	border-radius: 4px;
+	box-shadow: inset 0 0 0 2px var(--rvrt-accent);
+	outline: 2px solid transparent;
 }
 
 .rvrt-settings .rvrt-panel {
 	background: var(--rvrt-surface);
-	border: 1px solid var(--rvrt-border);
+	border: 1px solid var(--rvrt-rule);
 	border-block-start: 0;
+	border-end-end-radius: var(--rvrt-radius);
+	border-end-start-radius: var(--rvrt-radius);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
 	padding-block: 0.5em 1.5em;
 	padding-inline: 1.5em;
 }
@@ -60,7 +112,7 @@
 .rvrt-settings .rvrt-stats {
 	background: var(--rvrt-rule);
 	border: 1px solid var(--rvrt-rule);
-	border-radius: 4px;
+	border-radius: var(--rvrt-radius);
 	display: flex;
 	flex-wrap: wrap;
 	gap: 1px;
@@ -122,19 +174,87 @@
 	color: #1d2327;
 }
 
+/* Tables ------------------------------------------------------------------ */
+
+/* Every list on the screen shares one look: a rounded frame, a muted heading
+   band, and plain rows split by a hairline instead of WordPress's stripes. */
+.rvrt-settings .rvrt-table {
+	/* Separate borders, so the corners can be rounded without an overflow
+	   that would stop the header from sticking. */
+	border: 1px solid var(--rvrt-rule);
+	border-collapse: separate;
+	border-radius: var(--rvrt-radius);
+	border-spacing: 0;
+	box-shadow: none;
+}
+
+.rvrt-settings .rvrt-table :is(th, td) {
+	padding-block: 8px;
+	padding-inline: 12px;
+	vertical-align: middle;
+}
+
+.rvrt-settings .rvrt-table thead th {
+	background: var(--rvrt-soft);
+	border-block-end: 1px solid var(--rvrt-rule);
+	color: var(--rvrt-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	padding-block: 10px;
+	text-transform: uppercase;
+}
+
+.rvrt-settings .rvrt-table thead th:first-child {
+	border-start-start-radius: var(--rvrt-radius);
+}
+
+.rvrt-settings .rvrt-table thead th:last-child {
+	border-start-end-radius: var(--rvrt-radius);
+}
+
+.rvrt-settings .rvrt-table tbody tr {
+	background: var(--rvrt-surface);
+}
+
+.rvrt-settings .rvrt-table tbody tr + tr > * {
+	border-block-start: 1px solid var(--rvrt-divider);
+}
+
+.rvrt-settings .rvrt-table tbody tr:hover > * {
+	background: var(--rvrt-soft);
+}
+
+.rvrt-settings .rvrt-table tbody tr:last-child > :first-child {
+	border-end-start-radius: var(--rvrt-radius);
+}
+
+.rvrt-settings .rvrt-table tbody tr:last-child > :last-child {
+	border-end-end-radius: var(--rvrt-radius);
+}
+
+.rvrt-settings .rvrt-table .rvrt-col-number {
+	font-variant-numeric: tabular-nums;
+}
+
 /* Post types -------------------------------------------------------------- */
 
 .rvrt-settings :is(.rvrt-post-types, .rvrt-summary) {
 	margin-block-end: 0.75em;
 }
 
-.rvrt-settings :is(.rvrt-post-types, .rvrt-summary) :is(th, td) {
-	padding: 10px;
-	vertical-align: middle;
-}
-
 .rvrt-settings .rvrt-col-type {
 	inline-size: 40%;
+}
+
+/* A site with many post types runs past the bottom of the window, so the
+   headings stay in view, just under the admin bar. They stick to the window
+   rather than to a scrolling box, which would hide the Save button. */
+.rvrt-settings .rvrt-post-types thead th {
+	/* The heading band is opaque, so the rows never show through it. */
+	inset-block-start: 32px;
+	position: sticky;
+	z-index: 2;
 }
 
 .rvrt-settings .rvrt-col-number {
@@ -154,6 +274,16 @@
 
 .rvrt-settings .rvrt-col-field select {
 	max-inline-size: 100%;
+}
+
+/* The compact control size WordPress uses in dense lists, so a row is as tall
+   as its text rather than as its fields. */
+.rvrt-settings .rvrt-post-types .rvrt-col-field :is(input, select) {
+	block-size: 32px;
+	line-height: 30px;
+	min-block-size: 32px;
+	padding-block: 0;
+	padding-inline-end: 32px;
 }
 
 .rvrt-settings .rvrt-label {
@@ -177,8 +307,20 @@
 	font-size: 14px;
 }
 
-.rvrt-settings :is(.rvrt-none, .rvrt-native) {
+.rvrt-settings .rvrt-none {
 	color: #8c8f94;
+}
+
+/* Support the post type has of its own, as a status rather than a control. */
+.rvrt-settings .rvrt-native {
+	background: #edfaef;
+	border-radius: 999px;
+	color: #005c12;
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.6;
+	padding-inline: 0.65em;
 }
 
 .rvrt-settings .rvrt-toggle-wrap {
@@ -189,7 +331,8 @@
 
 .rvrt-settings .rvrt-sweep {
 	border: 1px solid var(--rvrt-rule);
-	border-radius: 4px;
+	border-radius: var(--rvrt-radius);
+	margin-block-start: 1.25em;
 	padding-block: 1em 1.25em;
 	padding-inline: 1.25em;
 }
@@ -236,6 +379,9 @@
 }
 
 .rvrt-settings .rvrt-sweep-result {
+	/* Border and padding inside the width, so the notice ends exactly where
+	   the progress bar above it does. */
+	box-sizing: border-box;
 	margin-block: 1em 0;
 	max-inline-size: var(--rvrt-measure);
 }
@@ -251,25 +397,36 @@
 /* Only the table scrolls, so the line counting what the list leaves out stays
    in view instead of sitting below five hundred rows. */
 .rvrt-settings .rvrt-affected-scroll {
+	/* The box that scrolls carries the frame and clips the corners, so the
+	   table inside it needs neither. */
+	border: 1px solid var(--rvrt-rule);
+	border-radius: var(--rvrt-radius);
 	max-block-size: 24em;
 	overflow-y: auto;
 	/* Reserve the scrollbar's room, so it never sits on top of the last column. */
 	scrollbar-gutter: stable;
 }
 
-.rvrt-settings .rvrt-affected :is(th, td) {
-	padding-block: 6px;
-	padding-inline: 10px;
+.rvrt-settings .rvrt-affected .rvrt-table {
+	border: 0;
 }
 
+/* Stuck to the top of the scrolling box; the heading band is opaque, so the
+   rows never show through it. */
 .rvrt-settings .rvrt-affected thead th {
-	/* A sticky header needs an opaque background of its own, or the rows
-	   scroll straight through it. */
-	background: var(--rvrt-surface);
-	box-shadow: inset 0 -1px 0 var(--rvrt-rule);
 	inset-block-start: 0;
 	position: sticky;
 	z-index: 1;
+}
+
+.rvrt-settings .rvrt-affected tbody th {
+	font-weight: 600;
+}
+
+/* A site name reads as one label, so it keeps to one line and the post
+   title takes the wrapping instead. */
+.rvrt-settings .rvrt-affected .rvrt-col-site {
+	white-space: nowrap;
 }
 
 .rvrt-settings .rvrt-kept {
@@ -772,6 +929,17 @@
 }
 
 @media screen and (max-width: 782px) {
+	/* One line of tabs that scrolls sideways, rather than a second row. */
+	.rvrt-settings .rvrt-tabs {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+
+	.rvrt-settings .rvrt-tabs .nav-tab {
+		flex: none;
+	}
+
 	.rvrt-settings :is(.rvrt-col-type, .rvrt-col-number, .rvrt-col-support, .rvrt-col-field) {
 		inline-size: auto;
 	}
@@ -781,7 +949,7 @@
 		margin-inline-start: 0;
 	}
 
-	.rvrt-settings .rvrt-day-label {
+	.rvrt-settings :is(.rvrt-day-label, .rvrt-post-types thead th) {
 		inset-block-start: 46px;
 	}
 
@@ -792,5 +960,213 @@
 	.rvrt-settings .rvrt-marker {
 		block-size: 28px;
 		inline-size: 28px;
+	}
+}
+
+/* Below this width the admin bar scrolls away with the page. */
+@media screen and (max-width: 600px) {
+	.rvrt-settings :is(.rvrt-day-label, .rvrt-post-types thead th) {
+		inset-block-start: 0;
+	}
+}
+
+/* A tab somebody may look at but not open. */
+.rvrt-settings .rvrt-tabs .rvrt-tab-disabled,
+.rvrt-settings .rvrt-tabs .rvrt-tab-disabled:hover {
+	border-block-end-color: transparent;
+	color: #a7aaad;
+	cursor: not-allowed;
+}
+
+/* The roles that see the dashboard widget, in as many columns as fit: a
+   site with a dozen custom roles would otherwise scroll on for a while. */
+.rvrt-settings .rvrt-roles {
+	display: grid;
+	gap: 0.5em 1.5em;
+	grid-template-columns: repeat(auto-fill, minmax(14em, 1fr));
+	max-inline-size: var(--rvrt-measure);
+}
+
+.rvrt-settings .rvrt-role.is-locked {
+	color: var(--rvrt-muted);
+}
+
+.rvrt-settings .rvrt-role-note {
+	font-size: 12px;
+}
+
+/* The dashboard widget borrows the screen's look; the box around it is the
+   widget's own, so the log needs no frame or width of its own there. */
+.rvrt-widget.rvrt-settings {
+	max-inline-size: none;
+}
+
+.rvrt-widget .rvrt-log-totals {
+	margin-block: 0 1em;
+}
+
+.rvrt-widget .rvrt-chart {
+	margin-block-end: 0.75em;
+}
+
+/* Site and Network, for a network administrator: the settings screen's
+   underlined tabs, at the widget's own scale. */
+.rvrt-widget .rvrt-widget-tabs {
+	border-block-end: 1px solid var(--rvrt-rule);
+	display: flex;
+	gap: 0.25em;
+	margin-block: -0.5em 1em;
+}
+
+/* Some Dashboard rules set display through an ID selector, which outranks
+   the browser's own rule for [hidden]. */
+.rvrt-widget [hidden] {
+	display: none !important;
+}
+
+.rvrt-widget .rvrt-widget-tab {
+	background: none;
+	border: 0;
+	border-block-end: 2px solid transparent;
+	color: var(--rvrt-muted);
+	cursor: pointer;
+	font: inherit;
+	font-weight: 500;
+	margin-block-end: -1px;
+	padding-block: 0.6em calc(0.6em - 1px);
+	padding-inline: 0.6em;
+}
+
+.rvrt-widget .rvrt-widget-tab:hover {
+	border-block-end-color: var(--rvrt-border);
+	color: #1d2327;
+}
+
+.rvrt-widget .rvrt-widget-tab[aria-selected="true"] {
+	border-block-end-color: var(--rvrt-accent);
+	color: #1d2327;
+	font-weight: 600;
+}
+
+.rvrt-widget .rvrt-widget-tab:focus-visible {
+	border-radius: 4px;
+	box-shadow: inset 0 0 0 2px var(--rvrt-accent);
+	outline: 2px solid transparent;
+}
+
+.rvrt-widget .rvrt-widget-panel + .rvrt-widget-panel {
+	margin-block-start: 1.5em;
+}
+
+.rvrt-widget .rvrt-log-more {
+	margin-block-end: 0;
+}
+
+/* This plugin's cron events, when WP Crontrol is there to manage them. */
+.rvrt-settings .rvrt-events {
+	border-block-start: 1px solid var(--rvrt-divider);
+	margin-block-start: 1.5em;
+	padding-block-start: 0.5em;
+}
+
+.rvrt-settings .rvrt-events-title {
+	font-size: 14px;
+	margin-block: 1em 0.25em;
+}
+
+.rvrt-settings .rvrt-events-table {
+	margin-block-start: 1em;
+}
+
+.rvrt-settings .rvrt-events-table tbody th {
+	font-weight: 400;
+}
+
+.rvrt-settings .rvrt-events-description {
+	color: var(--rvrt-muted);
+	display: block;
+	margin-block-start: 0.25em;
+}
+
+.rvrt-settings .rvrt-events-action {
+	text-align: end;
+	white-space: nowrap;
+}
+
+/* The cron warning sits in a form row, under the switch it is about. */
+.rvrt-settings .rvrt-cron-health.notice {
+	margin: 0.75em 0 0;
+}
+
+/* The question asked before a press that reaches past this screen. */
+.rvrt-settings .rvrt-dialog {
+	background: var(--rvrt-surface);
+	border: 0;
+	border-radius: var(--rvrt-radius);
+	box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
+	box-sizing: border-box;
+	color: #1d2327;
+	inline-size: min(32em, calc(100vw - 32px));
+	padding: 24px;
+}
+
+.rvrt-settings .rvrt-dialog::backdrop {
+	background: rgb(0 0 0 / 0.35);
+}
+
+.rvrt-settings .rvrt-dialog-title {
+	font-size: 1.3em;
+	line-height: 1.4;
+	margin: 0 0 0.5em;
+}
+
+.rvrt-settings .rvrt-dialog-message {
+	color: var(--rvrt-muted);
+	font-size: 14px;
+	margin: 0 0 1.5em;
+}
+
+.rvrt-settings .rvrt-dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: flex-end;
+}
+
+/* The yes of a press that deletes is red, like the admin's delete buttons. */
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger {
+	background: #d63638;
+	border-color: #d63638;
+}
+
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:is(:hover, :focus) {
+	background: #b32d2e;
+	border-color: #b32d2e;
+}
+
+.rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:focus {
+	box-shadow: 0 0 0 1px #fff, 0 0 0 3px #d63638;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.rvrt-settings .rvrt-dialog[open] {
+		animation: rvrt-dialog-in 160ms ease-out;
+	}
+
+	.rvrt-settings .rvrt-dialog[open]::backdrop {
+		animation: rvrt-backdrop-in 160ms ease-out;
+	}
+}
+
+@keyframes rvrt-dialog-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+}
+
+@keyframes rvrt-backdrop-in {
+	from {
+		opacity: 0;
 	}
 }

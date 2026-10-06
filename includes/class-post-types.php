@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Lists the post types a retention policy can apply to, and switches revision
  * support on for the ones the settings ask for.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Post_Types {
 

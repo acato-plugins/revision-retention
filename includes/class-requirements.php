@@ -13,6 +13,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Keeps the plugin from running on a WordPress version it cannot support.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Requirements {
 

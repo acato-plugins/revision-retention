@@ -33,6 +33,7 @@ function update_option( $k, $v ) { $GLOBALS['t_options'][ $k ] = $v; return true
 function delete_option( $k ) { unset( $GLOBALS['t_options'][ $k ] ); return true; }
 function get_site_option( $k, $d = false ) { return $GLOBALS['t_site_options'][ $k ] ?? $d; }
 function update_site_option( $k, $v ) { $GLOBALS['t_site_options'][ $k ] = $v; return true; }
+function delete_site_option( $k ) { unset( $GLOBALS['t_site_options'][ $k ] ); return true; }
 function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['t_filters'][ $h ][] = $cb; }
 function add_action( $h, $cb, $p = 10, $a = 1 ) {}
 function apply_filters( $h, $v, ...$rest ) {
@@ -53,9 +54,23 @@ function post_type_exists( $t ) { return array_key_exists( $t, $GLOBALS['t_suppo
 function post_type_supports( $t, $f ) { return in_array( $f, $GLOBALS['t_supports'][ $t ] ?? array(), true ); }
 function add_post_type_support( $t, $f ) { $GLOBALS['t_supports'][ $t ][] = $f; }
 function wp_delete_post_revision( $id ) { $GLOBALS['t_deleted'][] = (int) $id; return true; }
-function wp_next_scheduled( $h ) { return false; }
-function wp_schedule_single_event( $t, $h ) { return true; }
-function wp_clear_scheduled_hook( $h ) { return 0; }
+// The cron queue as hook => timestamp, which is all the scheduler books.
+function wp_next_scheduled( $h ) { return $GLOBALS['t_cron'][ $h ] ?? false; }
+function wp_schedule_single_event( $t, $h ) { $GLOBALS['t_cron'][ $h ] = (int) $t; return true; }
+function wp_clear_scheduled_hook( $h ) { unset( $GLOBALS['t_cron'][ $h ] ); return 0; }
+function _get_cron_array() { return array_flip( $GLOBALS['t_cron'] ?? array() ); }
+function get_transient( $k ) { return $GLOBALS['t_transients'][ $k ] ?? false; }
+function set_transient( $k, $v, $e = 0 ) { $GLOBALS['t_transients'][ $k ] = $v; return true; }
+function delete_transient( $k ) { unset( $GLOBALS['t_transients'][ $k ] ); return true; }
+function get_current_user_id() { return 1; }
+function get_user_meta( $id, $k, $single = false ) { return $GLOBALS['t_user_meta'][ $k ] ?? ''; }
+function current_time( $type, $gmt = false ) { return gmdate( 'Y-m-d H:i:s' ); }
+function plugin_dir_path( $file ) { return dirname( $file ) . '/'; }
+function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/revision-retention/'; }
+function plugin_basename( $file ) { return 'revision-retention/' . basename( $file ); }
+function add_query_arg( $k, $v, $url ) { return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . $k . '=' . rawurlencode( (string) $v ); }
+function get_sites( $args = array() ) { return array_keys( $GLOBALS['t_sites'] ?? array() ); }
+function get_blog_option( $id, $k, $d = false ) { return $GLOBALS['t_sites'][ $id ][ $k ] ?? $d; }
 function _prime_post_caches( $ids, $terms = true, $meta = true ) {}
 function get_post( $id ) {
 	$post            = new WP_Post();
@@ -92,13 +107,22 @@ function get_post_types( $args = array(), $output = 'names' ) {
 class WP_Post { public $ID = 0; public $post_type = 'post'; }
 class WP_Post_Type { public $name = ''; public $labels; }
 
-// A wpdb that answers from fixtures instead of MySQL, so the sweep's own
-// selection logic (the keep floor and the age cutoff) can be exercised.
+/**
+ * A wpdb that answers from fixtures instead of MySQL, so the sweep's own
+ * selection logic (the keep floor and the age cutoff) can be exercised.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
+ */
 class Test_WPDB {
+	public $prefix = 'wp_';
 	public $posts = 'wp_posts';
 	public $candidates = array();
 	public $revisions = array();
 	public function esc_like( $t ) { return addcslashes( $t, '_%\\' ); }
+	public $updates = array();
+	public $row = null;
+	public function update( $table, $data, $where, $format = null, $where_format = null ) { $this->updates[] = array( $data, $where ); return 1; }
+	public function get_row( $q, $output = null ) { return $this->row; }
 	public $queries = array();
 	public function prepare( $q, ...$a ) {
 		if ( 1 === count( $a ) && is_array( $a[0] ) ) { $a = $a[0]; }
@@ -124,7 +148,7 @@ class Test_WPDB {
 $GLOBALS['wpdb'] = new Test_WPDB();
 
 $dir = __DIR__ . '/../includes/';
-foreach ( array( 'retention-rule', 'post-types', 'settings', 'policy', 'sweep-result', 'cleaner', 'scheduler' ) as $c ) {
+foreach ( array( 'retention-rule', 'post-types', 'settings', 'policy', 'sweep-result', 'cleaner', 'scheduler', 'log', 'cron-health', 'rating-notice', 'assets', 'plugin' ) as $c ) {
 	require_once $dir . 'class-' . $c . '.php';
 }
 

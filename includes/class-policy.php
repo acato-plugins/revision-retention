@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * replaces whichever of the two it sets. On multisite the site wide numbers
  * have themselves already been resolved against the network defaults, so this
  * class only has to deal with the last step.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Policy {
 

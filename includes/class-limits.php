@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
  * removes whatever falls outside the number it gets back, so hooking in here
  * is what stops new revisions from piling up in the first place. The sweep in
  * Cleaner deals with what piled up before.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Limits {
 

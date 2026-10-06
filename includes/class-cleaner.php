@@ -20,6 +20,8 @@ defined( 'ABSPATH' ) || exit;
  * and other plugins see the hooks they are listening for. That is slower per
  * revision, which is exactly why the work is batched and resumable: a sweep
  * that runs out of time picks up where it left off instead of starting over.
+ *
+ * @author Paul van Impelen <paul@acato.nl>
  */
 class Cleaner {
 
@@ -312,21 +314,53 @@ class Cleaner {
 	}
 
 	/**
-	 * The highest post ID that has revisions at all.
+	 * How far through the site a sweep at this cursor is, from 0 to 1.
 	 *
-	 * The sweep walks posts in ID order, so the cursor against this is a fair
-	 * measure of how far through a run is. It is an estimate, not a count of
-	 * work left, which is all a progress bar needs.
+	 * Counted in posts rather than IDs: the share of the posts of the types
+	 * the policy sweeps that lie at or before the cursor. Post IDs are spread
+	 * unevenly, so measuring the cursor against the highest ID crawled
+	 * through a dense stretch and then leapt ahead. Every post is counted,
+	 * whether it has revisions or not, so what a real run deletes behind the
+	 * cursor does not move it; counting only posts with revisions let a policy
+	 * that keeps none take swept posts out of both sides, and the bar sat near
+	 * the start until it jumped to the end.
 	 *
-	 * @return int
+	 * @param int                $cursor     Parent post ID the sweep has got to.
+	 * @param array<int, string> $post_types Limit to these post types, empty for all the policy sweeps.
+	 *
+	 * @return float
 	 */
-	public static function last_parent_id(): int {
+	public static function progress( int $cursor, array $post_types = array() ): float {
+		$types = array_keys( Policy::sweepable() );
+
+		if ( array() !== $post_types ) {
+			$types = array_values( array_intersect( $types, $post_types ) );
+		}
+
+		if ( array() === $types ) {
+			return 1.0;
+		}
+
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read once per sweep to size its progress; a stale value would misreport it.
-		return (int) $wpdb->get_var(
-			"SELECT MAX( post_parent ) FROM {$wpdb->posts} WHERE post_type = 'revision'"
+		$placeholders = implode( ', ', array_fill( 0, count( $types ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The only interpolation is a generated list of %s placeholders; read per batch to size its progress, where a cached value would freeze the bar.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COUNT(*) AS total,
+					SUM( CASE WHEN ID <= %d THEN 1 ELSE 0 END ) AS done
+				FROM {$wpdb->posts}
+				WHERE post_type IN ( {$placeholders} )",
+				...array_merge( array( $cursor ), $types )
+			),
+			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+		$total = is_array( $row ) ? (int) $row['total'] : 0;
+
+		return $total > 0 ? min( 1.0, (int) $row['done'] / $total ) : 1.0;
 	}
 
 	/**

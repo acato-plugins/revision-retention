@@ -61,8 +61,11 @@ spl_autoload_register(
 
 register_activation_hook( RVRT_PLUGIN_FILE, array( Requirements::class, 'block_activation' ) );
 register_activation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_activation' ) );
+register_activation_hook( RVRT_PLUGIN_FILE, array( Rating_Notice::class, 'remember_install' ) );
+register_activation_hook( RVRT_PLUGIN_FILE, array( Plugin::class, 'forget_sites' ) );
 register_deactivation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_deactivation' ) );
 register_deactivation_hook( RVRT_PLUGIN_FILE, array( Log::class, 'on_deactivation' ) );
+register_deactivation_hook( RVRT_PLUGIN_FILE, array( Plugin::class, 'forget_sites' ) );
 
 // A WordPress old enough to miss the revision APIs this plugin builds on would
 // break in ways an administrator cannot act on, so it stops before booting.

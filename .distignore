@@ -12,6 +12,10 @@
 /composer.json
 /composer.lock
 /node_modules
+/package.json
+/package-lock.json
+/vite.config.js
+/.nvmrc
 /phpcs.xml.dist
 /phpstan.neon
 /vendor
