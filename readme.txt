@@ -157,6 +157,7 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * **Sweep every site now** asks for confirmation first.
 * A month after activation, the Dashboard and the plugin's settings ask administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down.
 * Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
+* The settings screen loads a minified stylesheet and script, built from the readable sources in `src/` that ship with the plugin.
 
 = 1.2.0 =
 * The log is on by default. A site that saved its settings with the log switched off keeps it off.
