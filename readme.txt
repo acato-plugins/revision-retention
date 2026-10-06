@@ -155,6 +155,10 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * A preview that runs to the end is reported as a success.
 * A refreshed settings screen: tabs that read as one card with the panel, lighter tables, and a post types table whose headings stay in view while scrolling.
 * **Sweep every site now** asks for confirmation first.
+* An optional Dashboard widget with the sweeps of the last 14 days: totals, a bar per day and a link to the Logs tab. Switch it on and pick the roles that see it under **Advanced**; administrators always do. Network administrators get a Site and a Network tab in it.
+* The roles picked for the widget may also open the Logs tab, read only, without seeing any of the settings.
+* Fields that depend on a switch that is off can no longer be changed, rather than only being dimmed.
+* A scheduled sweep that is already late reads as overdue instead of "due in".
 * A month after activation, the Dashboard and the plugin's settings ask administrators once whether they would rate the plugin, with **Maybe later** and **Don't ask again** to put it off or turn it down.
 * Counts read correctly in the singular, such as "1 revision" instead of "1 revisions".
 * The settings screen loads a minified stylesheet and script, built from the readable sources in `src/` that ship with the plugin.
