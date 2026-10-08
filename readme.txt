@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.2.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -143,6 +143,9 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 5. The network's Logs tab, which shows every site's log together and names the site each sweep ran on.
 
 == Changelog ==
+
+= 1.3.1 =
+* The plugin reports its version as 1.3.1. The 1.3.0 release still said 1.2.0 in its header and readme, so it showed and updated as 1.2.0.
 
 = 1.3.0 =
 * The **Schedule** tab says whether WP-Cron actually runs on the site, and warns under **Run automatically** when scheduled events are overdue, for instance because `DISABLE_WP_CRON` is set without a server cron job behind it. `wp revision-retention status` reports the same.

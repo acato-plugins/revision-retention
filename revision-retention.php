@@ -3,7 +3,7 @@
  * Plugin Name:       Revision Retention
  * Plugin URI:        https://github.com/acato-plugins/revision-retention
  * Description:       Give post revisions a retention policy: keep the newest few, drop the ones older than a threshold, per post type, on a schedule or from WP-CLI.
- * Version:           1.2.0
+ * Version:           1.3.1
  * Requires at least: 6.7
  * Requires PHP:      8.2
  * Author:            Acato
@@ -22,7 +22,7 @@ namespace Acato\RevisionRetention;
 defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'RVRT_VERSION' ) ) {
-	define( 'RVRT_VERSION', '1.2.0' );
+	define( 'RVRT_VERSION', '1.3.1' );
 }
 
 if ( ! defined( 'RVRT_PLUGIN_FILE' ) ) {
