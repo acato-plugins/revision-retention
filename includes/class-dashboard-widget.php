@@ -21,7 +21,9 @@ defined( 'ABSPATH' ) || exit;
  * On the network Dashboard it shows every site together, the way the network
  * Logs tab does, to the network administrators who can open that tab. A
  * network administrator on a site's Dashboard gets both, as a Site and a
- * Network tab.
+ * Network tab, unless the site is the only one on the network that is live
+ * and runs the plugin: then the network is the site, and the widget is the
+ * one a single site gets.
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
@@ -173,10 +175,42 @@ class Dashboard_Widget {
 	 * Whether this is a site's Dashboard seen by a network administrator,
 	 * who gets the whole network next to the site.
 	 *
+	 * Only when the network is more than this one site, so a network that
+	 * holds a single published site gets the widget a single site gets.
+	 *
 	 * @return bool
 	 */
 	private static function has_network_tab(): bool {
-		return is_multisite() && ! is_network_admin() && current_user_can( Settings::capability( true ) );
+		return is_multisite()
+			&& ! is_network_admin()
+			&& current_user_can( Settings::capability( true ) )
+			&& self::published_sites() > 1;
+	}
+
+	/**
+	 * How many sites the network view covers that are published.
+	 *
+	 * The sites the plugin runs on, less those archived, marked as spam or
+	 * deleted. A site that discourages search engines still counts: that is
+	 * how a staging network is often set up, and it should look like live.
+	 *
+	 * @return int
+	 */
+	private static function published_sites(): int {
+		$published = array_map(
+			'intval',
+			(array) get_sites(
+				array(
+					'fields'   => 'ids',
+					'number'   => 0,
+					'archived' => 0,
+					'spam'     => 0,
+					'deleted'  => 0,
+				)
+			)
+		);
+
+		return count( array_intersect( Plugin::sites(), $published ) );
 	}
 
 	/**
