@@ -50,11 +50,49 @@ class Settings {
 	 * @var array<string, int>
 	 */
 	private const INTERVALS = array(
-		'hourly'  => HOUR_IN_SECONDS,
-		'daily'   => DAY_IN_SECONDS,
-		'weekly'  => WEEK_IN_SECONDS,
-		'monthly' => MONTH_IN_SECONDS,
+		'hourly'      => HOUR_IN_SECONDS,
+		'four_hourly' => 4 * HOUR_IN_SECONDS,
+		'twicedaily'  => 12 * HOUR_IN_SECONDS,
+		'daily'       => DAY_IN_SECONDS,
+		'weekly'      => WEEK_IN_SECONDS,
+		'fortnightly' => 2 * WEEK_IN_SECONDS,
+		'monthly'     => MONTH_IN_SECONDS,
 	);
+
+	/**
+	 * The interval that runs on chosen days of the week rather than after a
+	 * fixed gap.
+	 *
+	 * @var string
+	 */
+	public const WEEKDAYS = 'weekdays';
+
+	/**
+	 * Days a sweep on chosen days runs on unless a site says otherwise.
+	 *
+	 * Numbered the way PHP's "w" format and WP_Locale number them, 0 being
+	 * Sunday. Monday alone is the weekly default moved to a fixed day.
+	 *
+	 * @var array<int, int>
+	 */
+	private const DEFAULT_DAYS = array( 1 );
+
+	/**
+	 * Time of day a sweep on chosen days starts unless a site says otherwise,
+	 * in minutes after midnight.
+	 *
+	 * 03:00, the middle of the night, when a site is quietest.
+	 *
+	 * @var int
+	 */
+	private const DEFAULT_TIME = 180;
+
+	/**
+	 * Hours between runs on a chosen day, 0 being once at the chosen time.
+	 *
+	 * @var int
+	 */
+	private const DEFAULT_REPEAT = 0;
 
 	/**
 	 * How often a sweep runs unless a site says otherwise.
@@ -124,6 +162,9 @@ class Settings {
 			'enable_revisions'         => array(),
 			'cron_enabled'             => true,
 			'cron_interval'            => self::DEFAULT_INTERVAL,
+			'cron_days'                => self::DEFAULT_DAYS,
+			'cron_time'                => self::DEFAULT_TIME,
+			'cron_repeat'              => self::DEFAULT_REPEAT,
 			'batch_size'               => 200,
 			'max_deletions'            => 1000,
 			'log_enabled'              => true,
@@ -151,6 +192,9 @@ class Settings {
 	 * revisions on, or let a role see the log, everywhere without stopping a
 	 * site from adding post types or roles of its own.
 	 *
+	 * `cron_days`, `cron_time` and `cron_repeat` belong to the interval: a site that inherits
+	 * the interval inherits them along with it, see self::sanitize().
+	 *
 	 * @return array<string, string>
 	 */
 	public static function overridable(): array {
@@ -159,6 +203,9 @@ class Settings {
 			'max_age_days'             => 'int',
 			'cron_enabled'             => 'bool',
 			'cron_interval'            => 'enum',
+			'cron_days'                => 'days',
+			'cron_time'                => 'time',
+			'cron_repeat'              => 'repeat',
 			'batch_size'               => 'int',
 			'max_deletions'            => 'int',
 			'log_enabled'              => 'bool',
@@ -175,10 +222,14 @@ class Settings {
 	 */
 	public static function intervals(): array {
 		return array(
-			'hourly'  => _x( 'Every hour', 'sweep interval', 'revision-retention' ),
-			'daily'   => _x( 'Once a day', 'sweep interval', 'revision-retention' ),
-			'weekly'  => _x( 'Once a week', 'sweep interval', 'revision-retention' ),
-			'monthly' => _x( 'Once a month', 'sweep interval', 'revision-retention' ),
+			'hourly'       => _x( 'Every hour', 'sweep interval', 'revision-retention' ),
+			'four_hourly'  => _x( 'Every 4 hours', 'sweep interval', 'revision-retention' ),
+			'twicedaily'   => _x( 'Every 12 hours (twice a day)', 'sweep interval', 'revision-retention' ),
+			'daily'        => _x( 'Once a day', 'sweep interval', 'revision-retention' ),
+			'weekly'       => _x( 'Once a week', 'sweep interval', 'revision-retention' ),
+			'fortnightly'  => _x( 'Every 14 days', 'sweep interval', 'revision-retention' ),
+			'monthly'      => _x( 'Once a month', 'sweep interval', 'revision-retention' ),
+			self::WEEKDAYS => _x( 'On chosen days of the week', 'sweep interval', 'revision-retention' ),
 		);
 	}
 
@@ -200,10 +251,12 @@ class Settings {
 	/**
 	 * Days a log entry is kept, for the retention currently configured.
 	 *
+	 * @param string $retention A retention to look up instead, such as the network's.
+	 *
 	 * @return int
 	 */
-	public static function log_retention_days(): int {
-		$retention = (string) self::get( 'log_retention' );
+	public static function log_retention_days( string $retention = '' ): int {
+		$retention = '' !== $retention ? $retention : (string) self::get( 'log_retention' );
 
 		return self::LOG_RETENTION[ $retention ] ?? self::LOG_RETENTION[ self::DEFAULT_LOG_RETENTION ];
 	}
@@ -261,6 +314,92 @@ class Settings {
 		$interval = (string) self::get( 'cron_interval' );
 
 		return self::INTERVALS[ $interval ] ?? self::INTERVALS[ self::DEFAULT_INTERVAL ];
+	}
+
+	/**
+	 * The days of the week a sweep on chosen days runs on.
+	 *
+	 * @return array<int, int> Day numbers, 0 being Sunday.
+	 */
+	public static function days(): array {
+		$days = self::get( 'cron_days' );
+
+		return is_array( $days ) && array() !== $days ? array_map( 'intval', $days ) : self::DEFAULT_DAYS;
+	}
+
+	/**
+	 * The site's time format, with a colon between the hours and the minutes.
+	 *
+	 * Some locales write 12.26, Dutch among them, or 12 h 26, French, where the
+	 * plugin wants 12:26 so a time can never be read as a number. Twelve or twenty-four hours is
+	 * still the site's to choose.
+	 *
+	 * @return string A date() format.
+	 */
+	public static function time_format(): string {
+		$format = (string) get_option( 'time_format', 'H:i' );
+
+		return (string) preg_replace( '/([GHgh])\s*(?:\.|\\\\h)\s*(i)/', '$1:$2', '' !== $format ? $format : 'H:i' );
+	}
+
+	/**
+	 * A time of day in minutes after midnight, as the 24 hour "HH:MM" that a
+	 * time field takes.
+	 *
+	 * @param int $minutes Minutes after midnight.
+	 *
+	 * @return string
+	 */
+	public static function time_string( int $minutes ): string {
+		return sprintf( '%02d:%02d', intdiv( $minutes, 60 ), $minutes % 60 );
+	}
+
+	/**
+	 * When the next full sweep falls due, counting from a given moment.
+	 *
+	 * A fixed interval simply adds its gap. On chosen days it is the first
+	 * slot on one of those days, in the site's own timezone, that comes
+	 * strictly after the moment. A day's slots are the chosen hour and, when
+	 * the sweep repeats, every so many hours after it until midnight, so a
+	 * sweep that finishes after the last of them waits for the next chosen day.
+	 *
+	 * @param int $after Unix timestamp to count from.
+	 *
+	 * @return int Unix timestamp.
+	 */
+	public static function next_run( int $after ): int {
+		if ( self::WEEKDAYS !== (string) self::get( 'cron_interval' ) ) {
+			return $after + self::interval_seconds();
+		}
+
+		$days   = self::days();
+		$repeat = (int) self::get( 'cron_repeat' );
+		$first  = (int) self::get( 'cron_time' );
+
+		// Every hour runs all day, at the chosen minutes past each hour.
+		$first = 1 === $repeat ? $first % 60 : $first;
+		$step  = ( $repeat > 0 ? $repeat : 24 ) * 60;
+		$start = ( new \DateTimeImmutable( '@' . $after ) )->setTimezone( wp_timezone() );
+
+		// Today counts too, as long as one of its slots has not passed yet,
+		// which is why this looks eight days ahead rather than seven.
+		for ( $offset = 0; $offset <= 7; $offset++ ) {
+			$day = $start->modify( '+' . $offset . ' days' );
+
+			if ( ! in_array( (int) $day->format( 'w' ), $days, true ) ) {
+				continue;
+			}
+
+			for ( $minute = $first; $minute < 24 * 60; $minute += $step ) {
+				$slot = $day->setTime( intdiv( $minute, 60 ), $minute % 60 )->getTimestamp();
+
+				if ( $slot > $after ) {
+					return $slot;
+				}
+			}
+		}
+
+		return $after + WEEK_IN_SECONDS;
 	}
 
 	/**
@@ -491,16 +630,30 @@ class Settings {
 		$nullable  = is_multisite() && ! $is_network;
 		$sanitized = array();
 
+		// Every hour reads only the minutes of the time, see sanitize_time().
+		$repeat = $input['cron_repeat'] ?? null;
+		$hourly = is_array( $repeat ) && 'hourly' === ( $repeat['mode'] ?? '' );
+
 		foreach ( self::overridable() as $key => $type ) {
 			$raw = $input[ $key ] ?? null;
 
-			if ( $nullable && ( null === $raw || '' === $raw ) ) {
+			// The days and the times go with the interval they belong to, so a
+			// site inheriting the interval inherits them as well, rather than
+			// pinning the days the screen happened to show behind it.
+			$inherits = in_array( $type, array( 'days', 'time', 'repeat' ), true )
+				? ! isset( $sanitized['cron_interval'] )
+				: null === $raw || '' === $raw;
+
+			if ( $nullable && $inherits ) {
 				continue;
 			}
 
 			$sanitized[ $key ] = match ( $type ) {
 				'bool' => (bool) $raw,
 				'enum' => self::sanitize_choice( $key, $raw, (string) $defaults[ $key ] ),
+				'days' => self::sanitize_days( $raw ),
+				'time' => self::sanitize_time( $raw, $hourly ),
+				'repeat' => self::sanitize_repeat( $raw ),
 				default => self::sanitize_number( $key, $raw, (int) $defaults[ $key ] ),
 			};
 		}
@@ -552,9 +705,93 @@ class Settings {
 	 */
 	private static function sanitize_choice( string $key, $value, string $fallback ): string {
 		$value   = is_string( $value ) ? $value : '';
-		$allowed = 'log_retention' === $key ? self::LOG_RETENTION : self::INTERVALS;
+		$allowed = 'log_retention' === $key ? self::LOG_RETENTION : self::INTERVALS + array( self::WEEKDAYS => 0 );
 
 		return isset( $allowed[ $value ] ) ? $value : $fallback;
+	}
+
+	/**
+	 * Reduce a time of day to minutes after midnight.
+	 *
+	 * The screen sends a time field, "HH:MM" or "HH:MM:SS" in some browsers,
+	 * and the minutes past the hour that running every hour uses. Every hour
+	 * takes the minutes from the latter and keeps the hour of the former, so
+	 * switching back to once a day finds the time it had. WP-CLI or a filter
+	 * may send "HH:MM", or the minutes after midnight as a number, on its own.
+	 *
+	 * @param mixed $input  Raw submitted value.
+	 * @param bool  $hourly Whether the sweep was set to run every hour.
+	 *
+	 * @return int
+	 */
+	private static function sanitize_time( $input, bool $hourly = false ): int {
+		if ( is_array( $input ) ) {
+			$time   = self::sanitize_time( $input['time'] ?? null );
+			$minute = $input['minute'] ?? null;
+
+			return $hourly && is_numeric( $minute )
+				? intdiv( $time, 60 ) * 60 + min( 59, max( 0, (int) $minute ) )
+				: $time;
+		}
+
+		if ( is_numeric( $input ) ) {
+			return min( 24 * 60 - 1, max( 0, (int) $input ) );
+		}
+
+		if ( is_string( $input ) && preg_match( '/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/', trim( $input ), $match ) ) {
+			return (int) $match[1] * 60 + (int) $match[2];
+		}
+
+		return self::DEFAULT_TIME;
+	}
+
+	/**
+	 * Reduce how often a chosen day repeats to hours between runs.
+	 *
+	 * The screen sends a mode and, for "every so many hours", the number of
+	 * hours; anything else, WP-CLI or a filter for one, may send the number
+	 * of hours on its own.
+	 *
+	 * @param mixed $input Raw submitted value.
+	 *
+	 * @return int Hours between runs, 0 for once at the chosen hour.
+	 */
+	private static function sanitize_repeat( $input ): int {
+		if ( is_array( $input ) ) {
+			$mode  = (string) ( $input['mode'] ?? '' );
+			$input = match ( $mode ) {
+				'hourly' => 1,
+				'hours' => max( 2, is_numeric( $input['hours'] ?? null ) ? (int) $input['hours'] : 2 ),
+				default => 0,
+			};
+		}
+
+		return is_numeric( $input ) ? min( 23, max( 0, (int) $input ) ) : self::DEFAULT_REPEAT;
+	}
+
+	/**
+	 * Reduce the chosen days of the week to day numbers.
+	 *
+	 * Nothing ticked falls back to the default day, so choosing to run on
+	 * chosen days can never quietly mean never running at all.
+	 *
+	 * @param mixed $input Raw submitted value.
+	 *
+	 * @return array<int, int>
+	 */
+	private static function sanitize_days( $input ): array {
+		$days = array();
+
+		foreach ( is_array( $input ) ? $input : array() as $day ) {
+			if ( is_numeric( $day ) && (int) $day >= 0 && (int) $day <= 6 ) {
+				$days[] = (int) $day;
+			}
+		}
+
+		$days = array_values( array_unique( $days ) );
+		sort( $days );
+
+		return array() !== $days ? $days : self::DEFAULT_DAYS;
 	}
 
 	/**

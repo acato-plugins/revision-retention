@@ -123,54 +123,139 @@ class Log_View {
 	}
 
 	/**
-	 * The last few days at a glance: the totals and the chart, nothing else.
+	 * The last few days, weeks or months at a glance: the totals and the
+	 * chart, nothing else.
 	 *
 	 * For the dashboard widget. The filter and the timeline are left to the
-	 * Logs tab, which the widget links to.
+	 * Logs tab, which the widget links to. With more than one period, each
+	 * gets its totals and chart, and a switch shows one at a time.
 	 *
-	 * @param int    $days     How many days to cover, today included.
-	 * @param string $more_url Where the whole log is.
+	 * @param array<string, int> $periods  How many bars each period gets, keyed by Log's PERIOD_ constants, in the switch's order.
+	 * @param string             $current  The period shown first.
+	 * @param string             $more_url Where the whole log is.
+	 * @param string             $next     When the next sweep is expected, in a sentence, or empty.
+	 * @param string             $stall    Why that sweep will not happen, in a sentence, or empty.
+	 * @param string             $fix_url  Where the stall can be looked into, or empty for no link.
 	 *
 	 * @return void
 	 */
-	public function render_recent( int $days, string $more_url ): void {
-		$totals = Log::totals( $this->network, $days );
+	public function render_recent( array $periods, string $current, string $more_url, string $next = '', string $stall = '', string $fix_url = '' ): void {
+		$labels = array(
+			Log::PERIOD_DAY   => _x( 'Daily', 'chart period', 'revision-retention' ),
+			Log::PERIOD_WEEK  => _x( 'Weekly', 'chart period', 'revision-retention' ),
+			Log::PERIOD_MONTH => _x( 'Monthly', 'chart period', 'revision-retention' ),
+		);
 		?>
-		<div class="rvrt-log rvrt-log-recent">
-			<p class="rvrt-log-totals">
-				<?php
-				if ( 0 === $totals['runs'] ) {
-					printf(
-						/* translators: %s: number of days. */
-						esc_html( _nx( 'No revisions were removed in the last %s day.', 'No revisions were removed in the last %s days.', $days, 'log summary', 'revision-retention' ) ),
-						esc_html( number_format_i18n( $days ) )
-					);
-				} else {
-					echo wp_kses(
-						sprintf(
-							/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: number of days. */
-							esc_html( _nx( '%1$s removed from %2$s in %3$s over the last %4$s day.', '%1$s removed from %2$s in %3$s over the last %4$s days.', $days, 'log summary', 'revision-retention' ) ),
-							/* translators: %s: number of revisions. */
-							self::strong_count( _nx( '%s revision', '%s revisions', $totals['revisions'], 'log summary', 'revision-retention' ), $totals['revisions'] ),
-							/* translators: %s: number of posts. */
-							self::strong_count( _nx( '%s post', '%s posts', $totals['posts'], 'log summary', 'revision-retention' ), $totals['posts'] ),
-							/* translators: %s: number of sweeps. */
-							self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
-							esc_html( number_format_i18n( $days ) )
-						),
-						array( 'strong' => array() )
-					);
-				}
-				?>
-			</p>
+		<div class="rvrt-log rvrt-log-recent" data-period="<?php echo esc_attr( $current ); ?>">
+			<?php // First, since nothing below it happens until it is sorted out. ?>
+			<?php if ( '' !== $stall ) : ?>
+				<p class="rvrt-log-stall">
+					<span class="dashicons dashicons-warning" aria-hidden="true"></span>
+					<span>
+						<?php echo esc_html( $stall ); ?>
+						<?php if ( '' !== $fix_url ) : ?>
+							<a href="<?php echo esc_url( $fix_url ); ?>"><?php echo esc_html_x( 'See the Schedule tab', 'dashboard widget link', 'revision-retention' ); ?></a>
+						<?php endif; ?>
+					</span>
+				</p>
+			<?php endif; ?>
 
-			<?php $this->render_chart( $days ); ?>
+			<?php if ( count( $periods ) > 1 ) : ?>
+				<div class="rvrt-period-switch" role="group" aria-label="<?php echo esc_attr_x( 'Show the results', 'accessibility label', 'revision-retention' ); ?>">
+					<?php foreach ( array_keys( $periods ) as $period ) : ?>
+						<button type="button" class="rvrt-period-button" data-period="<?php echo esc_attr( $period ); ?>" aria-pressed="<?php echo $period === $current ? 'true' : 'false'; ?>">
+							<?php echo esc_html( $labels[ $period ] ?? $period ); ?>
+						</button>
+					<?php endforeach; ?>
+				</div>
+			<?php endif; ?>
+
+			<?php foreach ( $periods as $period => $count ) : ?>
+				<div class="rvrt-period" data-period="<?php echo esc_attr( $period ); ?>"<?php echo $period === $current ? '' : ' hidden'; ?>>
+					<?php $this->render_period( $period, $count ); ?>
+				</div>
+			<?php endforeach; ?>
+
+			<?php if ( '' !== $next ) : ?>
+				<p class="rvrt-log-next">
+					<span class="dashicons dashicons-clock" aria-hidden="true"></span>
+					<span><?php echo esc_html( $next ); ?></span>
+				</p>
+			<?php endif; ?>
 
 			<p class="rvrt-log-more">
-				<a href="<?php echo esc_url( $more_url ); ?>"><?php echo esc_html_x( 'View the log', 'dashboard widget link', 'revision-retention' ); ?></a>
+				<a href="<?php echo esc_url( $more_url ); ?>">
+					<?php echo esc_html_x( 'View the log', 'dashboard widget link', 'revision-retention' ); ?>
+					<span class="rvrt-arrow" aria-hidden="true">&rarr;</span>
+				</a>
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * The totals and the chart over the last few days, weeks or months.
+	 *
+	 * @param string $period One of Log's PERIOD_ constants, what each bar covers.
+	 * @param int    $count  How many of them to cover, the current one included.
+	 *
+	 * @return void
+	 */
+	private function render_period( string $period, int $count ): void {
+		$today  = new \DateTimeImmutable( 'today', wp_timezone() );
+		$totals = Log::totals( $this->network, (int) Log::oldest( $period, $count )->diff( $today )->days + 1 );
+		$span   = self::describe_span( $period, $count );
+		?>
+		<p class="rvrt-log-totals">
+			<?php
+			if ( 0 === $totals['runs'] ) {
+				printf(
+					/* translators: %s: how far back, e.g. "14 days" or "12 weeks". */
+					esc_html_x( 'No revisions were removed in the last %s.', 'log summary', 'revision-retention' ),
+					esc_html( $span )
+				);
+			} else {
+				echo wp_kses(
+					sprintf(
+						/* translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: how far back, e.g. "14 days" or "12 weeks". */
+						esc_html_x( '%1$s removed from %2$s in %3$s over the last %4$s.', 'log summary', 'revision-retention' ),
+						/* translators: %s: number of revisions. */
+						self::strong_count( _nx( '%s revision', '%s revisions', $totals['revisions'], 'log summary', 'revision-retention' ), $totals['revisions'] ),
+						/* translators: %s: number of posts. */
+						self::strong_count( _nx( '%s post', '%s posts', $totals['posts'], 'log summary', 'revision-retention' ), $totals['posts'] ),
+						/* translators: %s: number of sweeps. */
+						self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
+						esc_html( $span )
+					),
+					array( 'strong' => array() )
+				);
+			}
+			?>
+		</p>
+
+		<?php
+		$this->render_chart( $count, $period );
+	}
+
+	/**
+	 * A number of days, weeks or months, in words.
+	 *
+	 * @param string $period One of Log's PERIOD_ constants.
+	 * @param int    $count  How many.
+	 *
+	 * @return string
+	 */
+	private static function describe_span( string $period, int $count ): string {
+		$number = number_format_i18n( $count );
+
+		return match ( $period ) {
+			/* translators: %s: number of weeks. */
+			Log::PERIOD_WEEK => sprintf( _nx( '%s week', '%s weeks', $count, 'log span', 'revision-retention' ), $number ),
+			/* translators: %s: number of months. */
+			Log::PERIOD_MONTH => sprintf( _nx( '%s month', '%s months', $count, 'log span', 'revision-retention' ), $number ),
+			/* translators: %s: number of days. */
+			default => sprintf( _nx( '%s day', '%s days', $count, 'log span', 'revision-retention' ), $number ),
+		};
 	}
 
 	/**
@@ -225,44 +310,87 @@ class Log_View {
 	}
 
 	/**
-	 * A bar per day for the last month, so a pattern shows at a glance.
+	 * A bar per day, week or month, so a pattern shows at a glance.
 	 *
-	 * @param int $span How many days the chart covers, today included.
+	 * @param int    $span   How many bars the chart has, the current period included.
+	 * @param string $period One of Log's PERIOD_ constants, what each bar covers.
 	 *
 	 * @return void
 	 */
-	private function render_chart( int $span ): void {
-		$days    = Log::daily( $span, $this->network );
+	private function render_chart( int $span, string $period = Log::PERIOD_DAY ): void {
+		$days    = Log::per_period( $period, $span, $this->network );
 		$highest = max( 1, ...array_values( $days ) );
 		$summary = sprintf(
-			/* translators: 1: number of revisions, 2: number of days. */
-			_nx( '%1$s revision removed in the last %2$s days', '%1$s revisions removed in the last %2$s days', array_sum( $days ), 'accessibility label', 'revision-retention' ),
+			/* translators: 1: number of revisions, 2: how far back, e.g. "14 days" or "12 weeks". */
+			_nx( '%1$s revision removed in the last %2$s', '%1$s revisions removed in the last %2$s', array_sum( $days ), 'accessibility label', 'revision-retention' ),
 			number_format_i18n( array_sum( $days ) ),
-			number_format_i18n( $span )
+			self::describe_span( $period, $span )
 		);
 		?>
 		<figure class="rvrt-chart">
-			<div class="rvrt-chart-bars" role="img" aria-label="<?php echo esc_attr( $summary ); ?>">
+			<?php // Each bar with something in it is a button, so its numbers can be had by pointer, by touch and by keyboard alike; the arrow keys move between them. A period with nothing removed has nothing to tell, so it is only drawn. ?>
+			<div class="rvrt-chart-bars" role="group" aria-label="<?php echo esc_attr( $summary ); ?>">
 				<?php
+				$last = array_key_last( array_filter( $days ) );
+
 				foreach ( $days as $day => $revisions ) :
-					$time  = (int) strtotime( $day . ' 12:00:00' );
-					$label = sprintf(
-						/* translators: 1: date, 2: number of revisions. */
-						_nx( '%1$s: %2$s revision', '%1$s: %2$s revisions', $revisions, 'chart tooltip', 'revision-retention' ),
-						wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ),
+					if ( 0 === $revisions ) {
+						echo '<span class="rvrt-chart-bar is-empty" aria-hidden="true" inert></span>';
+						continue;
+					}
+
+					$time = (int) strtotime( $day . ' 12:00:00' );
+					$when = match ( $period ) {
+						/* translators: %s: the date the week starts on. */
+						Log::PERIOD_WEEK => sprintf( _x( 'Week of %s', 'chart tooltip', 'revision-retention' ), wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ) ),
+						Log::PERIOD_MONTH => wp_date( _x( 'F Y', 'chart tooltip, month', 'revision-retention' ), $time, new \DateTimeZone( 'UTC' ) ),
+						default => wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ),
+					};
+					$count = sprintf(
+						/* translators: %s: number of revisions. */
+						_nx( '%s revision removed', '%s revisions removed', $revisions, 'chart tooltip', 'revision-retention' ),
 						number_format_i18n( $revisions )
 					);
 					?>
-					<span
-						class="rvrt-chart-bar<?php echo 0 === $revisions ? ' is-empty' : ''; ?>"
+					<button
+						type="button"
+						class="rvrt-chart-bar"
 						style="--rvrt-height: <?php echo esc_attr( (string) round( $revisions / $highest * 100, 1 ) ); ?>%"
-						title="<?php echo esc_attr( $label ); ?>"
-					></span>
+						aria-label="<?php echo esc_attr( $when . ': ' . $count ); ?>"
+						data-when="<?php echo esc_attr( (string) $when ); ?>"
+						data-count="<?php echo esc_attr( $count ); ?>"
+						tabindex="<?php echo $day === $last ? '0' : '-1'; ?>"
+					></button>
 				<?php endforeach; ?>
 			</div>
+			<div class="rvrt-chart-tip" aria-hidden="true" hidden>
+				<strong class="rvrt-chart-tip-when"></strong>
+				<span class="rvrt-chart-tip-count"></span>
+			</div>
 			<figcaption class="rvrt-chart-caption">
-				<span><?php echo esc_html( sprintf( /* translators: %s: number of days. */ _x( '%s days ago', 'chart axis', 'revision-retention' ), number_format_i18n( $span - 1 ) ) ); ?></span>
-				<span><?php echo esc_html_x( 'Today', 'chart axis', 'revision-retention' ); ?></span>
+				<?php
+				$back = number_format_i18n( $span - 1 );
+
+				[ $oldest, $newest ] = match ( $period ) {
+					Log::PERIOD_WEEK => array(
+						/* translators: %s: number of weeks. */
+						sprintf( _nx( '%s week ago', '%s weeks ago', $span - 1, 'chart axis', 'revision-retention' ), $back ),
+						_x( 'This week', 'chart axis', 'revision-retention' ),
+					),
+					Log::PERIOD_MONTH => array(
+						/* translators: %s: number of months. */
+						sprintf( _nx( '%s month ago', '%s months ago', $span - 1, 'chart axis', 'revision-retention' ), $back ),
+						_x( 'This month', 'chart axis', 'revision-retention' ),
+					),
+					default => array(
+						/* translators: %s: number of days. */
+						sprintf( _x( '%s days ago', 'chart axis', 'revision-retention' ), $back ),
+						_x( 'Today', 'chart axis', 'revision-retention' ),
+					),
+				};
+		?>
+				<span><?php echo esc_html( $oldest ); ?></span>
+				<span><?php echo esc_html( $newest ); ?></span>
 			</figcaption>
 		</figure>
 		<?php
@@ -340,8 +468,8 @@ class Log_View {
 					}
 					?>
 					<span class="rvrt-pill rvrt-pill-<?php echo esc_attr( $source ); ?>"><?php echo esc_html( self::sources()[ $source ] ?? $source ); ?></span>
-					<time class="rvrt-card-time" datetime="<?php echo esc_attr( gmdate( 'c', $ended ) ); ?>" title="<?php echo esc_attr( (string) wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ended ) ); ?>">
-						<?php echo esc_html( (string) wp_date( get_option( 'time_format' ), $ended ) ); ?>
+					<time class="rvrt-card-time" datetime="<?php echo esc_attr( gmdate( 'c', $ended ) ); ?>" title="<?php echo esc_attr( (string) wp_date( get_option( 'date_format' ) . ' ' . Settings::time_format(), $ended ) ); ?>">
+						<?php echo esc_html( (string) wp_date( Settings::time_format(), $ended ) ); ?>
 					</time>
 				</header>
 

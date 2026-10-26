@@ -40,7 +40,7 @@ Some post types ship without revision support, so nothing is recorded at all. Th
 
 = On a schedule =
 
-The sweep runs in the background at an interval you choose. Every run books the next one itself: another batch in a minute while there is work left, or the next full run at your interval once the site is clean. A sweep that gets interrupted continues where it stopped instead of starting over.
+The sweep runs in the background at an interval you choose, from every hour to once a month, or on the days of the week you tick: once at the hour you pick, say Monday and Wednesday at 03:00 in the site's timezone, or every hour or every few hours from that hour until midnight. Every run books the next one itself: another batch in a minute while there is work left, or the next full run at your interval once the site is clean. A sweep that gets interrupted continues where it stopped instead of starting over.
 
 There are also **Preview** and **Run one batch now** buttons on the settings screen. Preview reports what the policy would remove without deleting anything.
 

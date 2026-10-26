@@ -21,11 +21,27 @@
 	   blue, for the few screens that do not. */
 	--rvrt-accent: var(--wp-admin-theme-color, #2271b1);
 
+	/* The accent for what has to stand out against white or carry white
+	   text. Most admin colour schemes' accents do that as they are; the few
+	   that are too light get darkened below, each by no more than it needs. */
+	--rvrt-accent-strong: var(--rvrt-accent);
+
 	max-inline-size: 1100px;
 }
 
 .rvrt-settings :is(.rvrt-intro, .form-table td .description, .rvrt-panel-intro) {
 	max-inline-size: var(--rvrt-measure);
+}
+
+/* The admin colour schemes whose accent is too light for white text at 4.5:1
+   or a bar at 3:1 against the chart. Measured on each: Light, Midnight and
+   Ocean need a tenth darker, Sunrise a quarter. */
+:is(.admin-color-light, .admin-color-midnight, .admin-color-ocean) .rvrt-settings {
+	--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 90%, #000);
+}
+
+.admin-color-sunrise .rvrt-settings {
+	--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 75%, #000);
 }
 
 /* Tabs and panels --------------------------------------------------------- */
@@ -172,6 +188,24 @@
 
 .rvrt-settings .rvrt-choice-text {
 	color: #1d2327;
+}
+
+/* The days of the week on one line, wrapping on a narrow screen. */
+.rvrt-settings .rvrt-weekdays {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1.25em;
+}
+
+/* Once, every hour or every few hours, then the hour, on one line. */
+.rvrt-settings .rvrt-times > select,
+.rvrt-settings .rvrt-times > span,
+.rvrt-settings .rvrt-times > label {
+	margin-inline-end: 0.25em;
+}
+
+.rvrt-settings .rvrt-times [hidden] {
+	display: none;
 }
 
 /* Tables ------------------------------------------------------------------ */
@@ -507,6 +541,7 @@
 
 .rvrt-settings .rvrt-chart {
 	background: linear-gradient(to bottom, var(--rvrt-tint), var(--rvrt-surface));
+	position: relative;
 	border: 1px solid var(--rvrt-rule);
 	border-radius: 8px;
 	margin: 0 0 2em;
@@ -516,13 +551,18 @@
 
 .rvrt-settings .rvrt-chart-bars {
 	align-items: end;
+	cursor: pointer;
 	block-size: 72px;
 	display: flex;
 	gap: 3px;
 }
 
 .rvrt-settings .rvrt-chart-bar {
-	background: linear-gradient(to top, var(--rvrt-accent), color-mix(in srgb, var(--rvrt-accent) 55%, #fff));
+	appearance: none;
+	background: linear-gradient(to top, var(--rvrt-accent-strong), color-mix(in srgb, var(--rvrt-accent-strong) 80%, #fff));
+	border: 0;
+	cursor: pointer;
+	padding: 0;
 	block-size: max(var(--rvrt-height), 3px);
 	border-radius: 3px 3px 1px 1px;
 	flex: 1 1 0;
@@ -532,12 +572,42 @@
 	transition: filter 150ms ease;
 }
 
-.rvrt-settings .rvrt-chart-bar:hover {
+.rvrt-settings .rvrt-chart-bar:hover,
+.rvrt-settings .rvrt-chart-bar.is-active {
 	filter: brightness(1.15) saturate(1.2);
 }
 
+.rvrt-settings .rvrt-chart-bar:focus-visible {
+	outline: 2px solid var(--rvrt-accent-strong);
+	outline-offset: 2px;
+}
+
+/* What a bar covers and how many revisions went, above the bar. */
+.rvrt-settings .rvrt-chart-tip {
+	background: #1d2327;
+	border-radius: 4px;
+	box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+	color: #fff;
+	display: flex;
+	flex-direction: column;
+	font-size: 12px;
+	line-height: 1.4;
+	padding: 0.4em 0.65em;
+	position: absolute;
+	white-space: nowrap;
+	z-index: 1;
+}
+
+.rvrt-settings .rvrt-chart-tip[hidden] {
+	display: none;
+}
+
 .rvrt-settings .rvrt-chart-bar.is-empty {
-	background: var(--rvrt-rule);
+	/* Only a faint baseline: an empty period is drawn but not a control,
+	   hidden from assistive technology, and the absence of a bar is what
+	   says nothing was removed, so it needs no 3:1 of its own. */
+	background: #e0e0e1;
+	cursor: default;
 	block-size: 3px;
 }
 
@@ -1058,8 +1128,182 @@
 	margin-block-start: 1.5em;
 }
 
+/* When the schedule runs next, under the chart. */
+.rvrt-widget .rvrt-log-next {
+	align-items: flex-start;
+	color: var(--rvrt-muted);
+	display: flex;
+	gap: 0.5em;
+}
+
+.rvrt-widget .rvrt-log-next .dashicons {
+	color: var(--rvrt-accent);
+	flex: none;
+}
+
+/* And why it will not, when WP-Cron is stuck. */
+.rvrt-widget .rvrt-log-stall {
+	align-items: flex-start;
+	margin-block: 0 1em;
+	background: #fcf9e8;
+	border-inline-start: 4px solid #dba617;
+	display: flex;
+	gap: 0.5em;
+	padding: 0.5em 0.75em;
+}
+
+.rvrt-widget .rvrt-log-stall .dashicons {
+	color: #996800;
+	flex: none;
+}
+
 .rvrt-widget .rvrt-log-more {
 	margin-block-end: 0;
+}
+
+.rvrt-widget .rvrt-arrow {
+	display: inline-block;
+	margin-inline-start: 0.15em;
+}
+
+[dir="rtl"] .rvrt-widget .rvrt-arrow {
+	transform: scaleX(-1);
+}
+
+/* Daily, Weekly or Monthly: a pill shaped track with a thumb in the accent
+   colour that slides to the choice. The thumb is drawn by the track itself
+   and moved by :has(), so it needs no script; the three options share the
+   width equally for the thumb to land on each of them exactly. The choice
+   is marked by a filled thumb with white text, not by a shade alone, so it
+   reads at 3:1 and more whatever the colour vision. */
+.rvrt-widget .rvrt-period-switch {
+	--rvrt-thumb: 0;
+	background: #f0f0f1;
+	border: 1px solid var(--rvrt-rule);
+	border-radius: 999px;
+	display: inline-grid;
+	grid-auto-columns: 1fr;
+	grid-auto-flow: column;
+	margin-block-end: 1em;
+	padding: 2px;
+	position: relative;
+}
+
+.rvrt-widget .rvrt-period-switch::before {
+	background: var(--rvrt-accent-strong);
+	border-radius: 999px;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+	content: "";
+	inset-block: 2px;
+	inset-inline-start: 2px;
+	inline-size: calc((100% - 4px) / 3);
+	position: absolute;
+	transform: translateX(calc(var(--rvrt-thumb) * 100%));
+	transition: transform 250ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+
+.rvrt-widget .rvrt-period-switch:has(.rvrt-period-button:nth-child(2)[aria-pressed="true"]) {
+	--rvrt-thumb: 1;
+}
+
+.rvrt-widget .rvrt-period-switch:has(.rvrt-period-button:nth-child(3)[aria-pressed="true"]) {
+	--rvrt-thumb: 2;
+}
+
+[dir="rtl"] .rvrt-widget .rvrt-period-switch::before {
+	transform: translateX(calc(var(--rvrt-thumb) * -100%));
+}
+
+.rvrt-widget .rvrt-period-button {
+	background: none;
+	border: 0;
+	border-radius: 999px;
+	color: #3c434a;
+	cursor: pointer;
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	min-block-size: 24px;
+	padding: 0.3em 1.1em;
+	position: relative;
+	transition: color 150ms ease;
+}
+
+.rvrt-widget .rvrt-period-button:hover {
+	color: #1d2327;
+	text-decoration: underline;
+}
+
+.rvrt-widget .rvrt-period-button[aria-pressed="true"] {
+	color: #fff;
+	text-decoration: none;
+}
+
+.rvrt-widget .rvrt-period-button:focus-visible {
+	outline: 2px solid var(--rvrt-accent-strong);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.rvrt-widget .rvrt-period-switch::before {
+		transition: none;
+	}
+}
+
+/* Windows High Contrast and other forced colours drop every background, which
+   is what draws the bars, the switch's thumb and the tooltip. The system's
+   own colours take their place, so each still shows, and the choice in the
+   switch keeps its highlight. */
+@media (forced-colors: active) {
+	.rvrt-settings .rvrt-chart-bar {
+		background: Highlight;
+		forced-color-adjust: none;
+	}
+
+	.rvrt-settings .rvrt-chart-bar.is-empty {
+		background: GrayText;
+	}
+
+	.rvrt-settings .rvrt-chart-bar:is(.is-active, :focus-visible) {
+		outline: 2px solid CanvasText;
+		outline-offset: 1px;
+	}
+
+	.rvrt-settings .rvrt-chart-tip {
+		border: 1px solid CanvasText;
+	}
+
+	.rvrt-widget .rvrt-period-switch {
+		forced-color-adjust: none;
+		background: Canvas;
+		border-color: CanvasText;
+	}
+
+	.rvrt-widget .rvrt-period-switch::before {
+		background: Highlight;
+		box-shadow: none;
+	}
+
+	.rvrt-widget .rvrt-period-button {
+		color: ButtonText;
+	}
+
+	.rvrt-widget .rvrt-period-button[aria-pressed="true"] {
+		color: HighlightText;
+	}
+
+	.rvrt-widget .rvrt-period-button:focus-visible {
+		outline-color: CanvasText;
+	}
+
+	.rvrt-widget .rvrt-log-stall {
+		border: 1px solid CanvasText;
+	}
+}
+
+.rvrt-widget .rvrt-period[hidden] {
+	display: none;
 }
 
 /* This plugin's cron events, when WP Crontrol is there to manage them. */

@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * Every run is booked as a single event rather than a recurring one. After a
  * batch the handler decides for itself what to book next: another batch in a
  * minute while there is work left, or the next full run at the configured
- * interval once the site is clean. That is what makes the schedule follow the
+ * interval, or on the next chosen day of the week, once the site is clean. That is what makes the schedule follow the
  * settings without a recurring event going stale behind it, and it means a
  * sweep interrupted halfway simply continues rather than starting over.
  *
@@ -48,6 +48,14 @@ class Scheduler {
 	 * @var string
 	 */
 	public const LAST_RUN_OPTION = 'rvrt_last_cron';
+
+	/**
+	 * Site transient the network's Dashboard widget keeps where the schedule
+	 * stands on every site in.
+	 *
+	 * @var string
+	 */
+	public const NETWORK_TRANSIENT = 'rvrt_network_schedule';
 
 	/**
 	 * How long to wait before continuing a sweep that has more to do.
@@ -124,6 +132,8 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function sync(): void {
+		self::forget_network();
+
 		if ( empty( Settings::get( 'cron_enabled' ) ) ) {
 			wp_clear_scheduled_hook( self::HOOK );
 
@@ -136,9 +146,9 @@ class Scheduler {
 		if ( $state['cursor'] > 0 ) {
 			$due = $soon;
 		} elseif ( $state['finished'] < 1 ) {
-			$due = time() + Settings::interval_seconds();
+			$due = Settings::next_run( time() );
 		} else {
-			$due = max( $soon, $state['finished'] + Settings::interval_seconds() );
+			$due = max( $soon, Settings::next_run( $state['finished'] ) );
 		}
 
 		$booked = (int) wp_next_scheduled( self::HOOK );
@@ -159,15 +169,26 @@ class Scheduler {
 	 * @return void
 	 */
 	public static function reschedule( int $delay = 0 ): void {
+		self::forget_network();
 		wp_clear_scheduled_hook( self::HOOK );
 
 		if ( empty( Settings::get( 'cron_enabled' ) ) ) {
 			return;
 		}
 
-		$delay = $delay > 0 ? $delay : Settings::interval_seconds();
+		wp_schedule_single_event( $delay > 0 ? time() + $delay : Settings::next_run( time() ), self::HOOK );
+	}
 
-		wp_schedule_single_event( time() + $delay, self::HOOK );
+	/**
+	 * Drop what the network's widget keeps about the schedule, since this
+	 * site's part of it is about to change.
+	 *
+	 * @return void
+	 */
+	private static function forget_network(): void {
+		if ( is_multisite() ) {
+			delete_site_transient( self::NETWORK_TRANSIENT );
+		}
 	}
 
 	/**
