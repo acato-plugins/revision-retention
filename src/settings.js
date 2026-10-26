@@ -112,6 +112,45 @@
 		apply();
 	};
 
+	/** Show the days and the hour only while the sweep runs on chosen days. */
+	const syncWeekdays = () => {
+		const select = document.getElementById( 'rvrt-cron-interval' );
+		const rows = document.querySelectorAll( '.rvrt-weekdays-row' );
+
+		if ( ! select || ! rows.length ) {
+			return;
+		}
+
+		const apply = () => {
+			const interval = select.value === '' ? select.dataset.inherited : select.value;
+
+			for ( const row of rows ) {
+				row.hidden = interval !== 'weekdays';
+			}
+		};
+
+		select.addEventListener( 'change', apply );
+		apply();
+
+		// Once at a time, every hour at some minutes past it, or every few
+		// hours from a time: show only the fields and the words that fit.
+		const repeat = document.getElementById( 'rvrt-cron-repeat' );
+
+		if ( ! repeat ) {
+			return;
+		}
+
+		const parts = document.querySelectorAll( '.rvrt-times [data-repeat]' );
+		const applyRepeat = () => {
+			for ( const part of parts ) {
+				part.hidden = ! part.dataset.repeat.split( ' ' ).includes( repeat.value );
+			}
+		};
+
+		repeat.addEventListener( 'change', applyRepeat );
+		applyRepeat();
+	};
+
 	/** Fold the post types that hold nothing in and out of view. */
 	const syncQuietRows = () => {
 		const button = document.querySelector( '.rvrt-toggle' );
@@ -599,7 +638,8 @@
 	document.addEventListener( 'DOMContentLoaded', () => {
 		syncTabs();
 		syncConfirms();
-		syncDependent( 'rvrt-cron-enabled', [ 'rvrt-cron-interval', 'rvrt-max-deletions', 'rvrt-batch-size' ] );
+		syncDependent( 'rvrt-cron-enabled', [ 'rvrt-cron-interval', 'rvrt-cron-days', 'rvrt-cron-repeat', 'rvrt-max-deletions', 'rvrt-batch-size' ] );
+		syncWeekdays();
 		syncDependent( 'rvrt-log-enabled', [ 'rvrt-log-retention' ] );
 		syncDependent( 'rvrt-dashboard-widget', [ 'rvrt-widget-roles' ] );
 		syncQuietRows();

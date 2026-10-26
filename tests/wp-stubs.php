@@ -62,9 +62,13 @@ function _get_cron_array() { return array_flip( $GLOBALS['t_cron'] ?? array() );
 function get_transient( $k ) { return $GLOBALS['t_transients'][ $k ] ?? false; }
 function set_transient( $k, $v, $e = 0 ) { $GLOBALS['t_transients'][ $k ] = $v; return true; }
 function delete_transient( $k ) { unset( $GLOBALS['t_transients'][ $k ] ); return true; }
+function get_site_transient( $k ) { return $GLOBALS['t_site_transients'][ $k ] ?? false; }
+function set_site_transient( $k, $v, $e = 0 ) { $GLOBALS['t_site_transients'][ $k ] = $v; return true; }
+function delete_site_transient( $k ) { unset( $GLOBALS['t_site_transients'][ $k ] ); return true; }
 function get_current_user_id() { return 1; }
 function get_user_meta( $id, $k, $single = false ) { return $GLOBALS['t_user_meta'][ $k ] ?? ''; }
 function current_time( $type, $gmt = false ) { return gmdate( 'Y-m-d H:i:s' ); }
+function wp_timezone() { return new DateTimeZone( $GLOBALS['t_timezone'] ?? 'UTC' ); }
 function plugin_dir_path( $file ) { return dirname( $file ) . '/'; }
 function plugin_dir_url( $file ) { return 'https://example.test/wp-content/plugins/revision-retention/'; }
 function plugin_basename( $file ) { return 'revision-retention/' . basename( $file ); }
@@ -153,4 +157,4 @@ foreach ( array( 'retention-rule', 'post-types', 'settings', 'policy', 'sweep-re
 }
 
 define( 'RVRT_PLUGIN_FILE', __DIR__ . '/../revision-retention.php' );
-define( 'RVRT_VERSION', '1.3.1' );
+define( 'RVRT_VERSION', '1.4.0' );

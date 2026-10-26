@@ -83,8 +83,10 @@ do {
 	$rvrt_offset += 100;
 } while ( 100 === $rvrt_found );
 
-// Only a cache of where the plugin was active, so it goes whatever was chosen.
+// Only caches, of where the plugin was active and of where the schedule
+// stands, so they go whatever was chosen.
 delete_site_option( Plugin::SITES_OPTION );
+delete_site_transient( Scheduler::NETWORK_TRANSIENT );
 
 if ( ! empty( Settings::network()['remove_data_on_uninstall'] ) ) {
 	delete_site_option( Settings::NETWORK_OPTION );

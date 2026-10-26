@@ -155,6 +155,13 @@ class Settings_Page {
 			wp_enqueue_script( 'rvrt-settings', $script, array( 'wp-i18n' ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
 		}
+
+		// The Logs tab's chart, with its tooltips.
+		$chart = Assets::url( 'src/chart.js' );
+
+		if ( null !== $chart ) {
+			wp_enqueue_script( 'rvrt-chart', $chart, array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+		}
 	}
 
 	/**
@@ -845,6 +852,7 @@ class Settings_Page {
 				</th>
 				<td><?php $this->render_choice( 'cron_interval', 'rvrt-cron-interval', Settings::intervals(), $stored, $inherited, $inheritable ); ?></td>
 			</tr>
+			<?php $this->render_weekday_rows( $stored, $inherited, $inheritable, $is_network ); ?>
 			<tr>
 				<th scope="row">
 					<label for="rvrt-batch-size"><?php echo esc_html_x( 'Posts per batch', 'field label', 'revision-retention' ); ?></label>
@@ -871,6 +879,93 @@ class Settings_Page {
 		if ( ! $is_network ) {
 			$this->render_crontrol_section();
 		}
+	}
+
+	/**
+	 * The days and the times a sweep on chosen days runs at.
+	 *
+	 * Hidden by the screen's script unless the interval is, or inherits, the
+	 * chosen days. A site that has not chosen days of its own yet starts from
+	 * the network's, so switching to them begins from something sensible.
+	 *
+	 * @param array<string, mixed> $stored      Values as stored for this screen.
+	 * @param array<string, mixed> $inherited   Network values to fall back to.
+	 * @param bool                 $inheritable Whether the site inherits from the network.
+	 * @param bool                 $is_network  Whether the network screen is being rendered.
+	 *
+	 * @return void
+	 */
+	private function render_weekday_rows( array $stored, array $inherited, bool $inheritable, bool $is_network ): void {
+		global $wp_locale;
+
+		$source = $inheritable && ! isset( $stored['cron_interval'] ) ? $inherited : $stored;
+		$days   = is_array( $source['cron_days'] ?? null ) ? array_map( 'intval', $source['cron_days'] ) : array();
+		$time   = (int) ( $source['cron_time'] ?? 180 );
+		$repeat = (int) ( $source['cron_repeat'] ?? 0 );
+		$mode   = $repeat > 1 ? 'hours' : ( 1 === $repeat ? 'hourly' : 'once' );
+		$first  = (int) get_option( 'start_of_week', 1 );
+		?>
+		<tr class="rvrt-weekdays-row">
+			<th scope="row"><?php echo esc_html_x( 'On these days', 'field label', 'revision-retention' ); ?></th>
+			<td>
+				<fieldset id="rvrt-cron-days" class="rvrt-weekdays">
+					<legend class="screen-reader-text"><?php echo esc_html_x( 'On these days', 'field label', 'revision-retention' ); ?></legend>
+					<?php
+					// In the order the site's week starts with.
+					for ( $offset = 0; $offset < 7; $offset++ ) :
+						$day = ( $first + $offset ) % 7;
+						?>
+						<label>
+							<input type="checkbox" name="rvrt_settings[cron_days][]" value="<?php echo esc_attr( (string) $day ); ?>" <?php checked( in_array( $day, $days, true ) ); ?> />
+							<?php echo esc_html( $wp_locale->get_weekday( $day ) ); ?>
+						</label>
+					<?php endfor; ?>
+				</fieldset>
+				<p class="description"><?php echo esc_html_x( 'With no day ticked, the sweep runs on Mondays.', 'field description', 'revision-retention' ); ?></p>
+			</td>
+		</tr>
+		<tr class="rvrt-weekdays-row">
+			<th scope="row">
+				<label for="rvrt-cron-repeat"><?php echo esc_html_x( 'Times', 'field label', 'revision-retention' ); ?></label>
+			</th>
+			<td class="rvrt-times">
+				<select id="rvrt-cron-repeat" name="rvrt_settings[cron_repeat][mode]">
+					<option value="once" <?php selected( 'once', $mode ); ?>><?php echo esc_html_x( 'Once', 'sweep repeat', 'revision-retention' ); ?></option>
+					<option value="hourly" <?php selected( 'hourly', $mode ); ?>><?php echo esc_html_x( 'Every hour', 'sweep repeat', 'revision-retention' ); ?></option>
+					<option value="hours" <?php selected( 'hours', $mode ); ?>><?php echo esc_html_x( 'Every few hours', 'sweep repeat', 'revision-retention' ); ?></option>
+				</select>
+				<span class="rvrt-repeat-hours" data-repeat="hours">
+					<label for="rvrt-cron-repeat-hours" class="screen-reader-text"><?php echo esc_html_x( 'Hours between runs', 'field label', 'revision-retention' ); ?></label>
+					<?php echo esc_html_x( 'every', 'sweep repeat, before the number of hours', 'revision-retention' ); ?>
+					<input type="number" min="2" max="23" step="1" class="small-text" id="rvrt-cron-repeat-hours" name="rvrt_settings[cron_repeat][hours]" value="<?php echo esc_attr( (string) max( 2, $repeat ) ); ?>" />
+					<?php echo esc_html_x( 'hours', 'sweep repeat, after the number of hours', 'revision-retention' ); ?>
+				</span>
+				<span data-repeat="once hourly"><?php echo esc_html_x( 'at', 'sweep repeat, before the time', 'revision-retention' ); ?></span>
+				<span data-repeat="hours"><?php echo esc_html_x( 'from', 'sweep repeat, before the first time', 'revision-retention' ); ?></span>
+				<span data-repeat="once hours">
+					<label for="rvrt-cron-time" class="screen-reader-text"><?php echo esc_html_x( 'Time', 'field label', 'revision-retention' ); ?></label>
+					<input type="time" step="60" id="rvrt-cron-time" name="rvrt_settings[cron_time][time]" value="<?php echo esc_attr( Settings::time_string( $time ) ); ?>" />
+				</span>
+				<span data-repeat="hourly">
+					<label for="rvrt-cron-minute" class="screen-reader-text"><?php echo esc_html_x( 'Minutes past the hour', 'field label', 'revision-retention' ); ?></label>
+					<select id="rvrt-cron-minute" name="rvrt_settings[cron_time][minute]">
+						<?php for ( $minute = 0; $minute < 60; $minute++ ) : ?>
+							<option value="<?php echo esc_attr( (string) $minute ); ?>" <?php selected( $minute, $time % 60 ); ?>><?php echo esc_html( sprintf( ':%02d', $minute ) ); ?></option>
+						<?php endfor; ?>
+					</select>
+				</span>
+				<p class="description">
+					<?php
+					echo esc_html(
+						$is_network
+							? _x( 'Every hour runs all day at the minutes chosen. Every few hours starts at the time chosen and stops at midnight: every 3 hours from 09:25 runs at 09:25, 12:25, 15:25, 18:25 and 21:25. Times are in each site\'s own timezone. A large site may take several batches, a minute apart, to finish.', 'field description', 'revision-retention' )
+							: _x( 'Every hour runs all day at the minutes chosen. Every few hours starts at the time chosen and stops at midnight: every 3 hours from 09:25 runs at 09:25, 12:25, 15:25, 18:25 and 21:25. Times are in the site\'s timezone, set under Settings, General. A large site may take several batches, a minute apart, to finish.', 'field description', 'revision-retention' )
+					);
+					?>
+				</p>
+			</td>
+		</tr>
+		<?php
 	}
 
 	/**
@@ -1999,7 +2094,8 @@ class Settings_Page {
 	private function render_choice( string $key, string $id, array $choices, array $stored, array $inherited, bool $inheritable ): void {
 		$value = isset( $stored[ $key ] ) ? (string) $stored[ $key ] : '';
 		?>
-		<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]">
+		<?php // What "Inherit" amounts to, for the script that shows the fields depending on this one. ?>
+		<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]" data-inherited="<?php echo esc_attr( (string) ( $inherited[ $key ] ?? '' ) ); ?>">
 			<?php if ( $inheritable ) : ?>
 				<option value="" <?php selected( '', $value ); ?>>
 					<?php

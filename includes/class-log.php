@@ -69,6 +69,27 @@ class Log {
 	public const SOURCE_CLI = 'cli';
 
 	/**
+	 * A day, as one bar of a chart.
+	 *
+	 * @var string
+	 */
+	public const PERIOD_DAY = 'day';
+
+	/**
+	 * A week, starting on the day the site's week starts with.
+	 *
+	 * @var string
+	 */
+	public const PERIOD_WEEK = 'week';
+
+	/**
+	 * A calendar month.
+	 *
+	 * @var string
+	 */
+	public const PERIOD_MONTH = 'month';
+
+	/**
 	 * What the finished column holds for an entry given up on part way.
 	 *
 	 * 1 is a sweep that got to the end, 0 one that may still be going. A
@@ -391,11 +412,29 @@ class Log {
 	 * @return array<string, int> Totals keyed by `Y-m-d`, oldest first, every day present.
 	 */
 	public static function daily( int $days, bool $network = false ): array {
-		$totals = array();
-		$today  = new \DateTimeImmutable( 'today', wp_timezone() );
+		return self::per_period( self::PERIOD_DAY, $days, $network );
+	}
 
-		for ( $offset = $days - 1; $offset >= 0; --$offset ) {
-			$totals[ $today->modify( "-{$offset} days" )->format( 'Y-m-d' ) ] = 0;
+	/**
+	 * Revisions removed per day, week or month, for the last few of them.
+	 *
+	 * Weeks start on the day the site's week starts with, months on the first,
+	 * both in the site's timezone, and the current one counts as the last
+	 * even while it is still going.
+	 *
+	 * @param string $period  One of the PERIOD_ constants.
+	 * @param int    $count   How many periods to report, the current one included.
+	 * @param bool   $network Whether to read every site on the network instead of this one.
+	 *
+	 * @return array<string, int> Totals keyed by the `Y-m-d` each period starts on, oldest first, every period present.
+	 */
+	public static function per_period( string $period, int $count, bool $network = false ): array {
+		$totals  = array();
+		$current = self::period_start( $period, new \DateTimeImmutable( 'today', wp_timezone() ) );
+		$step    = self::PERIOD_WEEK === $period ? 'weeks' : ( self::PERIOD_MONTH === $period ? 'months' : 'days' );
+
+		for ( $offset = $count - 1; $offset >= 0; --$offset ) {
+			$totals[ $current->modify( "-{$offset} {$step}" )->format( 'Y-m-d' ) ] = 0;
 		}
 
 		$from = self::from( $network );
@@ -406,7 +445,7 @@ class Log {
 
 		global $wpdb;
 
-		$since = gmdate( 'Y-m-d H:i:s', $today->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() );
+		$since = gmdate( 'Y-m-d H:i:s', self::oldest( $period, $count )->getTimestamp() );
 
 		// Grouped here rather than in SQL, which would group by the database's
 		// idea of a day instead of the site's.
@@ -418,14 +457,52 @@ class Log {
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
-			$day = wp_date( 'Y-m-d', self::timestamp( (string) $row['ended_gmt'] ) );
+			$ended = ( new \DateTimeImmutable( '@' . self::timestamp( (string) $row['ended_gmt'] ) ) )->setTimezone( wp_timezone() );
+			$key   = self::period_start( $period, $ended->setTime( 0, 0 ) )->format( 'Y-m-d' );
 
-			if ( is_string( $day ) && isset( $totals[ $day ] ) ) {
-				$totals[ $day ] += (int) $row['revisions'];
+			if ( isset( $totals[ $key ] ) ) {
+				$totals[ $key ] += (int) $row['revisions'];
 			}
 		}
 
 		return $totals;
+	}
+
+	/**
+	 * Midnight at the start of the oldest of the last few periods, in the
+	 * site's timezone.
+	 *
+	 * @param string $period One of the PERIOD_ constants.
+	 * @param int    $count  How many periods, the current one included.
+	 *
+	 * @return \DateTimeImmutable
+	 */
+	public static function oldest( string $period, int $count ): \DateTimeImmutable {
+		$step = self::PERIOD_WEEK === $period ? 'weeks' : ( self::PERIOD_MONTH === $period ? 'months' : 'days' );
+
+		return self::period_start( $period, new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $count - 1 ) . " {$step}" );
+	}
+
+	/**
+	 * The day a period starts on, for a day inside it.
+	 *
+	 * @param string             $period One of the PERIOD_ constants.
+	 * @param \DateTimeImmutable $day    Midnight of a day, in the site's timezone.
+	 *
+	 * @return \DateTimeImmutable
+	 */
+	private static function period_start( string $period, \DateTimeImmutable $day ): \DateTimeImmutable {
+		if ( self::PERIOD_MONTH === $period ) {
+			return $day->modify( 'first day of this month' );
+		}
+
+		if ( self::PERIOD_WEEK === $period ) {
+			$back = ( (int) $day->format( 'w' ) - (int) get_option( 'start_of_week', 1 ) + 7 ) % 7;
+
+			return $day->modify( "-{$back} days" );
+		}
+
+		return $day;
 	}
 
 	/**

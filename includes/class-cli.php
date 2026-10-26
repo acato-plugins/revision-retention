@@ -86,7 +86,7 @@ class CLI {
 				'setting' => 'scheduled',
 				'value'   => empty( Settings::get( 'cron_enabled' ) )
 					? 'off'
-					: sprintf( '%s, next run %s', (string) Settings::get( 'cron_interval' ), $next ? gmdate( 'Y-m-d H:i:s', (int) $next ) . ' GMT' : 'not booked' ),
+					: sprintf( '%s, next run %s', self::describe_interval(), $next ? gmdate( 'Y-m-d H:i:s', (int) $next ) . ' GMT' : 'not booked' ),
 			),
 			array(
 				'setting' => 'wp_cron',
@@ -292,6 +292,32 @@ class CLI {
 				$total->finished ? '' : ( $shared ? ' Stopped early; run again to continue.' : ' Stopped early; running it again starts from the first post.' )
 			)
 		);
+	}
+
+	/**
+	 * The configured interval, with the days and the hour when it has them.
+	 *
+	 * @return string
+	 */
+	private static function describe_interval(): string {
+		$interval = (string) Settings::get( 'cron_interval' );
+
+		if ( Settings::WEEKDAYS !== $interval ) {
+			return $interval;
+		}
+
+		$names = array( 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' );
+		$days  = array_map( static fn ( int $day ): string => $names[ $day ], Settings::days() );
+
+		$repeat = (int) Settings::get( 'cron_repeat' );
+		$time   = Settings::time_string( (int) Settings::get( 'cron_time' ) );
+		$times  = match ( true ) {
+			$repeat > 1 => sprintf( 'every %d hours from %s', $repeat, $time ),
+			1 === $repeat => sprintf( 'every hour at :%02d', (int) Settings::get( 'cron_time' ) % 60 ),
+			default => sprintf( 'at %s', $time ),
+		};
+
+		return sprintf( '%s (%s %s site time)', $interval, implode( ', ', $days ), $times );
 	}
 
 	/**

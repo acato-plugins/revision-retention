@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,7 +40,7 @@ Some post types ship without revision support, so nothing is recorded at all. Th
 
 = On a schedule =
 
-The sweep runs in the background at an interval you choose. Every run books the next one itself: another batch in a minute while there is work left, or the next full run at your interval once the site is clean. A sweep that gets interrupted continues where it stopped instead of starting over.
+The sweep runs in the background at an interval you choose, from every hour to once a month, or on the days of the week you tick: once at the hour you pick, say Monday and Wednesday at 03:00 in the site's timezone, or every hour or every few hours from that hour until midnight. Every run books the next one itself: another batch in a minute while there is work left, or the next full run at your interval once the site is clean. A sweep that gets interrupted continues where it stopped instead of starting over.
 
 There are also **Preview** and **Run one batch now** buttons on the settings screen. Preview reports what the policy would remove without deleting anything.
 
@@ -143,6 +143,17 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 5. The network's Logs tab, which shows every site's log together and names the site each sweep ran on.
 
 == Changelog ==
+
+= 1.4.0 =
+* **How often** offers every 4 hours, every 12 hours (twice a day) and every 14 days, next to the hourly, daily, weekly and monthly sweeps it already had.
+* **How often** can also run on chosen days of the week, say Monday and Wednesday: once at a time of day you pick to the minute, every hour at so many minutes past it, or every few hours from a time until midnight. Times are in the site's timezone, and on a network a site that inherits the schedule inherits its days and times too. `wp revision-retention status` shows the days and the times.
+* The Dashboard widget says when the next cleanup is planned, today, tomorrow or on a day, and when one is overdue. When WP-Cron is not running, for instance because `DISABLE_WP_CRON` is set without a server cron job behind it, the widget says so at the top, with a link to the **Schedule** tab.
+* The network's Dashboard widget does the same for the whole network: the next cleanup on any site, how many sites are overdue, and the WP-Cron warning.
+* The widget's chart switches between **Daily**, **Weekly** and **Monthly** bars. It starts on the one that suits the schedule, a bar per week for a weekly sweep and per month for a monthly one, and remembers the choice in the browser. Weeks and months go back as far as the log is kept.
+* Every bar in the chart, in the widget and on the **Logs** tab, shows what it covers and how many revisions went, when pointed at, focused or clicked. The arrow keys move between the bars.
+* Times always show with a colon, 12:26 rather than 12.26, in the site's own 12 or 24 hours.
+* The widget and the chart read at WCAG 2.2 AA contrast on every admin colour scheme and with colour blindness, and draw themselves in the system's colours under Windows High Contrast. The bars can be reached with any pointer without hitting a few pixels, a day with nothing removed is only drawn, and the tooltip can be pointed at and closed with Escape.
+* On a network that holds a single published site, a network administrator's widget no longer shows a Network tab next to the Site one: the network is the site.
 
 = 1.3.1 =
 * The plugin reports its version as 1.3.1. The 1.3.0 release still said 1.2.0 in its header and readme, so it showed and updated as 1.2.0.

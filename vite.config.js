@@ -26,7 +26,10 @@ export default defineConfig( {
 		rollupOptions: {
 			// Listed rather than named, so each output takes its source's name:
 			// settings-<hash>.js and settings-<hash>.css.
-			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js' ],
+			// The chart's script is an entry of its own rather than imported by
+			// the other two, which would split it into a shared module chunk
+			// that a classic script cannot load.
+			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js', 'src/chart.js' ],
 		},
 	},
 } );
