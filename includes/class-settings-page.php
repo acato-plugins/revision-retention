@@ -434,6 +434,7 @@ class Settings_Page {
 		$counts = Cleaner::counts();
 		$total  = array_sum( $counts );
 		$types  = count( array_filter( $counts ) );
+		$next   = (int) wp_next_scheduled( Scheduler::HOOK );
 		?>
 		<ul class="rvrt-stats">
 			<li>
@@ -451,6 +452,22 @@ class Settings_Page {
 			<li>
 				<span class="rvrt-stat-value"><?php echo esc_html( Settings::describe_age( (int) Settings::get( 'max_age_days' ) ) ); ?></span>
 				<span class="rvrt-stat-label"><?php echo esc_html_x( 'Removed when older than', 'statistic label', 'revision-retention' ); ?></span>
+			</li>
+			<li>
+				<span class="rvrt-stat-value">
+					<?php
+					if ( $next < 1 ) {
+						echo '<span class="rvrt-none">' . esc_html_x( 'Not booked', 'cron event state', 'revision-retention' ) . '</span>';
+					} else {
+						self::render_countdown(
+							$next,
+							'%s',
+							_x( 'Due now', 'next sweep statistic', 'revision-retention' )
+						);
+					}
+					?>
+				</span>
+				<span class="rvrt-stat-label"><?php echo esc_html_x( 'Until the next sweep', 'statistic label', 'revision-retention' ); ?></span>
 			</li>
 		</ul>
 		<?php
@@ -1017,17 +1034,13 @@ class Settings_Page {
 								<?php
 								if ( $next < 1 ) {
 									echo '<span class="rvrt-none">' . esc_html_x( 'Not booked', 'cron event state', 'revision-retention' ) . '</span>';
-								} elseif ( $next <= time() ) {
-									printf(
-										/* translators: %s: how long ago the event was due, e.g. "3 hours". */
-										esc_html_x( 'Overdue by %s', 'cron event state', 'revision-retention' ),
-										esc_html( human_time_diff( $next ) )
-									);
 								} else {
-									printf(
+									self::render_countdown(
+										$next,
 										/* translators: %s: time until the event runs, e.g. "5 minutes". */
-										esc_html_x( 'In %s', 'cron event state', 'revision-retention' ),
-										esc_html( human_time_diff( $next ) )
+										_x( 'In %s', 'cron event state', 'revision-retention' ),
+										/* translators: %s: how long ago the event was due, e.g. "3 hours". */
+										_x( 'Overdue by %s', 'cron event state', 'revision-retention' )
 									);
 								}
 								?>
@@ -1461,6 +1474,35 @@ class Settings_Page {
 	}
 
 	/**
+	 * Render how long until a moment, or how long it is overdue, as a sentence
+	 * the settings script keeps counting down.
+	 *
+	 * The distance human_time_diff() gives runs either way, so a moment that has
+	 * already passed would otherwise read as one still to come; each side has
+	 * a sentence of its own. Both go along with the seconds left, so the
+	 * script can switch to the late one when the countdown runs out, and it
+	 * counts from when the page arrived rather than from the visitor's clock.
+	 * Without the script, the sentence simply stays as rendered.
+	 *
+	 * @param int    $at     Timestamp of the moment.
+	 * @param string $ahead  Sentence while it is still to come, with %s for the time left.
+	 * @param string $behind Sentence once it has passed, with %s for how long ago.
+	 *
+	 * @return void
+	 */
+	private static function render_countdown( int $at, string $ahead, string $behind ): void {
+		$left = $at - time();
+
+		printf(
+			'<span class="rvrt-countdown" data-left="%1$d" data-ahead="%2$s" data-behind="%3$s">%4$s</span>',
+			(int) $left,
+			esc_attr( $ahead ),
+			esc_attr( $behind ),
+			esc_html( sprintf( $left > 0 ? $ahead : $behind, human_time_diff( $at ) ) )
+		);
+	}
+
+	/**
 	 * Render the preview and run buttons, plus what the last sweep did.
 	 *
 	 * @param string $current Tab being shown.
@@ -1506,21 +1548,13 @@ class Settings_Page {
 				if ( $next ) {
 					echo ' ';
 
-					// human_time_diff() gives the distance either way, so a sweep that
-					// is already late would otherwise read as one still to come.
-					if ( $next <= time() ) {
-						printf(
-							/* translators: %s: how long ago the next scheduled sweep was due, e.g. "2 minutes". */
-							esc_html_x( 'The next one was due %s ago and runs as soon as WP-Cron does.', 'sweep status', 'revision-retention' ),
-							esc_html( human_time_diff( (int) $next ) )
-						);
-					} else {
-						printf(
-							/* translators: %s: time until the next scheduled sweep. */
-							esc_html_x( 'The next one is due in %s.', 'sweep status', 'revision-retention' ),
-							esc_html( human_time_diff( (int) $next ) )
-						);
-					}
+					self::render_countdown(
+						(int) $next,
+						/* translators: %s: time until the next scheduled sweep. */
+						_x( 'The next one is due in %s.', 'sweep status', 'revision-retention' ),
+						/* translators: %s: how long ago the next scheduled sweep was due, e.g. "2 minutes". */
+						_x( 'The next one was due %s ago and runs as soon as WP-Cron does.', 'sweep status', 'revision-retention' )
+					);
 				}
 				?>
 			</p>
