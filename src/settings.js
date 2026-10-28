@@ -635,6 +635,89 @@
 		} );
 	};
 
+	const MINUTE = 60;
+	const HOUR = 60 * MINUTE;
+	const DAY = 24 * HOUR;
+
+	/*
+	 * A number in a unit, written out the way the site's language does, e.g.
+	 * "4 minuten". The browser knows every language's unit names and plurals,
+	 * so these need no strings of their own to translate.
+	 */
+	const unit = ( name, value ) =>
+		new Intl.NumberFormat( document.documentElement.lang || undefined, { style: 'unit', unit: name, unitDisplay: 'long' } ).format( value );
+
+	/** Two units side by side, the larger first, e.g. "4 minutes 12 seconds". */
+	const pair = ( larger, smaller ) =>
+		new Intl.ListFormat( document.documentElement.lang || undefined, { style: 'narrow', type: 'unit' } ).format( [ larger, smaller ] );
+
+	const seconds = ( value ) => unit( 'second', value );
+	const minutes = ( value ) => unit( 'minute', value );
+	const hours = ( value ) => unit( 'hour', value );
+	const days = ( value ) => unit( 'day', value );
+
+	/**
+	 * A number of seconds as the two largest units it has.
+	 *
+	 * Seconds are kept while under an hour, so the countdown visibly moves;
+	 * beyond that a ticking second is noise next to the hours.
+	 */
+	const duration = ( total ) => {
+		if ( total < MINUTE ) {
+			return seconds( total );
+		}
+
+		if ( total < HOUR ) {
+			return pair( minutes( Math.floor( total / MINUTE ) ), seconds( total % MINUTE ) );
+		}
+
+		if ( total < DAY ) {
+			return pair( hours( Math.floor( total / HOUR ) ), minutes( Math.floor( ( total % HOUR ) / MINUTE ) ) );
+		}
+
+		return pair( days( Math.floor( total / DAY ) ), hours( Math.floor( ( total % DAY ) / HOUR ) ) );
+	};
+
+	/**
+	 * Keep the times until the next sweep and the next cron events counting.
+	 *
+	 * The server says how many seconds were left when it rendered the page,
+	 * which is counted down from here, so a visitor whose clock is off still
+	 * sees the right time. Once one runs out, its sentence turns to the one
+	 * for a moment that has passed and counts up from there, as the server
+	 * would have rendered it on a reload.
+	 */
+	const syncCountdowns = () => {
+		const countdowns = [ ...document.querySelectorAll( '.rvrt-countdown[data-left]' ) ].map( ( element ) => ( {
+			element,
+			left: Number( element.dataset.left ),
+			ahead: element.dataset.ahead,
+			behind: element.dataset.behind,
+		} ) );
+
+		if ( ! countdowns.length ) {
+			return;
+		}
+
+		const start = Date.now();
+
+		const tick = () => {
+			const elapsed = ( Date.now() - start ) / 1000;
+
+			for ( const { element, left, ahead, behind } of countdowns ) {
+				const remaining = Math.ceil( left - elapsed );
+
+				element.textContent =
+					remaining > 0
+						? sprintf( ahead, duration( remaining ) )
+						: sprintf( behind, duration( Math.max( 1, -remaining ) ) );
+			}
+		};
+
+		tick();
+		window.setInterval( tick, 1000 );
+	};
+
 	document.addEventListener( 'DOMContentLoaded', () => {
 		syncTabs();
 		syncConfirms();
@@ -643,6 +726,7 @@
 		syncDependent( 'rvrt-log-enabled', [ 'rvrt-log-retention' ] );
 		syncDependent( 'rvrt-dashboard-widget', [ 'rvrt-widget-roles' ] );
 		syncQuietRows();
+		syncCountdowns();
 
 		if ( window.fetch ) {
 			for ( const form of document.querySelectorAll( '.rvrt-sweep[data-ajax-url]' ) ) {
