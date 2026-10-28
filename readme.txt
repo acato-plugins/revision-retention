@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -143,6 +143,10 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 5. The network's Logs tab, which shows every site's log together and names the site each sweep ran on.
 
 == Changelog ==
+
+= 1.5.0 =
+* The time until the next sweep counts down live on the **Sweep** tab, and so does each event's next run under **Cron events** on the **Schedule** tab. Under an hour it shows minutes and seconds, in the site's own language, and once the time has passed it says how long ago it was due.
+* The numbers at the top of the settings screen include the time until the next sweep.
 
 = 1.4.0 =
 * **How often** offers every 4 hours, every 12 hours (twice a day) and every 14 days, next to the hourly, daily, weekly and monthly sweeps it already had.
