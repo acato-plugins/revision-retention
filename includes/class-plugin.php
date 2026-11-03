@@ -7,7 +7,12 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
+
+use Acato\RevisionRetention\Admin\Assets;
+use Acato\RevisionRetention\Admin\DashboardWidget;
+use Acato\RevisionRetention\Admin\RatingNotice;
+use Acato\RevisionRetention\Admin\SettingsPage;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,32 +21,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-final class Plugin {
-
-	/**
-	 * The single plugin instance.
-	 *
-	 * @var Plugin|null
-	 */
-	private static ?Plugin $instance = null;
-
-	/**
-	 * Retrieve the single plugin instance.
-	 *
-	 * @return Plugin
-	 */
-	public static function instance(): Plugin {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-
-		return self::$instance;
-	}
-
-	/**
-	 * Private constructor, use Plugin::instance() instead.
-	 */
-	private function __construct() {}
+final class Plugin extends Singleton {
 
 	/**
 	 * Network option holding the sites the plugin is active on, when it is
@@ -74,13 +54,13 @@ final class Plugin {
 		$ids     = array_map(
 			'intval',
 			(array) get_sites(
-				array(
+				[
 					'fields' => 'ids',
 					'number' => 0,
-				)
+				]
 			)
 		);
-		$network = (array) get_site_option( 'active_sitewide_plugins', array() );
+		$network = (array) get_site_option( 'active_sitewide_plugins', [] );
 
 		if ( isset( $network[ plugin_basename( RVRT_PLUGIN_FILE ) ] ) ) {
 			return $ids;
@@ -121,9 +101,36 @@ final class Plugin {
 		return array_values(
 			array_filter(
 				$ids,
-				static fn( int $id ): bool => in_array( $basename, (array) get_blog_option( $id, 'active_plugins', array() ), true )
+				static fn( int $id ): bool => in_array( $basename, (array) get_blog_option( $id, 'active_plugins', [] ), true )
 			)
 		);
+	}
+
+	/**
+	 * Register the activation hooks, then every feature of the plugin.
+	 *
+	 * @return void
+	 */
+	protected function init(): void {
+		register_activation_hook( RVRT_PLUGIN_FILE, [ Requirements::class, 'block_activation' ] );
+		register_activation_hook( RVRT_PLUGIN_FILE, [ Upgrade::class, 'on_activation' ] );
+		register_activation_hook( RVRT_PLUGIN_FILE, [ Scheduler::class, 'on_activation' ] );
+		register_activation_hook( RVRT_PLUGIN_FILE, [ RatingNotice::class, 'remember_install' ] );
+		register_activation_hook( RVRT_PLUGIN_FILE, [ self::class, 'forget_sites' ] );
+		register_deactivation_hook( RVRT_PLUGIN_FILE, [ Scheduler::class, 'on_deactivation' ] );
+		register_deactivation_hook( RVRT_PLUGIN_FILE, [ Log::class, 'on_deactivation' ] );
+		register_deactivation_hook( RVRT_PLUGIN_FILE, [ self::class, 'forget_sites' ] );
+
+		// A WordPress old enough to miss the revision APIs this plugin builds
+		// on would break in ways an administrator cannot act on, so it stops
+		// before booting.
+		if ( ! Requirements::are_met() ) {
+			Requirements::instance();
+
+			return;
+		}
+
+		$this->boot();
 	}
 
 	/**
@@ -131,18 +138,19 @@ final class Plugin {
 	 *
 	 * @return void
 	 */
-	public function boot(): void {
-		( new Post_Types() )->register();
-		( new Limits() )->register();
-		( new Scheduler() )->register();
-		( new Log() )->register();
-		( new Assets() )->register();
-		( new Settings_Page() )->register();
-		( new Rating_Notice() )->register();
-		( new Dashboard_Widget() )->register();
+	private function boot(): void {
+		Upgrade::instance();
+		PostTypes::instance();
+		Limits::instance();
+		Scheduler::instance();
+		Log::instance();
+		Assets::instance();
+		SettingsPage::instance();
+		RatingNotice::instance();
+		DashboardWidget::instance();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			CLI::register();
+			Cli::register();
 		}
 	}
 }

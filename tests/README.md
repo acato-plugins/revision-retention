@@ -23,9 +23,16 @@ plugin's own classes to run outside a site. What it covers:
 * when `Scheduler::sync()` books the next sweep, and what `Scheduler::advance()`
   stores, including a fresh install not sweeping on its first save;
 * a restart or deactivation marking the abandoned log entry as stopped;
-* `Cron_Health` telling a stalled cron from a quiet site that just woke it;
+* `CronHealth` telling a stalled cron from a quiet site that just woke it;
 * when the rating notice is due, the asset lookup with and without a build,
   the sites a network sweep may touch, and what progress is counted over.
+* the sweep lock, so the schedule, the screen and WP-CLI never run a real
+  batch at the same time, and a lock left by a request that died is taken over;
+* a revision WordPress refused to delete not being counted as removed;
+* `Upgrade` creating the options read on every request, autoloaded, without
+  touching saved settings;
+* a 1.5.0 site updated in place: the bootstrap boots on its data, and the
+  class names up to 1.5.0 still resolve to the classes that replaced them.
 
 Anything that needs a real database or a real WordPress — the SQL the sweep
 runs, autosave exclusion, the admin screens — is verified on

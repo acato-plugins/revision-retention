@@ -1,9 +1,25 @@
 # See: https://github.com/10up/action-wordpress-plugin-asset-update
+#
+# Pushes only the readme and the WordPress.org assets to SVN, between
+# releases; the code itself goes out with a tag (deploy.yml).
+#
+# The action refuses to deploy whenever anything else in trunk differs from
+# the repository, which is every push that also changed code, and dist/ is
+# never in the checkout because it is built on release. So the job only runs
+# when the readme or the assets changed, and IGNORE_OTHER_FILES has it push
+# those while it leaves the rest of trunk to the next tagged release.
 name: Plugin asset/readme update
 on:
   push:
     branches:
       - main
+    paths:
+      - readme.txt
+      - .wordpress-org/**
+
+permissions:
+  contents: read
+
 jobs:
   trunk:
     name: Push to main
@@ -15,3 +31,4 @@ jobs:
         env:
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          IGNORE_OTHER_FILES: true

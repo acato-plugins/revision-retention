@@ -26,6 +26,10 @@
 	   that are too light get darkened below, each by no more than it needs. */
 	--rvrt-accent-strong: var(--rvrt-accent);
 
+	/* Darker still, for small text on a tint of the accent, such as the
+	   pills in the log, which needs 4.5:1 against that tint. */
+	--rvrt-accent-ink: color-mix(in srgb, var(--rvrt-accent-strong) 85%, #000);
+
 	max-inline-size: 1100px;
 }
 
@@ -86,14 +90,14 @@
 .rvrt-settings .rvrt-tabs .nav-tab-active,
 .rvrt-settings .rvrt-tabs .nav-tab-active:hover {
 	background: none;
-	border-block-end-color: var(--rvrt-accent);
+	border-block-end-color: var(--rvrt-accent-strong);
 	color: #1d2327;
 	font-weight: 600;
 }
 
 .rvrt-settings .rvrt-tabs .nav-tab:focus-visible {
 	border-radius: 4px;
-	box-shadow: inset 0 0 0 2px var(--rvrt-accent);
+	box-shadow: inset 0 0 0 2px var(--rvrt-accent-strong);
 	outline: 2px solid transparent;
 }
 
@@ -400,7 +404,7 @@
 }
 
 .rvrt-settings .rvrt-progress-fill {
-	background: var(--rvrt-accent);
+	background: var(--rvrt-accent-strong);
 	block-size: 100%;
 	display: block;
 	inline-size: 0;
@@ -473,6 +477,25 @@
 
 .rvrt-settings [aria-disabled="true"] {
 	opacity: 0.5;
+}
+
+/* A sweep's buttons are marked unavailable rather than disabled while it
+   runs, so they keep the focus; they should not look pressable either. */
+.rvrt-settings .button[aria-disabled="true"] {
+	cursor: default;
+}
+
+/* The WordPress spinner floats; in the row of buttons it sits in line. */
+.rvrt-settings .rvrt-sweep-buttons .rvrt-spinner {
+	align-self: center;
+	float: none;
+	margin: 0;
+}
+
+/* Every digit as wide as the next, so a countdown does not make the sentence
+   it sits in shift and re-wrap every second. */
+.rvrt-settings .rvrt-countdown {
+	font-variant-numeric: tabular-nums;
 }
 
 /* Logs -------------------------------------------------------------------- */
@@ -762,19 +785,19 @@
 }
 
 .rvrt-settings .rvrt-card-site .dashicons {
+	block-size: 16px;
 	font-size: 16px;
-	height: 16px;
-	width: 16px;
+	inline-size: 16px;
 }
 
 .rvrt-settings a.rvrt-card-site:hover {
-	color: var(--rvrt-accent);
+	color: var(--rvrt-accent-strong);
 }
 
 .rvrt-settings .rvrt-pill {
 	background: var(--rvrt-tint);
 	border-radius: 999px;
-	color: var(--rvrt-accent);
+	color: var(--rvrt-accent-ink);
 	font-size: 11px;
 	font-weight: 600;
 	line-height: 1.6;
@@ -894,13 +917,13 @@
 }
 
 .rvrt-settings .rvrt-status-running {
-	color: var(--rvrt-accent);
+	color: var(--rvrt-accent-strong);
 	font-weight: 600;
 }
 
 .rvrt-settings .rvrt-status-running .rvrt-status-dot {
 	animation: rvrt-pulse 1.4s ease-out infinite;
-	background: var(--rvrt-accent);
+	background: var(--rvrt-accent-strong);
 }
 
 .rvrt-settings .rvrt-log-pages {
@@ -932,7 +955,7 @@
 	background: color-mix(in srgb, var(--rvrt-accent) 10%, #fff);
 	block-size: 56px;
 	border-radius: 50%;
-	color: var(--rvrt-accent);
+	color: var(--rvrt-accent-strong);
 	font-size: 28px;
 	inline-size: 56px;
 	line-height: 56px;
@@ -1113,18 +1136,31 @@
 }
 
 .rvrt-widget .rvrt-widget-tab[aria-selected="true"] {
-	border-block-end-color: var(--rvrt-accent);
+	border-block-end-color: var(--rvrt-accent-strong);
 	color: #1d2327;
 	font-weight: 600;
 }
 
 .rvrt-widget .rvrt-widget-tab:focus-visible {
 	border-radius: 4px;
-	box-shadow: inset 0 0 0 2px var(--rvrt-accent);
+	box-shadow: inset 0 0 0 2px var(--rvrt-accent-strong);
 	outline: 2px solid transparent;
 }
 
 .rvrt-widget .rvrt-widget-panel + .rvrt-widget-panel {
+	margin-block-start: 1.5em;
+}
+
+/* Without the script the views and the periods are shown one under the
+   other, each under its own heading; with it, the tabs and the switch name
+   them and the headings are hidden. */
+.rvrt-widget :is(.rvrt-widget-view-title, .rvrt-period-title) {
+	font-size: 13px;
+	font-weight: 600;
+	margin-block: 0 0.75em;
+}
+
+.rvrt-widget .rvrt-period + .rvrt-period {
 	margin-block-start: 1.5em;
 }
 
@@ -1137,7 +1173,7 @@
 }
 
 .rvrt-widget .rvrt-log-next .dashicons {
-	color: var(--rvrt-accent);
+	color: var(--rvrt-accent-strong);
 	flex: none;
 }
 

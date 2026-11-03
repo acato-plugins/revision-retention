@@ -4,6 +4,7 @@ parameters:
 	level: 7
 	paths:
 		- revision-retention.php
+		- admin
 		- includes
 		- uninstall.php
 	scanFiles:

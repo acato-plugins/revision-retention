@@ -7,7 +7,14 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Admin;
+
+use Acato\RevisionRetention\Includes\Log;
+use Acato\RevisionRetention\Includes\Settings;
+use DateTimeImmutable;
+use DateTimeZone;
+use WP_Site;
+use WP_User;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,7 +30,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Log_View {
+class LogView {
 
 	/**
 	 * Entries per page.
@@ -103,7 +110,7 @@ class Log_View {
 							self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
 							esc_html( mb_strtolower( Settings::log_retentions()[ (string) $setting ] ?? '' ) )
 						),
-						array( 'strong' => array() )
+						[ 'strong' => [] ]
 					);
 					?>
 				</p>
@@ -112,12 +119,12 @@ class Log_View {
 
 			<?php $this->render_chart( self::CHART_DAYS ); ?>
 
-			<?php if ( array() === $entries['rows'] ) : ?>
+			<?php if ( [] === $entries['rows'] ) { ?>
 				<p class="rvrt-log-nothing"><?php echo esc_html_x( 'Nothing in the log matches this filter.', 'log empty state', 'revision-retention' ); ?></p>
-			<?php else : ?>
+			<?php } else { ?>
 				<?php $this->render_timeline( $entries['rows'] ); ?>
 				<?php $this->render_pages( $page, $entries['total'], $source ); ?>
-			<?php endif; ?>
+			<?php } ?>
 		</div>
 		<?php
 	}
@@ -140,48 +147,50 @@ class Log_View {
 	 * @return void
 	 */
 	public function render_recent( array $periods, string $current, string $more_url, string $next = '', string $stall = '', string $fix_url = '' ): void {
-		$labels = array(
+		$labels = [
 			Log::PERIOD_DAY   => _x( 'Daily', 'chart period', 'revision-retention' ),
 			Log::PERIOD_WEEK  => _x( 'Weekly', 'chart period', 'revision-retention' ),
 			Log::PERIOD_MONTH => _x( 'Monthly', 'chart period', 'revision-retention' ),
-		);
+		];
 		?>
 		<div class="rvrt-log rvrt-log-recent" data-period="<?php echo esc_attr( $current ); ?>">
 			<?php // First, since nothing below it happens until it is sorted out. ?>
-			<?php if ( '' !== $stall ) : ?>
+			<?php if ( '' !== $stall ) { ?>
 				<p class="rvrt-log-stall">
 					<span class="dashicons dashicons-warning" aria-hidden="true"></span>
 					<span>
 						<?php echo esc_html( $stall ); ?>
-						<?php if ( '' !== $fix_url ) : ?>
+						<?php if ( '' !== $fix_url ) { ?>
 							<a href="<?php echo esc_url( $fix_url ); ?>"><?php echo esc_html_x( 'See the Schedule tab', 'dashboard widget link', 'revision-retention' ); ?></a>
-						<?php endif; ?>
+						<?php } ?>
 					</span>
 				</p>
-			<?php endif; ?>
+			<?php } ?>
 
-			<?php if ( count( $periods ) > 1 ) : ?>
-				<div class="rvrt-period-switch" role="group" aria-label="<?php echo esc_attr_x( 'Show the results', 'accessibility label', 'revision-retention' ); ?>">
-					<?php foreach ( array_keys( $periods ) as $period ) : ?>
+			<?php if ( count( $periods ) > 1 ) { ?>
+				<div class="rvrt-period-switch" role="group" hidden aria-label="<?php echo esc_attr_x( 'Show the results', 'accessibility label', 'revision-retention' ); ?>">
+					<?php foreach ( array_keys( $periods ) as $period ) { ?>
 						<button type="button" class="rvrt-period-button" data-period="<?php echo esc_attr( $period ); ?>" aria-pressed="<?php echo $period === $current ? 'true' : 'false'; ?>">
 							<?php echo esc_html( $labels[ $period ] ?? $period ); ?>
 						</button>
-					<?php endforeach; ?>
+					<?php } ?>
 				</div>
-			<?php endif; ?>
+			<?php } ?>
 
-			<?php foreach ( $periods as $period => $count ) : ?>
-				<div class="rvrt-period" data-period="<?php echo esc_attr( $period ); ?>"<?php echo $period === $current ? '' : ' hidden'; ?>>
+			<?php foreach ( $periods as $period => $count ) { ?>
+				<?php // Every period is there without the script, under its own heading; the script brings in the switch and shows one at a time. ?>
+				<div class="rvrt-period" data-period="<?php echo esc_attr( $period ); ?>">
+					<h4 class="rvrt-period-title"><?php echo esc_html( $labels[ $period ] ?? $period ); ?></h4>
 					<?php $this->render_period( $period, $count ); ?>
 				</div>
-			<?php endforeach; ?>
+			<?php } ?>
 
-			<?php if ( '' !== $next ) : ?>
+			<?php if ( '' !== $next ) { ?>
 				<p class="rvrt-log-next">
 					<span class="dashicons dashicons-clock" aria-hidden="true"></span>
 					<span><?php echo esc_html( $next ); ?></span>
 				</p>
-			<?php endif; ?>
+			<?php } ?>
 
 			<p class="rvrt-log-more">
 				<a href="<?php echo esc_url( $more_url ); ?>">
@@ -202,7 +211,7 @@ class Log_View {
 	 * @return void
 	 */
 	private function render_period( string $period, int $count ): void {
-		$today  = new \DateTimeImmutable( 'today', wp_timezone() );
+		$today  = new DateTimeImmutable( 'today', wp_timezone() );
 		$totals = Log::totals( $this->network, (int) Log::oldest( $period, $count )->diff( $today )->days + 1 );
 		$span   = self::describe_span( $period, $count );
 		?>
@@ -227,7 +236,7 @@ class Log_View {
 						self::strong_count( _nx( '%s sweep', '%s sweeps', $totals['runs'], 'log summary', 'revision-retention' ), $totals['runs'] ),
 						esc_html( $span )
 					),
-					array( 'strong' => array() )
+					[ 'strong' => [] ]
 				);
 			}
 			?>
@@ -293,7 +302,7 @@ class Log_View {
 	 * @return void
 	 */
 	private function render_filter( string $current ): void {
-		$filters = array( '' => _x( 'All', 'log filter', 'revision-retention' ) ) + self::sources();
+		$filters = [ '' => _x( 'All', 'log filter', 'revision-retention' ) ] + self::sources();
 
 		printf( '<nav class="rvrt-log-filter" aria-label="%s">', esc_attr_x( 'Show sweeps run by', 'accessibility label', 'revision-retention' ) );
 
@@ -333,7 +342,7 @@ class Log_View {
 				<?php
 				$last = array_key_last( array_filter( $days ) );
 
-				foreach ( $days as $day => $revisions ) :
+				foreach ( $days as $day => $revisions ) {
 					if ( 0 === $revisions ) {
 						echo '<span class="rvrt-chart-bar is-empty" aria-hidden="true" inert></span>';
 						continue;
@@ -342,9 +351,9 @@ class Log_View {
 					$time = (int) strtotime( $day . ' 12:00:00' );
 					$when = match ( $period ) {
 						/* translators: %s: the date the week starts on. */
-						Log::PERIOD_WEEK => sprintf( _x( 'Week of %s', 'chart tooltip', 'revision-retention' ), wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ) ),
-						Log::PERIOD_MONTH => wp_date( _x( 'F Y', 'chart tooltip, month', 'revision-retention' ), $time, new \DateTimeZone( 'UTC' ) ),
-						default => wp_date( get_option( 'date_format' ), $time, new \DateTimeZone( 'UTC' ) ),
+						Log::PERIOD_WEEK => sprintf( _x( 'Week of %s', 'chart tooltip', 'revision-retention' ), wp_date( get_option( 'date_format' ), $time, new DateTimeZone( 'UTC' ) ) ),
+						Log::PERIOD_MONTH => wp_date( _x( 'F Y', 'chart tooltip, month', 'revision-retention' ), $time, new DateTimeZone( 'UTC' ) ),
+						default => wp_date( get_option( 'date_format' ), $time, new DateTimeZone( 'UTC' ) ),
 					};
 					$count = sprintf(
 						/* translators: %s: number of revisions. */
@@ -361,7 +370,7 @@ class Log_View {
 						data-count="<?php echo esc_attr( $count ); ?>"
 						tabindex="<?php echo $day === $last ? '0' : '-1'; ?>"
 					></button>
-				<?php endforeach; ?>
+				<?php } ?>
 			</div>
 			<div class="rvrt-chart-tip" aria-hidden="true" hidden>
 				<strong class="rvrt-chart-tip-when"></strong>
@@ -372,21 +381,21 @@ class Log_View {
 				$back = number_format_i18n( $span - 1 );
 
 				[ $oldest, $newest ] = match ( $period ) {
-					Log::PERIOD_WEEK => array(
+					Log::PERIOD_WEEK => [
 						/* translators: %s: number of weeks. */
 						sprintf( _nx( '%s week ago', '%s weeks ago', $span - 1, 'chart axis', 'revision-retention' ), $back ),
 						_x( 'This week', 'chart axis', 'revision-retention' ),
-					),
-					Log::PERIOD_MONTH => array(
+					],
+					Log::PERIOD_MONTH => [
 						/* translators: %s: number of months. */
 						sprintf( _nx( '%s month ago', '%s months ago', $span - 1, 'chart axis', 'revision-retention' ), $back ),
 						_x( 'This month', 'chart axis', 'revision-retention' ),
-					),
-					default => array(
+					],
+					default => [
 						/* translators: %s: number of days. */
 						sprintf( _x( '%s days ago', 'chart axis', 'revision-retention' ), $back ),
 						_x( 'Today', 'chart axis', 'revision-retention' ),
-					),
+					],
 				};
 		?>
 				<span><?php echo esc_html( $oldest ); ?></span>
@@ -404,7 +413,7 @@ class Log_View {
 	 * @return void
 	 */
 	private function render_timeline( array $rows ): void {
-		$days    = array();
+		$days    = [];
 		$largest = 1;
 
 		foreach ( $rows as $row ) {
@@ -454,7 +463,7 @@ class Log_View {
 		$ended     = Log::timestamp( (string) $entry['ended_gmt'] );
 		$status    = Log::status( $entry );
 		$types     = json_decode( (string) $entry['post_types'], true );
-		$types     = is_array( $types ) ? $types : array();
+		$types     = is_array( $types ) ? $types : [];
 		?>
 		<li class="rvrt-entry rvrt-entry-<?php echo esc_attr( $source ); ?>" style="--rvrt-i: <?php echo esc_attr( (string) min( $index, 12 ) ); ?>">
 			<?php $this->render_marker( $source, $user_id ); ?>
@@ -488,13 +497,13 @@ class Log_View {
 
 				<span class="rvrt-meter" aria-hidden="true"><span style="--rvrt-share: <?php echo esc_attr( (string) max( 2, round( $revisions / $largest * 100, 1 ) ) ); ?>%"></span></span>
 
-				<?php if ( array() !== $types ) : ?>
+				<?php if ( [] !== $types ) { ?>
 					<ul class="rvrt-types">
-						<?php foreach ( $types as $type => $count ) : ?>
+						<?php foreach ( $types as $type => $count ) { ?>
 							<li><?php echo esc_html( '' === (string) $type ? _x( 'Other', 'post type fallback', 'revision-retention' ) : (string) $type ); ?> <b><?php echo esc_html( number_format_i18n( (int) $count ) ); ?></b></li>
-						<?php endforeach; ?>
+						<?php } ?>
 					</ul>
-				<?php endif; ?>
+				<?php } ?>
 
 				<p class="rvrt-status rvrt-status-<?php echo esc_attr( $status ); ?>">
 					<span class="rvrt-status-dot" aria-hidden="true"></span>
@@ -514,7 +523,7 @@ class Log_View {
 	 * @return void
 	 */
 	private function render_marker( string $source, int $user_id ): void {
-		$avatar = $user_id > 0 ? get_avatar_url( $user_id, array( 'size' => 72 ) ) : false;
+		$avatar = $user_id > 0 ? get_avatar_url( $user_id, [ 'size' => 72 ] ) : false;
 
 		if ( is_string( $avatar ) && '' !== $avatar ) {
 			printf(
@@ -552,7 +561,7 @@ class Log_View {
 
 		$user = get_userdata( $user_id );
 
-		if ( ! $user instanceof \WP_User ) {
+		if ( ! $user instanceof WP_User ) {
 			printf(
 				/* translators: %s: user ID. */
 				esc_html_x( 'A deleted user (#%s)', 'log actor', 'revision-retention' ),
@@ -581,7 +590,7 @@ class Log_View {
 	private function render_site( int $site_id ): void {
 		$site = get_site( $site_id );
 
-		if ( ! $site instanceof \WP_Site ) {
+		if ( ! $site instanceof WP_Site ) {
 			printf(
 				'<span class="rvrt-card-site">%s</span>',
 				/* translators: %s: site ID. */
@@ -593,7 +602,7 @@ class Log_View {
 
 		printf(
 			'<a class="rvrt-card-site" href="%s"><span class="dashicons dashicons-admin-multisite" aria-hidden="true"></span>%s</a>',
-			esc_url( get_admin_url( $site_id, 'options-general.php?page=' . Settings_Page::PAGE_SLUG . '&rvrt-tab=logs' ) ),
+			esc_url( get_admin_url( $site_id, 'options-general.php?page=' . SettingsPage::PAGE_SLUG . '&rvrt-tab=logs' ) ),
 			esc_html( '' !== (string) $site->blogname ? (string) $site->blogname : $site->domain . $site->path )
 		);
 	}
@@ -617,9 +626,9 @@ class Log_View {
 		$url = '' === $source ? $this->base_url : add_query_arg( self::SOURCE_ARG, $source, $this->base_url );
 		?>
 		<nav class="rvrt-log-pages" aria-label="<?php echo esc_attr_x( 'Log pages', 'accessibility label', 'revision-retention' ); ?>">
-			<?php if ( $page > 1 ) : ?>
+			<?php if ( $page > 1 ) { ?>
 				<a class="button" href="<?php echo esc_url( add_query_arg( self::PAGE_ARG, $page - 1, $url ) ); ?>"><?php echo esc_html_x( 'Newer', 'log pagination', 'revision-retention' ); ?></a>
-			<?php endif; ?>
+			<?php } ?>
 			<span class="rvrt-log-page-of">
 				<?php
 				printf(
@@ -630,9 +639,9 @@ class Log_View {
 				);
 				?>
 			</span>
-			<?php if ( $page < $pages ) : ?>
+			<?php if ( $page < $pages ) { ?>
 				<a class="button" href="<?php echo esc_url( add_query_arg( self::PAGE_ARG, $page + 1, $url ) ); ?>"><?php echo esc_html_x( 'Older', 'log pagination', 'revision-retention' ); ?></a>
-			<?php endif; ?>
+			<?php } ?>
 		</nav>
 		<?php
 	}
@@ -643,11 +652,11 @@ class Log_View {
 	 * @return array<string, string>
 	 */
 	private static function sources(): array {
-		return array(
+		return [
 			Log::SOURCE_CRON   => _x( 'Scheduled', 'log source', 'revision-retention' ),
 			Log::SOURCE_SCREEN => _x( 'Run now', 'log source', 'revision-retention' ),
 			Log::SOURCE_CLI    => _x( 'WP-CLI', 'log source', 'revision-retention' ),
-		);
+		];
 	}
 
 	/**
@@ -670,7 +679,7 @@ class Log_View {
 	 * @return string
 	 */
 	private static function describe_day( string $day ): string {
-		$today = new \DateTimeImmutable( 'today', wp_timezone() );
+		$today = new DateTimeImmutable( 'today', wp_timezone() );
 
 		if ( $today->format( 'Y-m-d' ) === $day ) {
 			return _x( 'Today', 'log day', 'revision-retention' );
@@ -680,7 +689,7 @@ class Log_View {
 			return _x( 'Yesterday', 'log day', 'revision-retention' );
 		}
 
-		$date   = new \DateTimeImmutable( $day . ' 12:00:00', wp_timezone() );
+		$date   = new DateTimeImmutable( $day . ' 12:00:00', wp_timezone() );
 		$format = $date->format( 'Y' ) === $today->format( 'Y' )
 			? _x( 'l j F', 'log day heading, this year', 'revision-retention' )
 			: _x( 'l j F Y', 'log day heading, another year', 'revision-retention' );

@@ -7,7 +7,10 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Admin;
+
+use Acato\RevisionRetention\Includes\Settings;
+use Acato\RevisionRetention\Includes\Singleton;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -24,7 +27,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Rating_Notice {
+class RatingNotice extends Singleton {
 
 	/**
 	 * Network wide option holding when the plugin was first activated.
@@ -67,19 +70,18 @@ class Rating_Notice {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_action( 'admin_init', array( self::class, 'remember_install' ) );
-		add_action( 'admin_notices', array( $this, 'render' ) );
-		add_action( 'network_admin_notices', array( $this, 'render' ) );
-		add_action( 'admin_post_' . self::ACTION, array( $this, 'handle' ) );
+	protected function init(): void {
+		add_action( 'admin_notices', [ $this, 'render' ] );
+		add_action( 'network_admin_notices', [ $this, 'render' ] );
+		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
 	}
 
 	/**
 	 * Note when the plugin was activated, unless that is already known.
 	 *
-	 * Runs on activation, and on any admin screen for an install that was
-	 * activated before the plugin kept track, which then waits a month from
-	 * the update like everybody else.
+	 * Runs on activation, and once after an update (see Upgrade) for an
+	 * install that was activated before the plugin kept track, which then
+	 * waits a month from the update like everybody else.
 	 *
 	 * @return void
 	 */
@@ -107,10 +109,10 @@ class Rating_Notice {
 
 		$link = static fn( string $choice ): string => wp_nonce_url(
 			add_query_arg(
-				array(
+				[
 					'action' => self::ACTION,
 					'choice' => $choice,
-				),
+				],
 				admin_url( 'admin-post.php' )
 			),
 			self::ACTION
@@ -154,6 +156,12 @@ class Rating_Notice {
 	 * @return void
 	 */
 	public function handle(): void {
+		// Only those the notice is shown to can answer it. A super admin, who
+		// sees it on the network screen, holds this capability on every site.
+		if ( ! current_user_can( Settings::capability() ) ) {
+			wp_die( esc_html_x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ), '', [ 'response' => 403 ] );
+		}
+
 		check_admin_referer( self::ACTION );
 
 		$choice  = isset( $_GET['choice'] ) ? sanitize_key( wp_unslash( $_GET['choice'] ) ) : '';
@@ -185,8 +193,8 @@ class Rating_Notice {
 	 * @return bool
 	 */
 	private static function is_place( string $screen_id ): bool {
-		return in_array( $screen_id, array( 'dashboard', 'dashboard-network' ), true )
-			|| str_contains( $screen_id, Settings_Page::PAGE_SLUG );
+		return in_array( $screen_id, [ 'dashboard', 'dashboard-network' ], true )
+			|| str_contains( $screen_id, SettingsPage::PAGE_SLUG );
 	}
 
 	/**

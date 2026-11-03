@@ -151,13 +151,24 @@
 		applyRepeat();
 	};
 
-	/** Fold the post types that hold nothing in and out of view. */
+	/**
+	 * Fold the post types that hold nothing in and out of view.
+	 *
+	 * Every row is there without this; the quiet ones are folded away here,
+	 * and the button that brings them back is shown.
+	 */
 	const syncQuietRows = () => {
 		const button = document.querySelector( '.rvrt-toggle' );
 
 		if ( ! button ) {
 			return;
 		}
+
+		for ( const row of document.querySelectorAll( '.rvrt-quiet' ) ) {
+			row.hidden = true;
+		}
+
+		button.closest( '.rvrt-toggle-wrap' )?.removeAttribute( 'hidden' );
 
 		button.addEventListener( 'click', () => {
 			const shown = button.dataset.shown === '1';
@@ -227,14 +238,18 @@
 			} );
 
 			tab.addEventListener( 'keydown', ( event ) => {
-				const step = { ArrowRight: 1, ArrowLeft: -1 }[ event.key ] ?? 0;
+				// The arrows follow the reading direction, so in a right to
+				// left language the right arrow goes back.
+				const rtl = getComputedStyle( tab ).direction === 'rtl';
+				const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[ event.key ] ?? 0;
+				const jump = { Home: 0, End: tabs.length - 1 }[ event.key ];
 
-				if ( ! step ) {
+				if ( ! step && jump === undefined ) {
 					return;
 				}
 
 				event.preventDefault();
-				select( tabs[ ( index + step + tabs.length ) % tabs.length ], true );
+				select( tabs[ jump ?? ( index + step + tabs.length ) % tabs.length ], true );
 			} );
 		} );
 	};
@@ -262,6 +277,23 @@
 		const affectedBody = affected.querySelector( 'tbody' );
 		const affectedMore = affected.querySelector( '.rvrt-affected-more' );
 
+		// How long to wait for a batch before treating its answer as lost. A
+		// batch is a couple of hundred posts and takes seconds; a request that
+		// hangs would otherwise leave the bar busy for good.
+		const BATCH_TIMEOUT = 120 * 1000;
+
+		// The WordPress spinner, beside the buttons while a sweep runs.
+		const spinner = document.createElement( 'span' );
+
+		spinner.className = 'spinner rvrt-spinner';
+		stop.before( spinner );
+
+		// The network's Preview and Sweep walk the sites from here, so they
+		// only appear once this runs; without it, scheduling still works.
+		for ( const button of form.querySelectorAll( '.rvrt-needs-script' ) ) {
+			button.hidden = false;
+		}
+
 		// A sweep can touch thousands of posts. The list is there to be read,
 		// so it stops at a length somebody would actually read and counts the
 		// rest.
@@ -271,17 +303,39 @@
 		let cancelled = false;
 		let listed = 0;
 		let omitted = 0;
+		let started = null;
 
+		/*
+		 * Marked unavailable rather than disabled. A disabled button drops the
+		 * focus of whoever just pressed it to the top of the page; this one
+		 * keeps it, says it is unavailable, and the running flag ignores it.
+		 */
 		const setBusy = ( busy ) => {
 			running = busy;
 
 			for ( const button of buttons ) {
-				button.disabled = busy;
+				button.setAttribute( 'aria-disabled', busy ? 'true' : 'false' );
 			}
 
-			stop.hidden = ! busy;
-			stop.disabled = false;
+			spinner.classList.toggle( 'is-active', busy );
 			progress.hidden = false;
+
+			if ( busy ) {
+				stop.hidden = false;
+				stop.removeAttribute( 'aria-disabled' );
+
+				return;
+			}
+
+			// Hiding Stop while it has the focus would drop the focus too, so
+			// it goes back to the button that started the sweep.
+			const focusWasOnStop = document.activeElement === stop;
+
+			stop.hidden = true;
+
+			if ( focusWasOnStop ) {
+				started?.focus();
+			}
 		};
 
 		/**
@@ -295,6 +349,11 @@
 			result.className = `rvrt-sweep-result notice inline notice-${ kind }`;
 			resultText.textContent = message;
 			result.hidden = false;
+
+			// A notice that appears already filled in is often not read out,
+			// so the outcome is spoken through the live region WordPress
+			// keeps for exactly this, once.
+			window.wp.a11y?.speak?.( message, kind === 'error' ? 'assertive' : 'polite' );
 		};
 
 		const resetList = () => {
@@ -393,6 +452,7 @@
 				response = await fetch( form.dataset.ajaxUrl, {
 					method: 'POST',
 					credentials: 'same-origin',
+					signal: window.AbortSignal?.timeout?.( BATCH_TIMEOUT ),
 					body: new URLSearchParams( {
 						action: form.dataset.request,
 						_wpnonce: form.dataset.nonce,
@@ -420,6 +480,18 @@
 			try {
 				payload = JSON.parse( text );
 			} catch {
+				// An error page from the server or a proxy in between, a 500 or
+				// a 502, is not the sweep's own refusal; say which it was.
+				if ( ! response.ok ) {
+					throw new Error(
+						sprintf(
+							/* translators: %s: HTTP status code, e.g. "502". */
+							_x( 'The server answered with error %s instead of finishing the batch. The site\'s error log will say why.', 'sweep error', 'revision-retention' ),
+							String( response.status )
+						)
+					);
+				}
+
 				// Anything that prints before the response lands in front of it
 				// and stops it being data at all. Say so, rather than showing a
 				// parser's complaint about an angle bracket.
@@ -470,11 +542,19 @@
 
 			// A press whose confirmation was declined has its default
 			// prevented by syncConfirms() before it gets here.
-			if ( ! button || running || event.defaultPrevented ) {
+			if ( ! button || event.defaultPrevented ) {
 				return;
 			}
 
+			// The buttons are only marked unavailable while a sweep runs, so
+			// a press then must not post the form either.
 			event.preventDefault();
+
+			if ( running ) {
+				return;
+			}
+
+			started = button;
 			cancelled = false;
 			resetList();
 			setBusy( true );
@@ -508,8 +588,12 @@
 		} );
 
 		stop.addEventListener( 'click', () => {
+			if ( cancelled ) {
+				return;
+			}
+
 			cancelled = true;
-			stop.disabled = true;
+			stop.setAttribute( 'aria-disabled', 'true' );
 			text.textContent = _x( 'Stopping after this batch…', 'sweep progress', 'revision-retention' );
 		} );
 	};
@@ -700,22 +784,42 @@
 		}
 
 		const start = Date.now();
+		let timer = 0;
 
 		const tick = () => {
 			const elapsed = ( Date.now() - start ) / 1000;
 
 			for ( const { element, left, ahead, behind } of countdowns ) {
 				const remaining = Math.ceil( left - elapsed );
-
-				element.textContent =
+				const sentence =
 					remaining > 0
 						? sprintf( ahead, duration( remaining ) )
 						: sprintf( behind, duration( Math.max( 1, -remaining ) ) );
+
+				// Beyond the hour the text changes once a minute; it is only
+				// written when it does, so nothing re-reads an unchanged line.
+				if ( element.textContent !== sentence ) {
+					element.textContent = sentence;
+				}
 			}
 		};
 
-		tick();
-		window.setInterval( tick, 1000 );
+		// Counted from the clock rather than from the ticks, so a tab in the
+		// background can stop ticking and still be right when it comes back.
+		const run = () => {
+			window.clearInterval( timer );
+			timer = 0;
+
+			if ( document.hidden ) {
+				return;
+			}
+
+			tick();
+			timer = window.setInterval( tick, 1000 );
+		};
+
+		document.addEventListener( 'visibilitychange', run );
+		run();
 	};
 
 	document.addEventListener( 'DOMContentLoaded', () => {

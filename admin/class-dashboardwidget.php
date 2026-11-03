@@ -7,7 +7,14 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Admin;
+
+use Acato\RevisionRetention\Includes\CronHealth;
+use Acato\RevisionRetention\Includes\Log;
+use Acato\RevisionRetention\Includes\Plugin;
+use Acato\RevisionRetention\Includes\Scheduler;
+use Acato\RevisionRetention\Includes\Settings;
+use Acato\RevisionRetention\Includes\Singleton;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,7 +34,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Dashboard_Widget {
+class DashboardWidget extends Singleton {
 
 	/**
 	 * ID of the widget.
@@ -70,10 +77,10 @@ class Dashboard_Widget {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_action( 'wp_dashboard_setup', array( $this, 'add' ) );
-		add_action( 'wp_network_dashboard_setup', array( $this, 'add' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	protected function init(): void {
+		add_action( 'wp_dashboard_setup', [ $this, 'add' ] );
+		add_action( 'wp_network_dashboard_setup', [ $this, 'add' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
 	}
 
 	/**
@@ -89,7 +96,7 @@ class Dashboard_Widget {
 		wp_add_dashboard_widget(
 			self::ID,
 			_x( 'Revision Retention', 'dashboard widget title', 'revision-retention' ),
-			array( $this, 'render' )
+			[ $this, 'render' ]
 		);
 	}
 
@@ -108,18 +115,18 @@ class Dashboard_Widget {
 		$style = Assets::url( 'src/settings.css' );
 
 		if ( null !== $style ) {
-			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_style( 'rvrt-settings', $style, [], null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 
 		// The chart's tooltips, and the widget's tabs and period switch.
-		foreach ( array(
+		foreach ( [
 			'rvrt-chart'  => 'src/chart.js',
 			'rvrt-widget' => 'src/widget.js',
-		) as $handle => $source ) {
+		] as $handle => $source ) {
 			$script = Assets::url( $source );
 
 			if ( null !== $script ) {
-				wp_enqueue_script( $handle, $script, array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+				wp_enqueue_script( $handle, $script, [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			}
 		}
 	}
@@ -147,20 +154,21 @@ class Dashboard_Widget {
 	/**
 	 * The Site and Network views, as tabs.
 	 *
-	 * The tab names the view, so the views carry no heading of their own. The
-	 * Site view is the one shown first; the script makes the tabs switch, the
-	 * way the Dashboard's own widgets need it to fold and move.
+	 * Without the script both views are shown, one under the other, each
+	 * under its own heading, and the tabs that could not switch anything are
+	 * left out. The script brings the tabs in, which then name the views, and
+	 * shows the Site view first.
 	 *
 	 * @return void
 	 */
 	private function render_tabs(): void {
-		$views = array(
+		$views = [
 			'site'    => _x( 'Site', 'dashboard widget tab', 'revision-retention' ),
 			'network' => _x( 'Network', 'dashboard widget tab', 'revision-retention' ),
-		);
+		];
 		?>
-		<div class="rvrt-widget-tabs" role="tablist" aria-label="<?php echo esc_attr_x( 'Recent sweeps', 'accessibility label', 'revision-retention' ); ?>">
-			<?php foreach ( $views as $view => $label ) : ?>
+		<div class="rvrt-widget-tabs" role="tablist" hidden aria-label="<?php echo esc_attr_x( 'Recent sweeps', 'accessibility label', 'revision-retention' ); ?>">
+			<?php foreach ( $views as $view => $label ) { ?>
 				<button
 					type="button"
 					class="rvrt-widget-tab"
@@ -170,14 +178,15 @@ class Dashboard_Widget {
 					aria-selected="<?php echo 'site' === $view ? 'true' : 'false'; ?>"
 					tabindex="<?php echo 'site' === $view ? '0' : '-1'; ?>"
 				><?php echo esc_html( $label ); ?></button>
-			<?php endforeach; ?>
+			<?php } ?>
 		</div>
-		<?php foreach ( $views as $view => $label ) : ?>
-			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" role="tabpanel" aria-labelledby="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>"<?php echo 'site' === $view ? '' : ' hidden'; ?>>
+		<?php foreach ( $views as $view => $label ) { ?>
+			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" role="tabpanel" aria-labelledby="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>">
+				<h3 class="rvrt-widget-view-title"><?php echo esc_html( $label ); ?></h3>
 				<?php self::render_view( 'network' === $view ); ?>
 			</div>
 			<?php
-		endforeach;
+		}
 	}
 
 	/**
@@ -189,10 +198,10 @@ class Dashboard_Widget {
 	 */
 	private static function render_view( bool $network ): void {
 		$logs = add_query_arg(
-			array(
-				'page'     => Settings_Page::PAGE_SLUG,
+			[
+				'page'     => SettingsPage::PAGE_SLUG,
 				'rvrt-tab' => 'logs',
-			),
+			],
 			$network ? network_admin_url( 'settings.php' ) : admin_url( 'options-general.php' )
 		);
 
@@ -200,10 +209,10 @@ class Dashboard_Widget {
 
 		$schedule = current_user_can( Settings::capability( $network ) )
 			? add_query_arg(
-				array(
-					'page'     => Settings_Page::PAGE_SLUG,
+				[
+					'page'     => SettingsPage::PAGE_SLUG,
 					'rvrt-tab' => 'schedule',
-				),
+				],
 				$network ? network_admin_url( 'settings.php' ) : admin_url( 'options-general.php' )
 			)
 			: '';
@@ -217,7 +226,7 @@ class Dashboard_Widget {
 			$stall = self::describe_stall( ! empty( Settings::get( 'cron_enabled' ) ) );
 		}
 
-		( new Log_View( $logs, $network ) )->render_recent( $periods, $current, $logs, $next, $stall, $schedule );
+		( new LogView( $logs, $network ) )->render_recent( $periods, $current, $logs, $next, $stall, $schedule );
 	}
 
 	/**
@@ -237,11 +246,11 @@ class Dashboard_Widget {
 	 * @return string The hint, or empty when cron runs or the schedule is off.
 	 */
 	private static function describe_stall( bool $enabled ): string {
-		if ( ! $enabled || Cron_Health::STALLED !== Cron_Health::check()['status'] ) {
+		if ( ! $enabled || CronHealth::STALLED !== CronHealth::check()['status'] ) {
 			return '';
 		}
 
-		return Cron_Health::triggered_by_visits()
+		return CronHealth::triggered_by_visits()
 			? _x( 'WP-Cron does not seem to be running, so scheduled cleanups wait. It is started by visits to the site, so a site nobody visits, or a server that blocks requests to itself, holds it up.', 'dashboard widget', 'revision-retention' )
 			: _x( 'WP-Cron does not seem to be running, so scheduled cleanups wait. DISABLE_WP_CRON is set, so visits do not start it and a server cron job has to.', 'dashboard widget', 'revision-retention' );
 	}
@@ -267,22 +276,22 @@ class Dashboard_Widget {
 	private static function periods( bool $network ): array {
 		$settings = $network ? Settings::network() : Settings::resolved();
 		$interval = (string) ( $settings['cron_interval'] ?? '' );
-		$days     = is_array( $settings['cron_days'] ?? null ) ? $settings['cron_days'] : array();
+		$days     = is_array( $settings['cron_days'] ?? null ) ? $settings['cron_days'] : [];
 		$kept     = Settings::log_retention_days( (string) ( $settings['log_retention'] ?? '' ) );
 
-		$periods = array(
+		$periods = [
 			Log::PERIOD_DAY   => self::DAYS,
 			Log::PERIOD_WEEK  => min( self::MAX_PERIODS, max( self::MIN_PERIODS, (int) ceil( $kept / 7 ) ) ),
 			Log::PERIOD_MONTH => min( self::MAX_PERIODS, max( self::MIN_PERIODS, (int) ceil( $kept / 30 ) ) ),
-		);
+		];
 
 		$current = match ( true ) {
 			'monthly' === $interval => Log::PERIOD_MONTH,
-			in_array( $interval, array( 'weekly', 'fortnightly' ), true ), Settings::WEEKDAYS === $interval && count( $days ) < 2 => Log::PERIOD_WEEK,
+			in_array( $interval, [ 'weekly', 'fortnightly' ], true ), Settings::WEEKDAYS === $interval && count( $days ) < 2 => Log::PERIOD_WEEK,
 			default => Log::PERIOD_DAY,
 		};
 
-		return array( $current, $periods );
+		return [ $current, $periods ];
 	}
 
 	/**
@@ -325,42 +334,92 @@ class Dashboard_Widget {
 	private static function network_schedule(): array {
 		$cached = get_site_transient( Scheduler::NETWORK_TRANSIENT );
 
-		if ( is_array( $cached ) ) {
+		// A value of the wrong shape, from an older version or left half
+		// written, is worked out again rather than shown.
+		if ( self::is_schedule( $cached ) ) {
 			return $cached;
 		}
 
-		$schedule = array(
+		$schedule = [
 			'enabled' => 0,
 			'running' => 0,
 			'overdue' => 0,
 			'next'    => 0,
 			'site'    => '',
-		);
+		];
 
 		foreach ( Plugin::sites() as $site_id ) {
 			switch_to_blog( $site_id );
-
-			if ( ! empty( Settings::get( 'cron_enabled' ) ) ) {
-				++$schedule['enabled'];
-
-				$next = (int) wp_next_scheduled( Scheduler::HOOK );
-
-				if ( Scheduler::state()['cursor'] > 0 ) {
-					++$schedule['running'];
-				} elseif ( $next > 0 && $next <= time() ) {
-					++$schedule['overdue'];
-				} elseif ( $next > 0 && ( 0 === $schedule['next'] || $next < $schedule['next'] ) ) {
-					$schedule['next'] = $next;
-					$schedule['site'] = (string) get_option( 'blogname' );
-				}
-			}
-
+			$schedule = self::add_site_schedule( $schedule );
 			restore_current_blog();
 		}
 
 		set_site_transient( Scheduler::NETWORK_TRANSIENT, $schedule, self::SCHEDULE_TTL );
 
 		return $schedule;
+	}
+
+	/**
+	 * Count the current site into the network's schedule.
+	 *
+	 * @param array{enabled: int, running: int, overdue: int, next: int, site: string} $schedule So far.
+	 *
+	 * @return array{enabled: int, running: int, overdue: int, next: int, site: string}
+	 */
+	private static function add_site_schedule( array $schedule ): array {
+		if ( empty( Settings::get( 'cron_enabled' ) ) ) {
+			return $schedule;
+		}
+
+		++$schedule['enabled'];
+
+		if ( Scheduler::state()['cursor'] > 0 ) {
+			++$schedule['running'];
+
+			return $schedule;
+		}
+
+		$next = (int) wp_next_scheduled( Scheduler::HOOK );
+
+		if ( $next < 1 ) {
+			return $schedule;
+		}
+
+		if ( $next <= time() ) {
+			++$schedule['overdue'];
+
+			return $schedule;
+		}
+
+		if ( 0 === $schedule['next'] || $next < $schedule['next'] ) {
+			$schedule['next'] = $next;
+			$schedule['site'] = (string) get_option( 'blogname' );
+		}
+
+		return $schedule;
+	}
+
+	/**
+	 * Whether a kept value is a network schedule this version can show.
+	 *
+	 * @param mixed $value What the transient held.
+	 *
+	 * @phpstan-assert-if-true array{enabled: int, running: int, overdue: int, next: int, site: string} $value
+	 *
+	 * @return bool
+	 */
+	private static function is_schedule( mixed $value ): bool {
+		if ( ! is_array( $value ) || ! is_string( $value['site'] ?? null ) ) {
+			return false;
+		}
+
+		foreach ( [ 'enabled', 'running', 'overdue', 'next' ] as $key ) {
+			if ( ! is_int( $value[ $key ] ?? null ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -376,7 +435,7 @@ class Dashboard_Widget {
 			return _x( 'Scheduled cleanups are switched off on every site.', 'dashboard widget', 'revision-retention' );
 		}
 
-		$sentences = array();
+		$sentences = [];
 
 		if ( $schedule['next'] > 0 ) {
 			$sentences[] = sprintf(
@@ -403,7 +462,7 @@ class Dashboard_Widget {
 			);
 		}
 
-		return array() !== $sentences
+		return [] !== $sentences
 			? implode( ' ', $sentences )
 			: _x( 'No cleanup run is booked yet.', 'dashboard widget', 'revision-retention' );
 	}
@@ -468,13 +527,13 @@ class Dashboard_Widget {
 		$published = array_map(
 			'intval',
 			(array) get_sites(
-				array(
+				[
 					'fields'   => 'ids',
 					'number'   => 0,
 					'archived' => 0,
 					'spam'     => 0,
 					'deleted'  => 0,
-				)
+				]
 			)
 		);
 

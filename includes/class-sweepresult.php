@@ -7,7 +7,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-final class Sweep_Result {
+final class SweepResult {
 
 	/**
 	 * Build a result.
@@ -35,19 +35,19 @@ final class Sweep_Result {
 		public readonly int $revisions,
 		public readonly bool $finished,
 		public readonly bool $dry_run,
-		public readonly array $items = array(),
+		public readonly array $items = [],
 		public readonly int $affected = 0
 	) {}
 
 	/**
 	 * Add another batch's outcome to this one.
 	 *
-	 * @param Sweep_Result $next The batch that ran after this one.
+	 * @param SweepResult $next The batch that ran after this one.
 	 *
-	 * @return Sweep_Result
+	 * @return SweepResult
 	 */
-	public function add( Sweep_Result $next ): Sweep_Result {
-		return new Sweep_Result(
+	public function add( SweepResult $next ): SweepResult {
+		return new SweepResult(
 			$next->cursor,
 			$this->posts + $next->posts,
 			$this->revisions + $next->revisions,

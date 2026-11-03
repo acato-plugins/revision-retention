@@ -7,7 +7,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Requirements {
+class Requirements extends Singleton {
 
 	/**
 	 * Lowest WordPress version this plugin supports.
@@ -50,7 +50,7 @@ class Requirements {
 		wp_die(
 			esc_html( self::message() ),
 			esc_html_x( 'Plugin could not be activated', 'activation error title', 'revision-retention' ),
-			array( 'back_link' => true )
+			[ 'back_link' => true ]
 		);
 	}
 
@@ -59,10 +59,10 @@ class Requirements {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_action( 'admin_init', array( $this, 'deactivate' ) );
-		add_action( 'admin_notices', array( $this, 'render_notice' ) );
-		add_action( 'network_admin_notices', array( $this, 'render_notice' ) );
+	protected function init(): void {
+		add_action( 'admin_init', [ $this, 'deactivate' ] );
+		add_action( 'admin_notices', [ $this, 'render_notice' ] );
+		add_action( 'network_admin_notices', [ $this, 'render_notice' ] );
 	}
 
 	/**
