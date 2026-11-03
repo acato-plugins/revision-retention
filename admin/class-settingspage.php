@@ -1858,17 +1858,18 @@ class SettingsPage extends Singleton {
 			return $cleaner->sweep( $size, true, $cursor, [], $cap );
 		}
 
-		$stored = Scheduler::state()['cursor'];
-
-		if ( $cursor > 0 && 0 === $stored ) {
-			return new SweepResult( 0, 0, 0, true, false );
-		}
-
 		if ( ! Scheduler::lock() ) {
 			return null;
 		}
 
 		try {
+			// Read only now the lock is held, so it is where the sweep really is.
+			$stored = Scheduler::state()['cursor'];
+
+			if ( $cursor > 0 && 0 === $stored ) {
+				return new SweepResult( 0, 0, 0, true, false );
+			}
+
 			$result = $cleaner->sweep( $size, false, $stored, [], $cap );
 
 			$this->remember_sweep( $result );

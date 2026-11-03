@@ -36,6 +36,7 @@ function update_site_option( $k, $v ) { $GLOBALS['t_site_options'][ $k ] = $v; r
 function delete_site_option( $k ) { unset( $GLOBALS['t_site_options'][ $k ] ); return true; }
 function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['t_filters'][ $h ][] = $cb; }
 function add_action( $h, $cb, $p = 10, $a = 1 ) {}
+function has_filter( $h ) { return ! empty( $GLOBALS["t_filters"][ $h ] ); }
 function apply_filters( $h, $v, ...$rest ) {
 	foreach ( $GLOBALS['t_filters'][ $h ] ?? array() as $cb ) { $v = $cb( $v, ...$rest ); }
 	return $v;

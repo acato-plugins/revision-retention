@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-03T13:30:03+00:00\n"
+"POT-Creation-Date: 2026-11-03T18:39:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -58,86 +58,86 @@ msgctxt "accessibility label"
 msgid "Recent sweeps"
 msgstr ""
 
-#: admin/class-dashboardwidget.php:254
+#: admin/class-dashboardwidget.php:256
 msgctxt "dashboard widget"
 msgid "WP-Cron does not seem to be running, so scheduled cleanups wait. It is started by visits to the site, so a site nobody visits, or a server that blocks requests to itself, holds it up."
 msgstr ""
 
-#: admin/class-dashboardwidget.php:255
+#: admin/class-dashboardwidget.php:257
 msgctxt "dashboard widget"
 msgid "WP-Cron does not seem to be running, so scheduled cleanups wait. DISABLE_WP_CRON is set, so visits do not start it and a server cron job has to."
 msgstr ""
 
-#: admin/class-dashboardwidget.php:304
+#: admin/class-dashboardwidget.php:306
 msgctxt "dashboard widget"
 msgid "Scheduled cleanups are switched off."
 msgstr ""
 
-#: admin/class-dashboardwidget.php:308
+#: admin/class-dashboardwidget.php:310
 msgctxt "dashboard widget"
 msgid "A cleanup is under way and carries on in the background."
 msgstr ""
 
-#: admin/class-dashboardwidget.php:314 admin/class-dashboardwidget.php:467
+#: admin/class-dashboardwidget.php:316 admin/class-dashboardwidget.php:469
 msgctxt "dashboard widget"
 msgid "No cleanup run is booked yet."
 msgstr ""
 
 #. translators: %s: when, e.g. "Thursday 15 October at 09:47".
-#: admin/class-dashboardwidget.php:319
+#: admin/class-dashboardwidget.php:321
 msgctxt "dashboard widget"
 msgid "The next cleanup was planned for %s and has not run yet."
 msgstr ""
 
 #. translators: %s: when, e.g. "today at 12:26" or "Monday 2 November at 03:25".
-#: admin/class-dashboardwidget.php:321
+#: admin/class-dashboardwidget.php:323
 msgctxt "dashboard widget"
 msgid "The next cleanup is planned for %s."
 msgstr ""
 
-#: admin/class-dashboardwidget.php:435
+#: admin/class-dashboardwidget.php:437
 msgctxt "dashboard widget"
 msgid "Scheduled cleanups are switched off on every site."
 msgstr ""
 
 #. translators: 1: when, e.g. "today at 12:26" or "Monday 2 November at 03:25", 2: site name.
-#: admin/class-dashboardwidget.php:443
+#: admin/class-dashboardwidget.php:445
 msgctxt "dashboard widget"
 msgid "The next cleanup on the network is planned for %1$s, on %2$s."
 msgstr ""
 
 #. translators: %s: time.
-#: admin/class-dashboardwidget.php:485
+#: admin/class-dashboardwidget.php:487
 msgctxt "dashboard widget, when"
 msgid "today at %s"
 msgstr ""
 
 #. translators: %s: time.
-#: admin/class-dashboardwidget.php:490
+#: admin/class-dashboardwidget.php:492
 msgctxt "dashboard widget, when"
 msgid "tomorrow at %s"
 msgstr ""
 
 #. translators: %s: time.
-#: admin/class-dashboardwidget.php:494
+#: admin/class-dashboardwidget.php:496
 msgctxt "dashboard widget day, this year"
 msgid "l j F"
 msgstr ""
 
 #. translators: %s: time.
-#: admin/class-dashboardwidget.php:495
+#: admin/class-dashboardwidget.php:497
 msgctxt "dashboard widget day, another year"
 msgid "l j F Y"
 msgstr ""
 
 #. translators: 1: day, e.g. "Monday 2 November", 2: time.
-#: admin/class-dashboardwidget.php:498
+#: admin/class-dashboardwidget.php:500
 msgctxt "dashboard widget, when"
 msgid "%1$s at %2$s"
 msgstr ""
 
 #. translators: %s: number of sites.
-#: admin/class-dashboardwidget.php:452
+#: admin/class-dashboardwidget.php:454
 msgctxt "dashboard widget"
 msgid "A cleanup is under way on %s site."
 msgid_plural "A cleanup is under way on %s sites."
@@ -145,7 +145,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites.
-#: admin/class-dashboardwidget.php:460
+#: admin/class-dashboardwidget.php:462
 msgctxt "dashboard widget"
 msgid "On %s site the cleanup is overdue."
 msgid_plural "On %s sites the cleanup is overdue."
@@ -154,7 +154,7 @@ msgstr[1] ""
 
 #. translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: how long entries are kept.
 #. translators: 1: number of revisions, e.g. "3 revisions", 2: number of posts, e.g. "2 posts", 3: number of sweeps, e.g. "1 sweep", 4: how far back, e.g. "14 days" or "12 weeks".
-#: admin/class-logview.php:104 admin/class-logview.php:230
+#: admin/class-logview.php:104 admin/class-logview.php:232
 msgctxt "log summary"
 msgid "%1$s removed from %2$s in %3$s over the last %4$s."
 msgstr ""
@@ -164,216 +164,216 @@ msgctxt "log empty state"
 msgid "Nothing in the log matches this filter."
 msgstr ""
 
-#: admin/class-logview.php:151
+#: admin/class-logview.php:153
 msgctxt "chart period"
 msgid "Daily"
 msgstr ""
 
-#: admin/class-logview.php:152
+#: admin/class-logview.php:154
 msgctxt "chart period"
 msgid "Weekly"
 msgstr ""
 
-#: admin/class-logview.php:153
+#: admin/class-logview.php:155
 msgctxt "chart period"
 msgid "Monthly"
 msgstr ""
 
-#: admin/class-logview.php:164
+#: admin/class-logview.php:166
 msgctxt "dashboard widget link"
 msgid "See the Schedule tab"
 msgstr ""
 
-#: admin/class-logview.php:171
+#: admin/class-logview.php:173
 msgctxt "accessibility label"
 msgid "Show the results"
 msgstr ""
 
-#: admin/class-logview.php:197
+#: admin/class-logview.php:199
 msgctxt "dashboard widget link"
 msgid "View the log"
 msgstr ""
 
 #. translators: %s: how far back, e.g. "14 days" or "12 weeks".
-#: admin/class-logview.php:223
+#: admin/class-logview.php:225
 msgctxt "log summary"
 msgid "No revisions were removed in the last %s."
 msgstr ""
 
-#: admin/class-logview.php:279
+#: admin/class-logview.php:281
 msgctxt "log empty state"
 msgid "Nothing logged yet"
 msgstr ""
 
-#: admin/class-logview.php:283
+#: admin/class-logview.php:285
 msgctxt "log empty state"
 msgid "Every sweep that removes revisions on a site that keeps a log will appear here: which site, who or what ran it, and how much it took away."
 msgstr ""
 
-#: admin/class-logview.php:287
+#: admin/class-logview.php:289
 msgctxt "log empty state"
 msgid "Every sweep that removes revisions will appear here: who or what ran it, and how much it took away."
 msgstr ""
 
-#: admin/class-logview.php:288
+#: admin/class-logview.php:290
 msgctxt "log empty state"
 msgid "Switch the log on above, and every sweep that removes revisions will appear here: who or what ran it, and how much it took away."
 msgstr ""
 
-#: admin/class-logview.php:305
+#: admin/class-logview.php:307
 msgctxt "log filter"
 msgid "All"
 msgstr ""
 
-#: admin/class-logview.php:307
+#: admin/class-logview.php:309
 msgctxt "accessibility label"
 msgid "Show sweeps run by"
 msgstr ""
 
 #. translators: %s: the date the week starts on.
-#: admin/class-logview.php:354
+#: admin/class-logview.php:356
 msgctxt "chart tooltip"
 msgid "Week of %s"
 msgstr ""
 
 #. translators: %s: the date the week starts on.
-#: admin/class-logview.php:355
+#: admin/class-logview.php:357
 msgctxt "chart tooltip, month"
 msgid "F Y"
 msgstr ""
 
 #. translators: %s: number of weeks.
-#: admin/class-logview.php:387
+#: admin/class-logview.php:389
 msgctxt "chart axis"
 msgid "This week"
 msgstr ""
 
 #. translators: %s: number of months.
-#: admin/class-logview.php:392
+#: admin/class-logview.php:394
 msgctxt "chart axis"
 msgid "This month"
 msgstr ""
 
 #. translators: %s: number of days.
-#: admin/class-logview.php:396
+#: admin/class-logview.php:398
 msgctxt "chart axis"
 msgid "%s days ago"
 msgstr ""
 
 #. translators: %s: number of days.
-#: admin/class-logview.php:397
+#: admin/class-logview.php:399
 msgctxt "chart axis"
 msgid "Today"
 msgstr ""
 
-#: admin/class-logview.php:503
+#: admin/class-logview.php:505
 msgctxt "post type fallback"
 msgid "Other"
 msgstr ""
 
-#: admin/class-logview.php:555
+#: admin/class-logview.php:557
 msgctxt "log actor"
 msgid "The schedule"
 msgstr ""
 
-#: admin/class-logview.php:556
+#: admin/class-logview.php:558
 msgctxt "log actor"
 msgid "Somebody on the server"
 msgstr ""
 
 #. translators: %s: user ID.
-#: admin/class-logview.php:567
+#: admin/class-logview.php:569
 msgctxt "log actor"
 msgid "A deleted user (#%s)"
 msgstr ""
 
 #. translators: %s: site ID.
-#: admin/class-logview.php:597
+#: admin/class-logview.php:599
 msgctxt "log site"
 msgid "A deleted site (#%s)"
 msgstr ""
 
-#: admin/class-logview.php:628
+#: admin/class-logview.php:630
 msgctxt "accessibility label"
 msgid "Log pages"
 msgstr ""
 
-#: admin/class-logview.php:630
+#: admin/class-logview.php:632
 msgctxt "log pagination"
 msgid "Newer"
 msgstr ""
 
 #. translators: 1: current page, 2: number of pages.
-#: admin/class-logview.php:636
+#: admin/class-logview.php:638
 msgctxt "log pagination"
 msgid "Page %1$s of %2$s"
 msgstr ""
 
-#: admin/class-logview.php:643
+#: admin/class-logview.php:645
 msgctxt "log pagination"
 msgid "Older"
 msgstr ""
 
-#: admin/class-logview.php:656
+#: admin/class-logview.php:658
 msgctxt "log source"
 msgid "Scheduled"
 msgstr ""
 
-#: admin/class-logview.php:657
+#: admin/class-logview.php:659
 msgctxt "log source"
 msgid "Run now"
 msgstr ""
 
-#: admin/class-logview.php:658
+#: admin/class-logview.php:660
 msgctxt "log source"
 msgid "WP-CLI"
 msgstr ""
 
-#: admin/class-logview.php:685
+#: admin/class-logview.php:687
 msgctxt "log day"
 msgid "Today"
 msgstr ""
 
-#: admin/class-logview.php:689
+#: admin/class-logview.php:691
 msgctxt "log day"
 msgid "Yesterday"
 msgstr ""
 
-#: admin/class-logview.php:694
+#: admin/class-logview.php:696
 msgctxt "log day heading, this year"
 msgid "l j F"
 msgstr ""
 
-#: admin/class-logview.php:695
+#: admin/class-logview.php:697
 msgctxt "log day heading, another year"
 msgid "l j F Y"
 msgstr ""
 
-#: admin/class-logview.php:711
+#: admin/class-logview.php:713
 msgctxt "sweep duration"
 msgid "under a minute"
 msgstr ""
 
 #. translators: %s: how long the sweep took.
-#: admin/class-logview.php:716
+#: admin/class-logview.php:718
 msgctxt "log status"
 msgid "Completed in %s"
 msgstr ""
 
 #. translators: %s: how long the sweep took.
-#: admin/class-logview.php:717
+#: admin/class-logview.php:719
 msgctxt "log status"
 msgid "In progress"
 msgstr ""
 
 #. translators: %s: how long the sweep ran for.
-#: admin/class-logview.php:719
+#: admin/class-logview.php:721
 msgctxt "log status"
 msgid "Stopped part way after %s; the next sweep continues"
 msgstr ""
 
 #. translators: %s: number of revisions.
-#: admin/class-logview.php:106 admin/class-logview.php:232
+#: admin/class-logview.php:106 admin/class-logview.php:234
 msgctxt "log summary"
 msgid "%s revision"
 msgid_plural "%s revisions"
@@ -381,7 +381,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of posts.
-#: admin/class-logview.php:108 admin/class-logview.php:234
+#: admin/class-logview.php:108 admin/class-logview.php:236
 msgctxt "log summary"
 msgid "%s post"
 msgid_plural "%s posts"
@@ -389,7 +389,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sweeps.
-#: admin/class-logview.php:110 admin/class-logview.php:236
+#: admin/class-logview.php:110 admin/class-logview.php:238
 msgctxt "log summary"
 msgid "%s sweep"
 msgid_plural "%s sweeps"
@@ -397,7 +397,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of weeks.
-#: admin/class-logview.php:262
+#: admin/class-logview.php:264
 msgctxt "log span"
 msgid "%s week"
 msgid_plural "%s weeks"
@@ -405,7 +405,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of months.
-#: admin/class-logview.php:264
+#: admin/class-logview.php:266
 msgctxt "log span"
 msgid "%s month"
 msgid_plural "%s months"
@@ -413,7 +413,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of days.
-#: admin/class-logview.php:266
+#: admin/class-logview.php:268
 msgctxt "log span"
 msgid "%s day"
 msgid_plural "%s days"
@@ -421,7 +421,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of revisions, 2: how far back, e.g. "14 days" or "12 weeks".
-#: admin/class-logview.php:334
+#: admin/class-logview.php:336
 msgctxt "accessibility label"
 msgid "%1$s revision removed in the last %2$s"
 msgid_plural "%1$s revisions removed in the last %2$s"
@@ -429,7 +429,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of revisions.
-#: admin/class-logview.php:360
+#: admin/class-logview.php:362
 msgctxt "chart tooltip"
 msgid "%s revision removed"
 msgid_plural "%s revisions removed"
@@ -437,7 +437,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of weeks.
-#: admin/class-logview.php:386
+#: admin/class-logview.php:388
 msgctxt "chart axis"
 msgid "%s week ago"
 msgid_plural "%s weeks ago"
@@ -445,7 +445,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of months.
-#: admin/class-logview.php:391
+#: admin/class-logview.php:393
 msgctxt "chart axis"
 msgid "%s month ago"
 msgid_plural "%s months ago"
@@ -453,7 +453,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of posts.
-#: admin/class-logview.php:491
+#: admin/class-logview.php:493
 msgctxt "log entry"
 msgid "revisions removed from %s post"
 msgid_plural "revisions removed from %s posts"
@@ -490,7 +490,7 @@ msgctxt "rating notice"
 msgid "Don't ask again"
 msgstr ""
 
-#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1669 admin/class-settingspage.php:1717 admin/class-settingspage.php:2022 admin/class-settingspage.php:2285
+#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1669 admin/class-settingspage.php:1717 admin/class-settingspage.php:2023 admin/class-settingspage.php:2286
 msgctxt "permission error"
 msgid "You are not allowed to do this."
 msgstr ""
@@ -667,12 +667,12 @@ msgctxt "column heading"
 msgid "Stored now"
 msgstr ""
 
-#: admin/class-settingspage.php:664 admin/class-settingspage.php:1372 admin/class-settingspage.php:2177
+#: admin/class-settingspage.php:664 admin/class-settingspage.php:1372 admin/class-settingspage.php:2178
 msgctxt "revision support state"
 msgid "On"
 msgstr ""
 
-#: admin/class-settingspage.php:664 admin/class-settingspage.php:2178
+#: admin/class-settingspage.php:664 admin/class-settingspage.php:2179
 msgctxt "revision support state"
 msgid "Off"
 msgstr ""
@@ -714,7 +714,7 @@ msgstr ""
 
 #. translators: %s: the age inherited from the network.
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:840 admin/class-settingspage.php:2172 admin/class-settingspage.php:2207
+#: admin/class-settingspage.php:840 admin/class-settingspage.php:2173 admin/class-settingspage.php:2208
 msgctxt "inherited setting option"
 msgid "Inherit (%s)"
 msgstr ""
@@ -1038,7 +1038,7 @@ msgctxt "column heading"
 msgid "Stored"
 msgstr ""
 
-#: admin/class-settingspage.php:1366 admin/class-settingspage.php:2368
+#: admin/class-settingspage.php:1366 admin/class-settingspage.php:2369
 msgctxt "stored revision count"
 msgid "None"
 msgstr ""
@@ -1101,32 +1101,32 @@ msgctxt "button label"
 msgid "Run now"
 msgstr ""
 
-#: admin/class-settingspage.php:1582 admin/class-settingspage.php:1970
+#: admin/class-settingspage.php:1582 admin/class-settingspage.php:1971
 msgctxt "button label"
 msgid "Stop"
 msgstr ""
 
-#: admin/class-settingspage.php:1593 admin/class-settingspage.php:1981
+#: admin/class-settingspage.php:1593 admin/class-settingspage.php:1982
 msgctxt "accessibility label"
 msgid "Sweep progress"
 msgstr ""
 
-#: admin/class-settingspage.php:1605 admin/class-settingspage.php:1993
+#: admin/class-settingspage.php:1605 admin/class-settingspage.php:1994
 msgctxt "column heading"
 msgid "Post"
 msgstr ""
 
-#: admin/class-settingspage.php:1606 admin/class-settingspage.php:1995
+#: admin/class-settingspage.php:1606 admin/class-settingspage.php:1996
 msgctxt "column heading"
 msgid "Type"
 msgstr ""
 
-#: admin/class-settingspage.php:1607 admin/class-settingspage.php:1996
+#: admin/class-settingspage.php:1607 admin/class-settingspage.php:1997
 msgctxt "column heading"
 msgid "Removing"
 msgstr ""
 
-#: admin/class-settingspage.php:1608 admin/class-settingspage.php:1997
+#: admin/class-settingspage.php:1608 admin/class-settingspage.php:1998
 msgctxt "column heading"
 msgid "Remaining"
 msgstr ""
@@ -1151,80 +1151,80 @@ msgctxt "sweep status"
 msgid "No sweep has finished on this site yet."
 msgstr ""
 
-#: admin/class-settingspage.php:1678 admin/class-settingspage.php:2293
+#: admin/class-settingspage.php:1678 admin/class-settingspage.php:2294
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide, so only a network administrator can sweep it."
 msgstr ""
 
-#: admin/class-settingspage.php:1888
+#: admin/class-settingspage.php:1889
 msgctxt "sweep error"
 msgid "Another sweep is running on this site right now, from the schedule or WP-CLI. Wait a minute and try again."
 msgstr ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1946
+#: admin/class-settingspage.php:1947
 msgctxt "sweep status"
 msgid "Revisions live in each site's own database, so a sweep belongs to the site rather than to the network."
 msgstr ""
 
-#: admin/class-settingspage.php:1952
+#: admin/class-settingspage.php:1953
 msgctxt "button label"
 msgid "Preview every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1960
+#: admin/class-settingspage.php:1961
 msgctxt "confirmation"
 msgid "This permanently deletes revisions on every site on the network that has the sweep switched on, under each site's own policy. It cannot be undone."
 msgstr ""
 
-#: admin/class-settingspage.php:1961
+#: admin/class-settingspage.php:1962
 msgctxt "confirmation title"
 msgid "Sweep every site now?"
 msgstr ""
 
-#: admin/class-settingspage.php:1964
+#: admin/class-settingspage.php:1965
 msgctxt "button label"
 msgid "Sweep every site now"
 msgstr ""
 
-#: admin/class-settingspage.php:1967
+#: admin/class-settingspage.php:1968
 msgctxt "button label"
 msgid "Schedule a sweep on every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1994
+#: admin/class-settingspage.php:1995
 msgctxt "column heading"
 msgid "Site"
 msgstr ""
 
-#: admin/class-settingspage.php:2007
+#: admin/class-settingspage.php:2008
 msgctxt "field description"
 msgid "Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Sweep every site now does the same and deletes as it goes, site after site, and logs what it removed on each one. It can be stopped, and the schedule picks up whatever is left. Schedule a sweep on every site leaves the work to WP-Cron instead, starting each site within the next few minutes. Both pass over the sites that have switched the sweep off."
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2173
+#: admin/class-settingspage.php:2174
 msgctxt "inherited boolean value"
 msgid "off"
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2173
+#: admin/class-settingspage.php:2174
 msgctxt "inherited boolean value"
 msgid "on"
 msgstr ""
 
-#: admin/class-settingspage.php:2229 admin/class-settingspage.php:2267
+#: admin/class-settingspage.php:2230 admin/class-settingspage.php:2268
 msgctxt "permission error"
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: admin/class-settingspage.php:2235
+#: admin/class-settingspage.php:2236
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide."
 msgstr ""
 
-#: admin/class-settingspage.php:2365
+#: admin/class-settingspage.php:2366
 msgctxt "revisions kept"
 msgid "All"
 msgstr ""
@@ -1278,7 +1278,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1942
+#: admin/class-settingspage.php:1943
 msgctxt "sweep status"
 msgid "Revision Retention is active on %s site."
 msgid_plural "Revision Retention is active on %s sites."
@@ -1487,7 +1487,7 @@ msgctxt "sweep progress"
 msgid "Stopping after this batch…"
 msgstr ""
 
-#: src/settings.js:665
+#: src/settings.js:674
 msgctxt "button label"
 msgid "Cancel"
 msgstr ""

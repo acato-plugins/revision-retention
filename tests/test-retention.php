@@ -711,6 +711,11 @@ check( 'and reads the same settings', \Acato\RevisionRetention\Settings::get( 'k
 check( 'an old WordPress style name too', \Acato\RevisionRetention\Sweep_Result::class, 'Acato\\RevisionRetention\\Sweep_Result' );
 check( 'which resolves to its new class', get_class( new \Acato\RevisionRetention\Sweep_Result( 0, 0, 0, true, true ) ), SweepResult::class );
 check( 'the old Plugin::instance() is the one plugin', \Acato\RevisionRetention\Plugin::instance() === Plugin::instance(), true );
+// A parameter type or instanceof never asks the autoloader, so the rule
+// handed to the filter has to be the old class already.
+add_filter( 'revision_retention_rule', static fn( \Acato\RevisionRetention\Retention_Rule $rule ): \Acato\RevisionRetention\Retention_Rule => $rule );
+Policy::flush();
+check( 'a filter typed against the 1.5.0 rule class still runs', Policy::for_post_type( 'post' )->keep, 7 );
 
 echo "\n" . str_repeat( '-', 52 ) . "\n";
 printf( "%d passed, %d failed\n", $pass, $fail );

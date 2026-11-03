@@ -54,9 +54,14 @@
 			} );
 		} );
 
-		// The tabs name the views from here on.
+		// The tabs name the views from here on, and the views become their panels.
 		for ( const title of widget.querySelectorAll( '.rvrt-widget-view-title' ) ) {
 			title.hidden = true;
+		}
+
+		for ( const panel of widget.querySelectorAll( '.rvrt-widget-panel[data-tab]' ) ) {
+			panel.setAttribute( 'role', 'tabpanel' );
+			panel.setAttribute( 'aria-labelledby', panel.dataset.tab );
 		}
 
 		list.hidden = false;

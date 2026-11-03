@@ -143,10 +143,12 @@ class LogView {
 	 * @param string             $next     When the next sweep is expected, in a sentence, or empty.
 	 * @param string             $stall    Why that sweep will not happen, in a sentence, or empty.
 	 * @param string             $fix_url  Where the stall can be looked into, or empty for no link.
+	 * @param int                $level    Heading level of each period's title, one below whatever the view sits under.
 	 *
 	 * @return void
 	 */
-	public function render_recent( array $periods, string $current, string $more_url, string $next = '', string $stall = '', string $fix_url = '' ): void {
+	public function render_recent( array $periods, string $current, string $more_url, string $next = '', string $stall = '', string $fix_url = '', int $level = 3 ): void {
+		$tag    = 'h' . min( 6, max( 2, $level ) );
 		$labels = [
 			Log::PERIOD_DAY   => _x( 'Daily', 'chart period', 'revision-retention' ),
 			Log::PERIOD_WEEK  => _x( 'Weekly', 'chart period', 'revision-retention' ),
@@ -180,7 +182,7 @@ class LogView {
 			<?php foreach ( $periods as $period => $count ) { ?>
 				<?php // Every period is there without the script, under its own heading; the script brings in the switch and shows one at a time. ?>
 				<div class="rvrt-period" data-period="<?php echo esc_attr( $period ); ?>">
-					<h4 class="rvrt-period-title"><?php echo esc_html( $labels[ $period ] ?? $period ); ?></h4>
+					<<?php echo esc_html( $tag ); ?> class="rvrt-period-title"><?php echo esc_html( $labels[ $period ] ?? $period ); ?></<?php echo esc_html( $tag ); ?>>
 					<?php $this->render_period( $period, $count ); ?>
 				</div>
 			<?php } ?>

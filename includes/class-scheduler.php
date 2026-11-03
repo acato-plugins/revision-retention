@@ -251,14 +251,16 @@ class Scheduler extends Singleton {
 		// that started it is already used up.
 		self::reschedule( self::CONTINUE_DELAY, true );
 
-		$state = self::state();
-
 		// The screen or WP-CLI is sweeping this site right now. Their batches
 		// carry the same cursor and log entry, so running alongside them would
 		// delete and count the same revisions twice; try again in a minute.
 		if ( ! self::lock() ) {
-			return new SweepResult( $state['cursor'], 0, 0, false, false );
+			return new SweepResult( self::state()['cursor'], 0, 0, false, false );
 		}
+
+		// Read only now: until the lock was this request's, another one may
+		// have moved the sweep on.
+		$state = self::state();
 
 		try {
 			$result = ( new Cleaner() )->sweep(
@@ -296,7 +298,7 @@ class Scheduler extends Singleton {
 		$claimed = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'off' )", self::LOCK_OPTION, (string) time() ) );
 
 		if ( $claimed ) {
-			wp_cache_delete( 'notoptions', 'options' );
+			self::forget_cached_state();
 
 			return true;
 		}
@@ -310,7 +312,29 @@ class Scheduler extends Singleton {
 
 		// Take over a stale lock only if nobody else did in the meantime.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
-		return (bool) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", (string) time(), self::LOCK_OPTION, (string) $since ) );
+		$taken = (bool) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", (string) time(), self::LOCK_OPTION, (string) $since ) );
+
+		if ( $taken ) {
+			self::forget_cached_state();
+		}
+
+		return $taken;
+	}
+
+	/**
+	 * Have the next read of where the sweep got to come from the database.
+	 *
+	 * The cursor is autoloaded, so this request holds the copy it loaded when
+	 * it started. Another request may have run batches since, and once the
+	 * lock is this request's, it has to carry on from where they left off,
+	 * never from where the sweep was when this request began.
+	 *
+	 * @return void
+	 */
+	private static function forget_cached_state(): void {
+		wp_cache_delete( 'notoptions', 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( self::CURSOR_OPTION, 'options' );
 	}
 
 	/**

@@ -56,11 +56,19 @@ class Policy {
 
 		$rule = new RetentionRule( $keep, $max_age );
 
+		// Up to 1.5.0 this class was Acato\RevisionRetention\Retention_Rule,
+		// and a callback may still name it in its parameter type or in an
+		// instanceof. Neither asks the autoloader, so the alias that makes the
+		// old name this class is made here, before the rule is handed out.
+		if ( has_filter( 'revision_retention_rule' ) ) {
+			class_exists( 'Acato\RevisionRetention\Retention_Rule' );
+		}
+
 		/**
 		 * Filters the retention rule that applies to a post type.
 		 *
 		 * @param RetentionRule $rule      The rule resolved from the settings.
-		 * @param string         $post_type Post type the rule applies to.
+		 * @param string        $post_type Post type the rule applies to.
 		 */
 		$filtered = apply_filters( 'revision_retention_rule', $rule, $post_type );
 

@@ -181,9 +181,10 @@ class DashboardWidget extends Singleton {
 			<?php } ?>
 		</div>
 		<?php foreach ( $views as $view => $label ) { ?>
-			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" role="tabpanel" aria-labelledby="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>">
+			<?php // The script makes these tab panels once it brings in the tabs; without it, they are plain sections under a heading. ?>
+			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" data-tab="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>">
 				<h3 class="rvrt-widget-view-title"><?php echo esc_html( $label ); ?></h3>
-				<?php self::render_view( 'network' === $view ); ?>
+				<?php self::render_view( 'network' === $view, 4 ); ?>
 			</div>
 			<?php
 		}
@@ -193,10 +194,11 @@ class DashboardWidget extends Singleton {
 	 * The totals and the chart for this site, or for every site.
 	 *
 	 * @param bool $network Whether every site on the network is meant.
+	 * @param int  $level   Heading level for each period's title: 4 under a view's own heading, 3 straight under the widget's.
 	 *
 	 * @return void
 	 */
-	private static function render_view( bool $network ): void {
+	private static function render_view( bool $network, int $level = 3 ): void {
 		$logs = add_query_arg(
 			[
 				'page'     => SettingsPage::PAGE_SLUG,
@@ -226,7 +228,7 @@ class DashboardWidget extends Singleton {
 			$stall = self::describe_stall( ! empty( Settings::get( 'cron_enabled' ) ) );
 		}
 
-		( new LogView( $logs, $network ) )->render_recent( $periods, $current, $logs, $next, $stall, $schedule );
+		( new LogView( $logs, $network ) )->render_recent( $periods, $current, $logs, $next, $stall, $schedule, $level );
 	}
 
 	/**

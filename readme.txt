@@ -156,6 +156,7 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 * Without JavaScript, the Dashboard widget shows both views and every period, and the settings screen every post type, instead of controls that do nothing.
 * The countdowns pause while the browser tab is in the background.
 * Code written against the class names up to 1.5.0, `Acato\RevisionRetention\Settings` for instance, keeps working: the classes moved to `Acato\RevisionRetention\Admin` and `Acato\RevisionRetention\Includes`, and the old names are aliases of the new ones.
+* For developers: the plugin's classes hook themselves in through `::instance()`. Code that created them with `new`, or called their `register()` methods, has to use `::instance()` instead. The `revision_retention_rule`, `revision_retention_eligible_post_types` and `revision_retention_excluded_posts` filters are unchanged.
 
 = 1.5.0 =
 * The time until the next sweep counts down live on the **Sweep** tab, and so does each event's next run under **Cron events** on the **Schedule** tab. Under an hour it shows minutes and seconds, in the site's own language, and once the time has passed it says how long ago it was due.

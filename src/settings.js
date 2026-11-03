@@ -616,6 +616,15 @@
 			let confirmed = false;
 
 			control.addEventListener( 'click', async ( event ) => {
+				// Marked unavailable, while a sweep runs: no question to ask,
+				// and nothing to let through.
+				if ( control.getAttribute( 'aria-disabled' ) === 'true' ) {
+					event.preventDefault();
+					event.stopImmediatePropagation();
+
+					return;
+				}
+
 				if ( confirmed ) {
 					confirmed = false;
 

@@ -112,8 +112,11 @@
 	padding-inline: 1.5em;
 }
 
-.rvrt-settings :is(.rvrt-panel, .rvrt-submit, .rvrt-progress, .rvrt-stop)[hidden] {
-	display: none;
+/* WordPress gives buttons, and some Dashboard rules give other elements, a
+   display that outranks the browser's own rule for [hidden]. Hidden is meant
+   to hide, whatever the element. */
+.rvrt-settings [hidden] {
+	display: none !important;
 }
 
 .rvrt-settings .rvrt-submit .submit {
@@ -475,7 +478,9 @@
 	margin-block-start: 0.5em;
 }
 
-.rvrt-settings [aria-disabled="true"] {
+/* Buttons have core's own unavailable look; dimming them as well would
+   leave them barely visible. */
+.rvrt-settings [aria-disabled="true"]:not(.button) {
 	opacity: 0.5;
 }
 
@@ -1109,12 +1114,6 @@
 	display: flex;
 	gap: 0.25em;
 	margin-block: -0.5em 1em;
-}
-
-/* Some Dashboard rules set display through an ID selector, which outranks
-   the browser's own rule for [hidden]. */
-.rvrt-widget [hidden] {
-	display: none !important;
 }
 
 .rvrt-widget .rvrt-widget-tab {
