@@ -137,7 +137,7 @@ def main() -> int:
         "# This file is distributed under the GPL-2.0-or-later.",
         'msgid ""',
         'msgstr ""',
-        '"Project-Id-Version: Revision Retention 1.5.0\\n"',
+        '"Project-Id-Version: Revision Retention 1.6.0\\n"',
         f'"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/{DOMAIN}\\n"',
         '"Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n"',
         '"Language-Team: LANGUAGE <LL@li.org>\\n"',
