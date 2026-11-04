@@ -4,10 +4,14 @@
 # releases; the code itself goes out with a tag (deploy.yml).
 #
 # The action refuses to deploy whenever anything else in trunk differs from
-# the repository, which is every push that also changed code, and dist/ is
-# never in the checkout because it is built on release. So the job only runs
-# when the readme or the assets changed, and IGNORE_OTHER_FILES has it push
-# those while it leaves the rest of trunk to the next tagged release.
+# the repository, which is every push to main that has unreleased code on it,
+# and dist/ is never in the checkout because it is built on release. So the
+# job only runs when the readme or the assets changed, and IGNORE_OTHER_FILES
+# has it push those while it leaves the rest of trunk to the next release.
+#
+# A push that changes the Stable tag is a release, not a readme fix. Sent
+# ahead of the tag, that readme would point WordPress.org at a tag that is not
+# in SVN yet, so it is left to deploy.yml, which sends the readme with the tag.
 name: Plugin asset/readme update
 on:
   push:
@@ -26,7 +30,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Leave a release to the tag
+        id: release
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if git diff "$BEFORE" HEAD -- readme.txt | grep -qE '^[-+]Stable tag:'; then
+            echo "The Stable tag changes, so the readme goes out with the tag."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: WordPress.org plugin asset/readme update
+        if: steps.release.outputs.skip != 'true'
         uses: 10up/action-wordpress-plugin-asset-update@stable
         env:
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}

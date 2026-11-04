@@ -144,20 +144,6 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 == Changelog ==
 
-= 1.6.0 =
-* A sweep runs once at a time on a site. When the schedule, **Run now** and WP-CLI met on the same site, they could work through the same batch together and count its revisions twice. Now whichever comes second waits: the schedule tries again a minute later, and the screen and WP-CLI say another sweep is running.
-* A revision that could not be deleted is no longer counted as removed.
-* A scheduled batch books the next one before it starts, so a batch that dies halfway no longer stops the schedule on a site nobody logs in to.
-* When the log table cannot be created, the plugin tries again on the next sweep, rather than writing to a table that is not there from then on.
-* Uninstalling the plugin clears its scheduled events on every site of a network, also when its data is kept.
-* Sweeps the schedule ran show as run by the schedule in the log, never by whoever happened to visit the site at the time.
-* Fewer database queries: the settings are autoloaded from the start, the revisions of a batch are read in one query, the revision counts are read once per screen, and the network's Dashboard widget keeps its overview while sweeps are under way.
-* The sweep buttons keep the keyboard focus while a sweep runs, the WordPress spinner shows beside them, and the outcome is read out by screen readers once. Status text, pills, the progress bar and focus rings meet WCAG 2.2 AA contrast on every admin colour scheme. Tabs answer Home and End.
-* Without JavaScript, the Dashboard widget shows both views and every period, and the settings screen every post type, instead of controls that do nothing.
-* The countdowns pause while the browser tab is in the background.
-* Code written against the class names up to 1.5.0, `Acato\RevisionRetention\Settings` for instance, keeps working: the classes moved to `Acato\RevisionRetention\Admin` and `Acato\RevisionRetention\Includes`, and the old names are aliases of the new ones.
-* For developers: the plugin's classes hook themselves in through `::instance()`. Code that created them with `new`, or called their `register()` methods, has to use `::instance()` instead. The `revision_retention_rule`, `revision_retention_eligible_post_types` and `revision_retention_excluded_posts` filters are unchanged.
-
 = 1.5.0 =
 * The time until the next sweep counts down live on the **Sweep** tab, and so does each event's next run under **Cron events** on the **Schedule** tab. Under an hour it shows minutes and seconds, in the site's own language, and once the time has passed it says how long ago it was due.
 * The numbers at the top of the settings screen include the time until the next sweep.

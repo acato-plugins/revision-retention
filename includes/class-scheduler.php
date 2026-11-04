@@ -81,6 +81,13 @@ class Scheduler extends Singleton {
 	private const LOCK_TTL = 10 * MINUTE_IN_SECONDS;
 
 	/**
+	 * The token of the lock this request holds, or empty when it holds none.
+	 *
+	 * @var string
+	 */
+	private static string $lock_token = '';
+
+	/**
 	 * Hook the schedule into WordPress.
 	 *
 	 * @return void
@@ -111,7 +118,10 @@ class Scheduler extends Singleton {
 		wp_clear_scheduled_hook( self::HOOK );
 		delete_option( self::CURSOR_OPTION );
 		delete_option( self::LAST_RUN_OPTION );
-		self::unlock();
+
+		// The lock is left alone: a WP-CLI sweep may be running right now,
+		// and dropping its lock would let a second one start beside it. A
+		// lock nobody holds any more expires by itself.
 	}
 
 	/**
@@ -271,6 +281,13 @@ class Scheduler extends Singleton {
 				(int) Settings::get( 'max_deletions' )
 			);
 
+			// A batch that outlasted the lock may have lost it to another
+			// request, which carries the sweep on from here; storing this
+			// batch's cursor over theirs would send it back.
+			if ( ! self::renew_lock() ) {
+				return $result;
+			}
+
 			self::advance( Log::SOURCE_CRON, $result );
 		} finally {
 			self::unlock();
@@ -286,39 +303,113 @@ class Scheduler extends Singleton {
 	 *
 	 * The option is inserted with INSERT IGNORE, the same way WP_Upgrader takes
 	 * its lock: the row's unique name makes the database decide which of two
-	 * requests gets it, where add_option() would let both through. A lock
-	 * older than LOCK_TTL was left by a request that died, and is taken over.
+	 * requests gets it, where add_option() would let both through. Its value
+	 * is when it was taken and a token of this request's own, so renewing and
+	 * letting go only ever touch this request's lock, never one another
+	 * request took over in the meantime. A lock older than LOCK_TTL was left
+	 * by a request that died, and is taken over.
 	 *
 	 * @return bool Whether this request now holds the lock.
 	 */
 	public static function lock(): bool {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- A lock has to be decided by the database, never by a cache.
-		$claimed = $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'off' )", self::LOCK_OPTION, (string) time() ) );
+		$token = bin2hex( random_bytes( 8 ) );
+		$value = time() . ':' . $token;
 
-		if ( $claimed ) {
-			self::forget_cached_state();
+		// Twice at most: a lock let go of between the INSERT and the SELECT
+		// is gone by the time it is looked at, and is tried for once more.
+		for ( $attempt = 0; $attempt < 2; $attempt++ ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- A lock has to be decided by the database, never by a cache.
+			if ( $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} ( option_name, option_value, autoload ) VALUES ( %s, %s, 'off' )", self::LOCK_OPTION, $value ) ) ) {
+				return self::hold( $token );
+			}
 
-			return true;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read past the cache, which may predate the lock.
+			$held = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::LOCK_OPTION ) );
+
+			if ( null === $held ) {
+				continue;
+			}
+
+			if ( (int) $held > time() - self::LOCK_TTL ) {
+				return false;
+			}
+
+			// Take over a stale lock only if nobody else did in the meantime.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
+			$taken = $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $value, self::LOCK_OPTION, (string) $held ) );
+
+			return $taken ? self::hold( $token ) : false;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read past the cache, which may predate the lock.
-		$since = (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::LOCK_OPTION ) );
+		return false;
+	}
 
-		if ( $since > time() - self::LOCK_TTL ) {
+	/**
+	 * Note that this request holds the lock, under this token.
+	 *
+	 * @param string $token The token in the lock's value.
+	 *
+	 * @return true
+	 */
+	private static function hold( string $token ): bool {
+		self::$lock_token = $token;
+
+		self::forget_cached_state();
+
+		return true;
+	}
+
+	/**
+	 * Hold on to the lock for another LOCK_TTL, for a run of many batches.
+	 *
+	 * Also the check, before a batch's outcome is stored, that the lock is
+	 * still this request's: a batch that ran longer than LOCK_TTL may have
+	 * had it taken over.
+	 *
+	 * @return bool Whether this request still holds the lock.
+	 */
+	public static function renew_lock(): bool {
+		global $wpdb;
+
+		if ( '' === self::$lock_token ) {
 			return false;
 		}
 
-		// Take over a stale lock only if nobody else did in the meantime.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
-		$taken = (bool) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", (string) time(), self::LOCK_OPTION, (string) $since ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The lock lives past the cache, see lock().
+		$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value LIKE %s", time() . ':' . self::$lock_token, self::LOCK_OPTION, '%:' . $wpdb->esc_like( self::$lock_token ) ) );
 
-		if ( $taken ) {
-			self::forget_cached_state();
+		// Read back rather than trusting the affected rows, which MySQL
+		// reports as none when the value happens to be unchanged.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
+		$held = (string) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::LOCK_OPTION ) );
+
+		if ( str_ends_with( $held, ':' . self::$lock_token ) ) {
+			return true;
 		}
 
-		return $taken;
+		self::$lock_token = '';
+
+		return false;
+	}
+
+	/**
+	 * Let go of the sweep on this site, if this request still holds it.
+	 *
+	 * @return void
+	 */
+	public static function unlock(): void {
+		global $wpdb;
+
+		if ( '' === self::$lock_token ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The lock lives past the cache, see lock().
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s AND option_value LIKE %s", self::LOCK_OPTION, '%:' . $wpdb->esc_like( self::$lock_token ) ) );
+
+		self::$lock_token = '';
 	}
 
 	/**
@@ -335,30 +426,6 @@ class Scheduler extends Singleton {
 		wp_cache_delete( 'notoptions', 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( self::CURSOR_OPTION, 'options' );
-	}
-
-	/**
-	 * Hold on to the lock for another LOCK_TTL, for a run of many batches.
-	 *
-	 * @return void
-	 */
-	public static function renew_lock(): void {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The lock lives past the cache, see lock().
-		$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s", (string) time(), self::LOCK_OPTION ) );
-	}
-
-	/**
-	 * Let go of the sweep on this site.
-	 *
-	 * @return void
-	 */
-	public static function unlock(): void {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The lock lives past the cache, see lock().
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name = %s", self::LOCK_OPTION ) );
 	}
 
 	/**

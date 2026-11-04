@@ -290,8 +290,16 @@ class Cli {
 				// cursor, one log entry and one total, whoever runs the next
 				// batch. The lock is renewed so a long run keeps it.
 				if ( $shared ) {
+					// A batch that outlasted the lock may have lost it to the
+					// schedule or the screen, which carry the sweep on; this
+					// batch's cursor must not be stored over theirs.
+					if ( ! Scheduler::renew_lock() ) {
+						WP_CLI::warning( 'Another sweep took over this site while this batch ran, so this run stops here and leaves the rest to it.' );
+
+						break;
+					}
+
 					Scheduler::advance( Log::SOURCE_CLI, $result );
-					Scheduler::renew_lock();
 				} elseif ( ! $dry_run ) {
 					$entry = Log::record( Log::SOURCE_CLI, $result, $entry );
 				}

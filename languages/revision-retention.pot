@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-03T18:39:57+00:00\n"
+"POT-Creation-Date: 2026-11-04T07:51:45+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -490,7 +490,7 @@ msgctxt "rating notice"
 msgid "Don't ask again"
 msgstr ""
 
-#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1669 admin/class-settingspage.php:1717 admin/class-settingspage.php:2023 admin/class-settingspage.php:2286
+#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1669 admin/class-settingspage.php:1717 admin/class-settingspage.php:2029 admin/class-settingspage.php:2292
 msgctxt "permission error"
 msgid "You are not allowed to do this."
 msgstr ""
@@ -667,12 +667,12 @@ msgctxt "column heading"
 msgid "Stored now"
 msgstr ""
 
-#: admin/class-settingspage.php:664 admin/class-settingspage.php:1372 admin/class-settingspage.php:2178
+#: admin/class-settingspage.php:664 admin/class-settingspage.php:1372 admin/class-settingspage.php:2184
 msgctxt "revision support state"
 msgid "On"
 msgstr ""
 
-#: admin/class-settingspage.php:664 admin/class-settingspage.php:2179
+#: admin/class-settingspage.php:664 admin/class-settingspage.php:2185
 msgctxt "revision support state"
 msgid "Off"
 msgstr ""
@@ -714,7 +714,7 @@ msgstr ""
 
 #. translators: %s: the age inherited from the network.
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:840 admin/class-settingspage.php:2173 admin/class-settingspage.php:2208
+#: admin/class-settingspage.php:840 admin/class-settingspage.php:2179 admin/class-settingspage.php:2214
 msgctxt "inherited setting option"
 msgid "Inherit (%s)"
 msgstr ""
@@ -1038,7 +1038,7 @@ msgctxt "column heading"
 msgid "Stored"
 msgstr ""
 
-#: admin/class-settingspage.php:1366 admin/class-settingspage.php:2369
+#: admin/class-settingspage.php:1366 admin/class-settingspage.php:2375
 msgctxt "stored revision count"
 msgid "None"
 msgstr ""
@@ -1101,32 +1101,32 @@ msgctxt "button label"
 msgid "Run now"
 msgstr ""
 
-#: admin/class-settingspage.php:1582 admin/class-settingspage.php:1971
+#: admin/class-settingspage.php:1582 admin/class-settingspage.php:1977
 msgctxt "button label"
 msgid "Stop"
 msgstr ""
 
-#: admin/class-settingspage.php:1593 admin/class-settingspage.php:1982
+#: admin/class-settingspage.php:1593 admin/class-settingspage.php:1988
 msgctxt "accessibility label"
 msgid "Sweep progress"
 msgstr ""
 
-#: admin/class-settingspage.php:1605 admin/class-settingspage.php:1994
+#: admin/class-settingspage.php:1605 admin/class-settingspage.php:2000
 msgctxt "column heading"
 msgid "Post"
 msgstr ""
 
-#: admin/class-settingspage.php:1606 admin/class-settingspage.php:1996
+#: admin/class-settingspage.php:1606 admin/class-settingspage.php:2002
 msgctxt "column heading"
 msgid "Type"
 msgstr ""
 
-#: admin/class-settingspage.php:1607 admin/class-settingspage.php:1997
+#: admin/class-settingspage.php:1607 admin/class-settingspage.php:2003
 msgctxt "column heading"
 msgid "Removing"
 msgstr ""
 
-#: admin/class-settingspage.php:1608 admin/class-settingspage.php:1998
+#: admin/class-settingspage.php:1608 admin/class-settingspage.php:2004
 msgctxt "column heading"
 msgid "Remaining"
 msgstr ""
@@ -1151,80 +1151,80 @@ msgctxt "sweep status"
 msgid "No sweep has finished on this site yet."
 msgstr ""
 
-#: admin/class-settingspage.php:1678 admin/class-settingspage.php:2294
+#: admin/class-settingspage.php:1678 admin/class-settingspage.php:2300
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide, so only a network administrator can sweep it."
 msgstr ""
 
-#: admin/class-settingspage.php:1889
+#: admin/class-settingspage.php:1895
 msgctxt "sweep error"
-msgid "Another sweep is running on this site right now, from the schedule or WP-CLI. Wait a minute and try again."
+msgid "Another sweep is running on this site right now, from the schedule, WP-CLI or an earlier batch that is still being finished. Wait a minute and try again."
 msgstr ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1947
+#: admin/class-settingspage.php:1953
 msgctxt "sweep status"
 msgid "Revisions live in each site's own database, so a sweep belongs to the site rather than to the network."
 msgstr ""
 
-#: admin/class-settingspage.php:1953
+#: admin/class-settingspage.php:1959
 msgctxt "button label"
 msgid "Preview every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1961
+#: admin/class-settingspage.php:1967
 msgctxt "confirmation"
 msgid "This permanently deletes revisions on every site on the network that has the sweep switched on, under each site's own policy. It cannot be undone."
 msgstr ""
 
-#: admin/class-settingspage.php:1962
+#: admin/class-settingspage.php:1968
 msgctxt "confirmation title"
 msgid "Sweep every site now?"
 msgstr ""
 
-#: admin/class-settingspage.php:1965
+#: admin/class-settingspage.php:1971
 msgctxt "button label"
 msgid "Sweep every site now"
 msgstr ""
 
-#: admin/class-settingspage.php:1968
+#: admin/class-settingspage.php:1974
 msgctxt "button label"
 msgid "Schedule a sweep on every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1995
+#: admin/class-settingspage.php:2001
 msgctxt "column heading"
 msgid "Site"
 msgstr ""
 
-#: admin/class-settingspage.php:2008
+#: admin/class-settingspage.php:2014
 msgctxt "field description"
 msgid "Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Sweep every site now does the same and deletes as it goes, site after site, and logs what it removed on each one. It can be stopped, and the schedule picks up whatever is left. Schedule a sweep on every site leaves the work to WP-Cron instead, starting each site within the next few minutes. Both pass over the sites that have switched the sweep off."
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2174
+#: admin/class-settingspage.php:2180
 msgctxt "inherited boolean value"
 msgid "off"
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2174
+#: admin/class-settingspage.php:2180
 msgctxt "inherited boolean value"
 msgid "on"
 msgstr ""
 
-#: admin/class-settingspage.php:2230 admin/class-settingspage.php:2268
+#: admin/class-settingspage.php:2236 admin/class-settingspage.php:2274
 msgctxt "permission error"
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: admin/class-settingspage.php:2236
+#: admin/class-settingspage.php:2242
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide."
 msgstr ""
 
-#: admin/class-settingspage.php:2366
+#: admin/class-settingspage.php:2372
 msgctxt "revisions kept"
 msgid "All"
 msgstr ""
@@ -1278,7 +1278,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1943
+#: admin/class-settingspage.php:1949
 msgctxt "sweep status"
 msgid "Revision Retention is active on %s site."
 msgid_plural "Revision Retention is active on %s sites."
@@ -1436,64 +1436,74 @@ msgctxt "sweep progress"
 msgid "%1$s found, %2$s checked"
 msgstr ""
 
-#: src/settings.js:389 src/settings.js:392
+#: src/settings.js:391 src/settings.js:394
 msgctxt "affected posts list"
 msgid "(no title)"
 msgstr ""
 
-#: src/settings.js:433
+#: src/settings.js:435
 msgctxt "sweep error"
 msgid "The connection dropped before the server answered. The batch may still have run, so a reload of this page shows where the sweep stands."
 msgstr ""
 
-#: src/settings.js:434
+#: src/settings.js:436
 msgctxt "sweep error"
 msgid "The connection dropped before the server answered. A preview deletes nothing, so it is safe to start it again."
 msgstr ""
 
+#: src/settings.js:452
+msgctxt "sweep error"
+msgid "The server took more than five minutes over this batch and may still be working on it. Reload this page in a few minutes to see where the sweep stands."
+msgstr ""
+
+#: src/settings.js:453
+msgctxt "sweep error"
+msgid "The server took more than five minutes over this batch. A preview deletes nothing, so it is safe to start it again in a few minutes."
+msgstr ""
+
 #. translators: %s: HTTP status code, e.g. "502".
-#: src/settings.js:489
+#: src/settings.js:508
 msgctxt "sweep error"
 msgid "The server answered with error %s instead of finishing the batch. The site's error log will say why."
 msgstr ""
 
-#: src/settings.js:499
+#: src/settings.js:518
 msgctxt "sweep error"
 msgid "The server answered with something other than data, which usually means another plugin printed a PHP warning. The site's error log will say what it was."
 msgstr ""
 
-#: src/settings.js:505
+#: src/settings.js:524
 msgctxt "sweep error"
 msgid "The sweep could not be completed."
 msgstr ""
 
-#: src/settings.js:561
+#: src/settings.js:580
 msgctxt "sweep progress"
 msgid "Starting…"
 msgstr ""
 
-#: src/settings.js:573
+#: src/settings.js:592
 msgctxt "sweep result"
 msgid "Stopped. The schedule will finish the rest."
 msgstr ""
 
-#: src/settings.js:574
+#: src/settings.js:593
 msgctxt "sweep result"
 msgid "Stopped part way, so this covers only the posts checked so far."
 msgstr ""
 
-#: src/settings.js:597
+#: src/settings.js:616
 msgctxt "sweep progress"
 msgid "Stopping after this batch…"
 msgstr ""
 
-#: src/settings.js:674
+#: src/settings.js:693
 msgctxt "button label"
 msgid "Cancel"
 msgstr ""
 
 #. translators: %s: number of posts.
-#: src/settings.js:419
+#: src/settings.js:421
 msgctxt "affected posts list"
 msgid "And %s more post."
 msgid_plural "And %s more posts."

@@ -277,10 +277,12 @@
 		const affectedBody = affected.querySelector( 'tbody' );
 		const affectedMore = affected.querySelector( '.rvrt-affected-more' );
 
-		// How long to wait for a batch before treating its answer as lost. A
-		// batch is a couple of hundred posts and takes seconds; a request that
-		// hangs would otherwise leave the bar busy for good.
-		const BATCH_TIMEOUT = 120 * 1000;
+		// How long to wait for a batch before giving up on its answer. A batch
+		// is a couple of hundred posts and takes seconds; this is for a request
+		// that hangs, which would otherwise leave the bar busy for good. Giving
+		// up does not stop the server, which may still finish the batch, so it
+		// is set well past what any PHP time limit lets a batch run.
+		const BATCH_TIMEOUT = 5 * 60 * 1000;
 
 		// The WordPress spinner, beside the buttons while a sweep runs.
 		const spinner = document.createElement( 'span' );
@@ -439,6 +441,23 @@
 			return error;
 		};
 
+		/*
+		 * A batch the browser stopped waiting for. The server may be working on
+		 * it still, and holds the sweep until it is done, so starting again
+		 * straight away would only be told another sweep is running.
+		 */
+		const slow = ( mode ) => {
+			const error = new Error(
+				mode === 'run'
+					? _x( 'The server took more than five minutes over this batch and may still be working on it. Reload this page in a few minutes to see where the sweep stands.', 'sweep error', 'revision-retention' )
+					: _x( 'The server took more than five minutes over this batch. A preview deletes nothing, so it is safe to start it again in a few minutes.', 'sweep error', 'revision-retention' )
+			);
+
+			error.lost = true;
+
+			return error;
+		};
+
 		const report = ( percent, message ) => {
 			fill.style.inlineSize = `${ percent }%`;
 			bar.setAttribute( 'aria-valuenow', String( percent ) );
@@ -461,18 +480,18 @@
 						site: String( site ),
 					} ),
 				} );
-			} catch {
+			} catch ( error ) {
 				// The request went out, so the batch may well have run on the
 				// server; only its answer was lost on the way back.
-				throw lost( mode );
+				throw error?.name === 'TimeoutError' ? slow( mode ) : lost( mode );
 			}
 
 			let text;
 
 			try {
 				text = await response.text();
-			} catch {
-				throw lost( mode );
+			} catch ( error ) {
+				throw error?.name === 'TimeoutError' ? slow( mode ) : lost( mode );
 			}
 
 			let payload;

@@ -1872,6 +1872,12 @@ class SettingsPage extends Singleton {
 
 			$result = $cleaner->sweep( $size, false, $stored, [], $cap );
 
+			// A batch that outlasted the lock may have lost it, and the sweep
+			// is then another request's to store; this one says so.
+			if ( ! Scheduler::renew_lock() ) {
+				return null;
+			}
+
 			$this->remember_sweep( $result );
 		} finally {
 			Scheduler::unlock();
@@ -1886,7 +1892,7 @@ class SettingsPage extends Singleton {
 	 * @return string
 	 */
 	private static function busy_message(): string {
-		return _x( 'Another sweep is running on this site right now, from the schedule or WP-CLI. Wait a minute and try again.', 'sweep error', 'revision-retention' );
+		return _x( 'Another sweep is running on this site right now, from the schedule, WP-CLI or an earlier batch that is still being finished. Wait a minute and try again.', 'sweep error', 'revision-retention' );
 	}
 
 	/**

@@ -631,9 +631,20 @@ check( 'the first request gets the lock', Scheduler::lock(), true );
 check( 'a second one does not', Scheduler::lock(), false );
 Scheduler::unlock();
 check( 'once let go, it can be had again', Scheduler::lock(), true );
-$GLOBALS['wpdb']->lock = (string) ( time() - HOUR_IN_SECONDS );
+Scheduler::unlock();
+$GLOBALS['wpdb']->lock = ( time() - HOUR_IN_SECONDS ) . ':someone-else';
 check( 'a lock left by a request that died is taken over', Scheduler::lock(), true );
-check( 'and is then this request\'s own', (int) $GLOBALS['wpdb']->lock >= time() - 1, true );
+check( 'and is then this request\'s own', (int) $GLOBALS['wpdb']->lock >= time() - 1 && ! str_ends_with( $GLOBALS['wpdb']->lock, ':someone-else' ), true );
+// The request that died wakes up after all, and finds its lock taken.
+$GLOBALS['wpdb']->lock = time() . ':the-new-owner';
+check( 'a request whose lock was taken over learns it lost it', Scheduler::renew_lock(), false );
+Scheduler::unlock();
+check( 'and letting go leaves the new owner\'s lock alone', $GLOBALS['wpdb']->lock, time() . ':the-new-owner' );
+check( 'deactivating leaves a running sweep\'s lock alone', ( static function () { Scheduler::on_deactivation(); return $GLOBALS['wpdb']->lock; } )(), time() . ':the-new-owner' );
+$GLOBALS['wpdb']->lock = null;
+$GLOBALS['wpdb']->lock_released_meanwhile = true;
+check( 'a lock let go of while it was being looked at is tried for again', Scheduler::lock(), true );
+Scheduler::unlock();
 
 // A scheduled batch while the screen holds the lock deletes nothing, and
 // still leaves the next batch booked.
@@ -641,10 +652,11 @@ update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 30, 'cron
 $GLOBALS['wpdb']->candidates = array( array( 'parent_id' => 7, 'post_type' => 'post' ) );
 $GLOBALS['wpdb']->revisions  = array( 7 => array( array( 'ID' => 70, 'post_date_gmt' => '2001-01-01 00:00:00' ) ) );
 Policy::flush();
+$GLOBALS['wpdb']->lock = time() . ':the-screen';
 $locked = Scheduler::instance()->run();
 check( 'a locked sweep deletes nothing', array( $locked->revisions, $GLOBALS['t_deleted'] ), array( 0, array() ) );
 check( 'and books the next try', (int) wp_next_scheduled( Scheduler::HOOK ) > time(), true );
-Scheduler::unlock();
+$GLOBALS['wpdb']->lock = null;
 $unlocked = Scheduler::instance()->run();
 check( 'without the lock held, the batch runs', $unlocked->revisions, 1 );
 check( 'and lets go of the lock after', $GLOBALS['wpdb']->lock, null );
@@ -665,6 +677,24 @@ Policy::flush();
 $partial = ( new Cleaner() )->sweep( 100, false );
 check( 'a revision that could not be deleted is not counted', array( $partial->revisions, $partial->items[0]['kept'] ), array( 1, 1 ) );
 $GLOBALS['t_undeletable'] = array();
+
+// Revisions are read 25 posts at a time, and not at all past the cap.
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 30 ) );
+$GLOBALS['wpdb']->candidates = array();
+$GLOBALS['wpdb']->revisions  = array();
+for ( $n = 1; $n <= 60; $n++ ) {
+	$GLOBALS['wpdb']->candidates[]     = array( 'parent_id' => $n, 'post_type' => 'post' );
+	$GLOBALS['wpdb']->revisions[ $n ] = array( array( 'ID' => 1000 + $n, 'post_date_gmt' => '2001-01-01 00:00:00' ) );
+}
+Policy::flush();
+$reads = static fn(): int => count( array_filter( $GLOBALS['wpdb']->queries, static fn( $q ) => str_contains( $q['query'], 'post_parent IN' ) ) );
+$GLOBALS['wpdb']->queries = array();
+$all = ( new Cleaner() )->sweep( 100, true );
+check( 'sixty posts take three revisions queries', array( $all->revisions, $reads() ), array( 60, 3 ) );
+$GLOBALS['wpdb']->queries = array();
+$capped = ( new Cleaner() )->sweep( 100, true, 0, array(), 10 );
+check( 'and a cap reached in the first chunk reads no more', array( $capped->revisions, $reads() ), array( 10, 1 ) );
 
 /* ------------------------------------------------------ 24. Upgrade */
 echo "\nUpgrade\n";

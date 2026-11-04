@@ -43,6 +43,13 @@ class Cleaner {
 	private static ?array $counts = null;
 
 	/**
+	 * How many posts' revisions are read in one query.
+	 *
+	 * @var int
+	 */
+	private const REVISIONS_CHUNK = 25;
+
+	/**
 	 * Remove one batch of revisions.
 	 *
 	 * @param int                $batch_size    Posts to work through in this batch.
@@ -85,12 +92,21 @@ class Cleaner {
 		$capped    = false;
 		$last      = $cursor;
 		$affected  = [];
-		$revisions = $this->revisions_of( array_diff( array_map( 'intval', array_column( $candidates, 'parent_id' ) ), $excluded ) );
+		$revisions = [];
 
 		foreach ( $candidates as $candidate ) {
 			$parent_id = (int) ( $candidate['parent_id'] ?? 0 );
 			$last      = $parent_id;
 			++$processed;
+
+			// The revisions are read for a few posts at a time: one query per
+			// post was a query too many, all of a batch at once could be more
+			// rows than memory holds when posts carry thousands, and the posts
+			// past the deletion cap are never read at all.
+			if ( 0 === ( $processed - 1 ) % self::REVISIONS_CHUNK ) {
+				$chunk     = array_slice( $candidates, $processed - 1, self::REVISIONS_CHUNK );
+				$revisions = $this->revisions_of( array_values( array_diff( array_map( 'intval', array_column( $chunk, 'parent_id' ) ), $excluded ) ) );
+			}
 
 			if ( in_array( $parent_id, $excluded, true ) ) {
 				continue;

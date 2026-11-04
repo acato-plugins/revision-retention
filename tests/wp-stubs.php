@@ -143,18 +143,29 @@ class Test_WPDB {
 	public function get_row( $q, $output = null ) { return $this->row; }
 	// The sweep lock: a row in the options table, claimed with INSERT IGNORE.
 	public $lock = null;
+	public $lock_released_meanwhile = false;
 	public $options = 'wp_options';
 	public function query( $q ) {
-		$sql = is_array( $q ) ? $q['query'] : $q;
+		$sql  = is_array( $q ) ? $q['query'] : $q;
+		$args = is_array( $q ) ? $q['args'] : array();
+		// A LIKE '%:token' match, the way the lock names its owner.
+		$owns = fn( $like ) => null !== $this->lock && str_ends_with( $this->lock, substr( stripslashes( $like ), 1 ) );
 		if ( str_starts_with( $sql, 'INSERT IGNORE' ) ) {
+			// A lock that was let go of between the INSERT and the SELECT.
+			if ( $this->lock_released_meanwhile ) { $this->lock_released_meanwhile = false; $this->lock = null; return 0; }
 			if ( null !== $this->lock ) { return 0; }
-			$this->lock = (string) $q['args'][1];
+			$this->lock = (string) $args[1];
 			return 1;
 		}
-		if ( str_starts_with( $sql, 'DELETE' ) ) { $this->lock = null; return 1; }
+		if ( str_starts_with( $sql, 'DELETE' ) ) {
+			if ( str_contains( $sql, 'LIKE' ) && ! $owns( $args[1] ) ) { return 0; }
+			$this->lock = null;
+			return 1;
+		}
 		if ( str_starts_with( $sql, 'UPDATE' ) ) {
-			if ( null === $this->lock || ( isset( $q['args'][2] ) && $this->lock !== $q['args'][2] ) ) { return 0; }
-			$this->lock = (string) $q['args'][0];
+			$match = str_contains( $sql, 'LIKE' ) ? $owns( $args[2] ) : ( null !== $this->lock && $this->lock === $args[2] );
+			if ( ! $match ) { return 0; }
+			$this->lock = (string) $args[0];
 			return 1;
 		}
 		return 1;
