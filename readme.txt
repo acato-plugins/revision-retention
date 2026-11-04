@@ -136,11 +136,12 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 
 == Screenshots ==
 
-1. The settings screen, with the policy in force at the top and every post type's rule and stored revisions below it.
+1. The settings screen, with the policy in force and the time until the next sweep at the top, and every post type's rule and stored revisions below it.
 2. Preview reporting what the policy would take from each post, and what each post keeps, before anything is deleted.
-3. The schedule: how often the sweep runs, how many posts it looks at per batch, and the most it may delete in one.
+3. The schedule: on which days and at what time the sweep runs, whether WP-Cron is running, how many posts it looks at per batch, and the most it may delete in one.
 4. The log as a timeline: a bar per day for the last month, and every sweep with who ran it, what it removed per post type, and whether it finished.
 5. The network's Logs tab, which shows every site's log together and names the site each sweep ran on.
+6. The Dashboard widget: the sweeps of the last days, weeks or months, for this site or the whole network, and when the next one is due.
 
 == Changelog ==
 
