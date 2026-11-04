@@ -36,6 +36,7 @@ function update_site_option( $k, $v ) { $GLOBALS['t_site_options'][ $k ] = $v; r
 function delete_site_option( $k ) { unset( $GLOBALS['t_site_options'][ $k ] ); return true; }
 function add_filter( $h, $cb, $p = 10, $a = 1 ) { $GLOBALS['t_filters'][ $h ][] = $cb; }
 function add_action( $h, $cb, $p = 10, $a = 1 ) {}
+function has_filter( $h ) { return ! empty( $GLOBALS["t_filters"][ $h ] ); }
 function apply_filters( $h, $v, ...$rest ) {
 	foreach ( $GLOBALS['t_filters'][ $h ] ?? array() as $cb ) { $v = $cb( $v, ...$rest ); }
 	return $v;
@@ -53,7 +54,20 @@ function sanitize_key( $s ) { return strtolower( preg_replace( '/[^a-z0-9_\-]/i'
 function post_type_exists( $t ) { return array_key_exists( $t, $GLOBALS['t_supports'] ); }
 function post_type_supports( $t, $f ) { return in_array( $f, $GLOBALS['t_supports'][ $t ] ?? array(), true ); }
 function add_post_type_support( $t, $f ) { $GLOBALS['t_supports'][ $t ][] = $f; }
-function wp_delete_post_revision( $id ) { $GLOBALS['t_deleted'][] = (int) $id; return true; }
+function is_wp_error( $v ) { return false; }
+function wp_cache_delete( $k, $g = '' ) { return true; }
+// A revision listed in t_undeletable is one WordPress refuses to delete.
+function wp_delete_post_revision( $id ) {
+	if ( in_array( (int) $id, $GLOBALS['t_undeletable'] ?? array(), true ) ) { return false; }
+	$GLOBALS['t_deleted'][] = (int) $id;
+	return true;
+}
+function add_option( $k, $v = '', $d = '', $a = null ) {
+	if ( array_key_exists( $k, $GLOBALS['t_options'] ) ) { return false; }
+	$GLOBALS['t_options'][ $k ]  = $v;
+	$GLOBALS['t_autoload'][ $k ] = $a;
+	return true;
+}
 // The cron queue as hook => timestamp, which is all the scheduler books.
 function wp_next_scheduled( $h ) { return $GLOBALS['t_cron'][ $h ] ?? false; }
 function wp_schedule_single_event( $t, $h ) { $GLOBALS['t_cron'][ $h ] = (int) $t; return true; }
@@ -127,6 +141,40 @@ class Test_WPDB {
 	public $row = null;
 	public function update( $table, $data, $where, $format = null, $where_format = null ) { $this->updates[] = array( $data, $where ); return 1; }
 	public function get_row( $q, $output = null ) { return $this->row; }
+	// The sweep lock: a row in the options table, claimed with INSERT IGNORE.
+	public $lock = null;
+	public $lock_released_meanwhile = false;
+	public $options = 'wp_options';
+	public function query( $q ) {
+		$sql  = is_array( $q ) ? $q['query'] : $q;
+		$args = is_array( $q ) ? $q['args'] : array();
+		// A LIKE '%:token' match, the way the lock names its owner.
+		$owns = fn( $like ) => null !== $this->lock && str_ends_with( $this->lock, substr( stripslashes( $like ), 1 ) );
+		if ( str_starts_with( $sql, 'INSERT IGNORE' ) ) {
+			// A lock that was let go of between the INSERT and the SELECT.
+			if ( $this->lock_released_meanwhile ) { $this->lock_released_meanwhile = false; $this->lock = null; return 0; }
+			if ( null !== $this->lock ) { return 0; }
+			$this->lock = (string) $args[1];
+			return 1;
+		}
+		if ( str_starts_with( $sql, 'DELETE' ) ) {
+			if ( str_contains( $sql, 'LIKE' ) && ! $owns( $args[1] ) ) { return 0; }
+			$this->lock = null;
+			return 1;
+		}
+		if ( str_starts_with( $sql, 'UPDATE' ) ) {
+			$match = str_contains( $sql, 'LIKE' ) ? $owns( $args[2] ) : ( null !== $this->lock && $this->lock === $args[2] );
+			if ( ! $match ) { return 0; }
+			$this->lock = (string) $args[0];
+			return 1;
+		}
+		return 1;
+	}
+	public function get_var( $q ) {
+		$sql = is_array( $q ) ? $q['query'] : $q;
+		if ( str_contains( $sql, 'option_value' ) ) { return $this->lock; }
+		return null;
+	}
 	public $queries = array();
 	public function prepare( $q, ...$a ) {
 		if ( 1 === count( $a ) && is_array( $a[0] ) ) { $a = $a[0]; }
@@ -142,19 +190,36 @@ class Test_WPDB {
 			$rows = array_values( array_filter( $this->candidates, fn( $r ) => $r['parent_id'] > $cursor ) );
 			return array_slice( $rows, 0, $limit );
 		}
-		if ( str_contains( $sql, 'ORDER BY post_date_gmt DESC' ) ) {
-			$parent = (int) $q['args'][0];
-			return $this->revisions[ $parent ] ?? array();
+		if ( str_contains( $sql, 'post_parent IN' ) ) {
+			$rows = array();
+			foreach ( array_slice( $q['args'], 0, -1 ) as $parent ) {
+				foreach ( $this->revisions[ (int) $parent ] ?? array() as $row ) {
+					$rows[] = $row + array( 'post_parent' => (int) $parent );
+				}
+			}
+			return $rows;
 		}
 		return array();
 	}
 }
 $GLOBALS['wpdb'] = new Test_WPDB();
 
-$dir = __DIR__ . '/../includes/';
-foreach ( array( 'retention-rule', 'post-types', 'settings', 'policy', 'sweep-result', 'cleaner', 'scheduler', 'log', 'cron-health', 'rating-notice', 'assets', 'plugin' ) as $c ) {
-	require_once $dir . 'class-' . $c . '.php';
-}
+// The same mapping as rvrt_autoload() in the bootstrap, which cannot be
+// loaded here without booting the whole plugin.
+spl_autoload_register(
+	static function ( string $class_name ): void {
+		$prefix = 'Acato\\RevisionRetention\\';
+		if ( ! str_starts_with( $class_name, $prefix ) ) {
+			return;
+		}
+		$parts = explode( '\\', strtolower( substr( $class_name, strlen( $prefix ) ) ) );
+		$name  = array_pop( $parts );
+		$file  = __DIR__ . '/../' . implode( '/', $parts ) . '/class-' . $name . '.php';
+		if ( is_readable( $file ) ) {
+			require_once $file;
+		}
+	}
+);
 
 define( 'RVRT_PLUGIN_FILE', __DIR__ . '/../revision-retention.php' );
 define( 'RVRT_VERSION', '1.5.0' );

@@ -7,7 +7,9 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Admin;
+
+use Acato\RevisionRetention\Includes\Singleton;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-final class Assets {
+final class Assets extends Singleton {
 
 	/**
 	 * Folder the build writes to, inside the plugin.
@@ -42,8 +44,8 @@ final class Assets {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_filter( 'load_script_textdomain_relative_path', array( self::class, 'translation_path' ), 10, 2 );
+	protected function init(): void {
+		add_filter( 'load_script_textdomain_relative_path', [ self::class, 'translation_path' ], 10, 2 );
 	}
 
 	/**
@@ -119,7 +121,7 @@ final class Assets {
 		$contents = is_readable( $path ) ? file_get_contents( $path ) : false; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- A local file of the plugin's own, not a remote request.
 		$decoded  = false === $contents ? null : json_decode( $contents, true );
 
-		self::$manifest = is_array( $decoded ) ? $decoded : array();
+		self::$manifest = is_array( $decoded ) ? $decoded : [];
 
 		return self::$manifest;
 	}

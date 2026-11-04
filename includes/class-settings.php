@@ -7,7 +7,9 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
+
+use DateTimeImmutable;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -49,7 +51,7 @@ class Settings {
 	 *
 	 * @var array<string, int>
 	 */
-	private const INTERVALS = array(
+	private const INTERVALS = [
 		'hourly'      => HOUR_IN_SECONDS,
 		'four_hourly' => 4 * HOUR_IN_SECONDS,
 		'twicedaily'  => 12 * HOUR_IN_SECONDS,
@@ -57,7 +59,7 @@ class Settings {
 		'weekly'      => WEEK_IN_SECONDS,
 		'fortnightly' => 2 * WEEK_IN_SECONDS,
 		'monthly'     => MONTH_IN_SECONDS,
-	);
+	];
 
 	/**
 	 * The interval that runs on chosen days of the week rather than after a
@@ -75,7 +77,7 @@ class Settings {
 	 *
 	 * @var array<int, int>
 	 */
-	private const DEFAULT_DAYS = array( 1 );
+	private const DEFAULT_DAYS = [ 1 ];
 
 	/**
 	 * Time of day a sweep on chosen days starts unless a site says otherwise,
@@ -110,13 +112,13 @@ class Settings {
 	 *
 	 * @var array<string, int>
 	 */
-	private const LOG_RETENTION = array(
+	private const LOG_RETENTION = [
 		'week'      => 7,
 		'month'     => 30,
 		'quarter'   => 90,
 		'half_year' => 180,
 		'year'      => 365,
-	);
+	];
 
 	/**
 	 * How long log entries are kept unless a site says otherwise.
@@ -155,11 +157,11 @@ class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function defaults(): array {
-		return array(
+		return [
 			'keep'                     => 5,
 			'max_age_days'             => 365,
-			'post_types'               => array(),
-			'enable_revisions'         => array(),
+			'post_types'               => [],
+			'enable_revisions'         => [],
 			'cron_enabled'             => true,
 			'cron_interval'            => self::DEFAULT_INTERVAL,
 			'cron_days'                => self::DEFAULT_DAYS,
@@ -171,8 +173,8 @@ class Settings {
 			'log_retention'            => self::DEFAULT_LOG_RETENTION,
 			'remove_data_on_uninstall' => false,
 			'dashboard_widget'         => false,
-			'widget_roles'             => array(),
-		);
+			'widget_roles'             => [],
+		];
 	}
 
 	/**
@@ -181,7 +183,7 @@ class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function network_defaults(): array {
-		return self::defaults() + array( 'allow_site_override' => true );
+		return self::defaults() + [ 'allow_site_override' => true ];
 	}
 
 	/**
@@ -198,7 +200,7 @@ class Settings {
 	 * @return array<string, string>
 	 */
 	public static function overridable(): array {
-		return array(
+		return [
 			'keep'                     => 'int',
 			'max_age_days'             => 'int',
 			'cron_enabled'             => 'bool',
@@ -212,7 +214,7 @@ class Settings {
 			'log_retention'            => 'enum',
 			'remove_data_on_uninstall' => 'bool',
 			'dashboard_widget'         => 'bool',
-		);
+		];
 	}
 
 	/**
@@ -221,7 +223,7 @@ class Settings {
 	 * @return array<string, string>
 	 */
 	public static function intervals(): array {
-		return array(
+		return [
 			'hourly'       => _x( 'Every hour', 'sweep interval', 'revision-retention' ),
 			'four_hourly'  => _x( 'Every 4 hours', 'sweep interval', 'revision-retention' ),
 			'twicedaily'   => _x( 'Every 12 hours (twice a day)', 'sweep interval', 'revision-retention' ),
@@ -230,7 +232,7 @@ class Settings {
 			'fortnightly'  => _x( 'Every 14 days', 'sweep interval', 'revision-retention' ),
 			'monthly'      => _x( 'Once a month', 'sweep interval', 'revision-retention' ),
 			self::WEEKDAYS => _x( 'On chosen days of the week', 'sweep interval', 'revision-retention' ),
-		);
+		];
 	}
 
 	/**
@@ -239,13 +241,13 @@ class Settings {
 	 * @return array<string, string>
 	 */
 	public static function log_retentions(): array {
-		return array(
+		return [
 			'week'      => _x( 'One week', 'log retention', 'revision-retention' ),
 			'month'     => _x( 'One month', 'log retention', 'revision-retention' ),
 			'quarter'   => _x( 'Three months', 'log retention', 'revision-retention' ),
 			'half_year' => _x( 'Six months', 'log retention', 'revision-retention' ),
 			'year'      => _x( 'One year', 'log retention', 'revision-retention' ),
-		);
+		];
 	}
 
 	/**
@@ -272,7 +274,7 @@ class Settings {
 	 * @return array<int, string>
 	 */
 	public static function age_choices(): array {
-		return array(
+		return [
 			0    => _x( 'Never', 'age threshold', 'revision-retention' ),
 			7    => _x( '7 days', 'age threshold', 'revision-retention' ),
 			14   => _x( '14 days', 'age threshold', 'revision-retention' ),
@@ -284,7 +286,7 @@ class Settings {
 			730  => _x( '2 years', 'age threshold', 'revision-retention' ),
 			1095 => _x( '3 years', 'age threshold', 'revision-retention' ),
 			1825 => _x( '5 years', 'age threshold', 'revision-retention' ),
-		);
+		];
 	}
 
 	/**
@@ -324,7 +326,7 @@ class Settings {
 	public static function days(): array {
 		$days = self::get( 'cron_days' );
 
-		return is_array( $days ) && array() !== $days ? array_map( 'intval', $days ) : self::DEFAULT_DAYS;
+		return is_array( $days ) && [] !== $days ? array_map( 'intval', $days ) : self::DEFAULT_DAYS;
 	}
 
 	/**
@@ -379,7 +381,7 @@ class Settings {
 		// Every hour runs all day, at the chosen minutes past each hour.
 		$first = 1 === $repeat ? $first % 60 : $first;
 		$step  = ( $repeat > 0 ? $repeat : 24 ) * 60;
-		$start = ( new \DateTimeImmutable( '@' . $after ) )->setTimezone( wp_timezone() );
+		$start = ( new DateTimeImmutable( '@' . $after ) )->setTimezone( wp_timezone() );
 
 		// Today counts too, as long as one of its slots has not passed yet,
 		// which is why this looks eight days ahead rather than seven.
@@ -408,9 +410,9 @@ class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function network(): array {
-		$stored = is_multisite() ? get_site_option( self::NETWORK_OPTION, array() ) : array();
+		$stored = is_multisite() ? get_site_option( self::NETWORK_OPTION, [] ) : [];
 
-		return self::fill( is_array( $stored ) ? $stored : array(), self::network_defaults() );
+		return self::fill( is_array( $stored ) ? $stored : [], self::network_defaults() );
 	}
 
 	/**
@@ -423,9 +425,9 @@ class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function site(): array {
-		$stored = get_option( self::OPTION, array() );
+		$stored = get_option( self::OPTION, [] );
 
-		return is_array( $stored ) ? $stored : array();
+		return is_array( $stored ) ? $stored : [];
 	}
 
 	/**
@@ -452,7 +454,7 @@ class Settings {
 		}
 
 		$network  = self::network();
-		$resolved = self::fill( array(), $network );
+		$resolved = self::fill( [], $network );
 
 		if ( ! self::allows_site_override() ) {
 			return $resolved;
@@ -467,15 +469,15 @@ class Settings {
 		}
 
 		$resolved['post_types'] = self::merge_post_types(
-			is_array( $network['post_types'] ) ? $network['post_types'] : array(),
-			isset( $site['post_types'] ) && is_array( $site['post_types'] ) ? $site['post_types'] : array()
+			is_array( $network['post_types'] ) ? $network['post_types'] : [],
+			isset( $site['post_types'] ) && is_array( $site['post_types'] ) ? $site['post_types'] : []
 		);
-		foreach ( array( 'enable_revisions', 'widget_roles' ) as $key ) {
+		foreach ( [ 'enable_revisions', 'widget_roles' ] as $key ) {
 			$resolved[ $key ] = array_values(
 				array_unique(
 					array_merge(
-						is_array( $network[ $key ] ?? null ) ? $network[ $key ] : array(),
-						isset( $site[ $key ] ) && is_array( $site[ $key ] ) ? $site[ $key ] : array()
+						is_array( $network[ $key ] ?? null ) ? $network[ $key ] : [],
+						isset( $site[ $key ] ) && is_array( $site[ $key ] ) ? $site[ $key ] : []
 					)
 				)
 			);
@@ -505,7 +507,7 @@ class Settings {
 	 * @return void
 	 */
 	public static function update_site( array $settings ): void {
-		update_option( self::OPTION, $settings );
+		update_option( self::OPTION, $settings, true );
 	}
 
 	/**
@@ -545,7 +547,11 @@ class Settings {
 		$promoted['allow_site_override'] = ! empty( self::network()['allow_site_override'] );
 
 		self::update_network( $promoted );
-		delete_option( self::OPTION );
+
+		// Emptied rather than deleted: the option is read on every request, and
+		// one that is missing costs a query each time, where an autoloaded one
+		// comes with the rest.
+		self::update_site( [] );
 	}
 
 
@@ -598,7 +604,7 @@ class Settings {
 		$roles = (array) self::get( 'widget_roles' );
 		$user  = wp_get_current_user();
 
-		return array() !== array_intersect( $roles, (array) $user->roles );
+		return [] !== array_intersect( $roles, (array) $user->roles );
 	}
 
 	/**
@@ -625,10 +631,10 @@ class Settings {
 	 * @return array<string, mixed>
 	 */
 	public static function sanitize( $input, bool $is_network = false ): array {
-		$input     = is_array( $input ) ? $input : array();
+		$input     = is_array( $input ) ? $input : [];
 		$defaults  = $is_network ? self::network_defaults() : self::defaults();
 		$nullable  = is_multisite() && ! $is_network;
-		$sanitized = array();
+		$sanitized = [];
 
 		// Every hour reads only the minutes of the time, see sanitize_time().
 		$repeat = $input['cron_repeat'] ?? null;
@@ -640,7 +646,7 @@ class Settings {
 			// The days and the times go with the interval they belong to, so a
 			// site inheriting the interval inherits them as well, rather than
 			// pinning the days the screen happened to show behind it.
-			$inherits = in_array( $type, array( 'days', 'time', 'repeat' ), true )
+			$inherits = in_array( $type, [ 'days', 'time', 'repeat' ], true )
 				? ! isset( $sanitized['cron_interval'] )
 				: null === $raw || '' === $raw;
 
@@ -687,7 +693,7 @@ class Settings {
 
 		return match ( $key ) {
 			// Anything below zero means the same thing, so it is normalised.
-			'keep' => max( Retention_Rule::UNLIMITED, $number ),
+			'keep' => max( RetentionRule::UNLIMITED, $number ),
 			'batch_size' => min( self::MAX_BATCH_SIZE, max( self::MIN_BATCH_SIZE, $number ) ),
 			'max_deletions' => min( self::MAX_DELETIONS, max( 0, $number ) ),
 			default => max( 0, $number ),
@@ -705,7 +711,7 @@ class Settings {
 	 */
 	private static function sanitize_choice( string $key, $value, string $fallback ): string {
 		$value   = is_string( $value ) ? $value : '';
-		$allowed = 'log_retention' === $key ? self::LOG_RETENTION : self::INTERVALS + array( self::WEEKDAYS => 0 );
+		$allowed = 'log_retention' === $key ? self::LOG_RETENTION : self::INTERVALS + [ self::WEEKDAYS => 0 ];
 
 		return isset( $allowed[ $value ] ) ? $value : $fallback;
 	}
@@ -780,9 +786,9 @@ class Settings {
 	 * @return array<int, int>
 	 */
 	private static function sanitize_days( $input ): array {
-		$days = array();
+		$days = [];
 
-		foreach ( is_array( $input ) ? $input : array() as $day ) {
+		foreach ( is_array( $input ) ? $input : [] as $day ) {
 			if ( is_numeric( $day ) && (int) $day >= 0 && (int) $day <= 6 ) {
 				$days[] = (int) $day;
 			}
@@ -791,7 +797,7 @@ class Settings {
 		$days = array_values( array_unique( $days ) );
 		sort( $days );
 
-		return array() !== $days ? $days : self::DEFAULT_DAYS;
+		return [] !== $days ? $days : self::DEFAULT_DAYS;
 	}
 
 	/**
@@ -803,11 +809,11 @@ class Settings {
 	 */
 	private static function sanitize_post_types( $input ): array {
 		if ( ! is_array( $input ) ) {
-			return array();
+			return [];
 		}
 
-		$eligible  = Post_Types::eligible();
-		$sanitized = array();
+		$eligible  = PostTypes::eligible();
+		$sanitized = [];
 
 		foreach ( $input as $post_type => $values ) {
 			$post_type = (string) $post_type;
@@ -816,9 +822,9 @@ class Settings {
 				continue;
 			}
 
-			$rule = array();
+			$rule = [];
 
-			foreach ( array( 'keep', 'max_age_days' ) as $key ) {
+			foreach ( [ 'keep', 'max_age_days' ] as $key ) {
 				$raw = $values[ $key ] ?? null;
 
 				// A per post type field is always inheritable: left empty it
@@ -830,7 +836,7 @@ class Settings {
 				$rule[ $key ] = self::sanitize_number( $key, $raw, 0 );
 			}
 
-			if ( array() !== $rule ) {
+			if ( [] !== $rule ) {
 				$sanitized[ $post_type ] = $rule;
 			}
 		}
@@ -847,11 +853,11 @@ class Settings {
 	 */
 	private static function sanitize_post_type_list( $input ): array {
 		if ( ! is_array( $input ) ) {
-			return array();
+			return [];
 		}
 
-		$eligible = Post_Types::eligible();
-		$list     = array();
+		$eligible = PostTypes::eligible();
+		$list     = [];
 
 		foreach ( $input as $post_type ) {
 			$post_type = sanitize_key( (string) $post_type );
@@ -876,11 +882,11 @@ class Settings {
 	 */
 	private static function sanitize_roles( $input ): array {
 		if ( ! is_array( $input ) ) {
-			return array();
+			return [];
 		}
 
 		$known = wp_roles()->get_names();
-		$list  = array();
+		$list  = [];
 
 		foreach ( $input as $role ) {
 			$role = sanitize_key( (string) $role );
@@ -924,10 +930,10 @@ class Settings {
 	 * @return array<string, array<string, int>>
 	 */
 	private static function merge_post_types( array $network, array $site ): array {
-		$merged = array();
+		$merged = [];
 
 		foreach ( array_keys( $network + $site ) as $post_type ) {
-			$rule = array();
+			$rule = [];
 
 			if ( isset( $network[ $post_type ] ) && is_array( $network[ $post_type ] ) ) {
 				$rule = $network[ $post_type ];
@@ -937,7 +943,7 @@ class Settings {
 				$rule = array_merge( $rule, $site[ $post_type ] );
 			}
 
-			if ( array() !== $rule ) {
+			if ( [] !== $rule ) {
 				$merged[ (string) $post_type ] = $rule;
 			}
 		}

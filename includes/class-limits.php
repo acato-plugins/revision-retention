@@ -7,7 +7,9 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
+
+use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,15 +23,15 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Limits {
+class Limits extends Singleton {
 
 	/**
 	 * Hook the limit into WordPress.
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_filter( 'wp_revisions_to_keep', array( $this, 'filter_revisions_to_keep' ), 10, 2 );
+	protected function init(): void {
+		add_filter( 'wp_revisions_to_keep', [ $this, 'filter_revisions_to_keep' ], 10, 2 );
 	}
 
 	/**
@@ -45,7 +47,7 @@ class Limits {
 	 * @return mixed
 	 */
 	public function filter_revisions_to_keep( $num, $post = null ) {
-		if ( ! $post instanceof \WP_Post ) {
+		if ( ! $post instanceof WP_Post ) {
 			return $num;
 		}
 

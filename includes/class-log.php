@@ -7,7 +7,9 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
+
+use DateTimeImmutable;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,7 +33,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Log {
+class Log extends Singleton {
 
 	/**
 	 * Option holding the version of the table this site has.
@@ -119,13 +121,20 @@ class Log {
 	private const STALE_AFTER = 15 * MINUTE_IN_SECONDS;
 
 	/**
+	 * The network's log tables, once listed in this request.
+	 *
+	 * @var array<int, string>|null
+	 */
+	private static ?array $network_tables = null;
+
+	/**
 	 * Hook the log into WordPress.
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_action( self::PRUNE_HOOK, array( self::class, 'prune' ) );
-		add_action( 'admin_init', array( $this, 'ensure_pruning' ) );
+	protected function init(): void {
+		add_action( self::PRUNE_HOOK, [ self::class, 'prune' ] );
+		add_action( 'admin_init', [ $this, 'ensure_pruning' ] );
 	}
 
 	/**
@@ -223,7 +232,16 @@ class Log {
 			) {$charset};"
 		);
 
-		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+		// dbDelta() reports nothing when the CREATE fails, for want of the
+		// privilege or of disk space. Marking the table as there regardless
+		// would have every later batch write into a table that is not, and
+		// never try again; leaving the version unset has the next batch retry.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Checking the plugin's own table right after creating it.
+		if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) {
+			return;
+		}
+
+		update_option( self::DB_VERSION_OPTION, self::DB_VERSION, true );
 	}
 
 	/**
@@ -244,20 +262,24 @@ class Log {
 	/**
 	 * Add what a batch removed to the log.
 	 *
-	 * @param string       $source One of the SOURCE_ constants.
-	 * @param Sweep_Result $result What the batch did.
-	 * @param int          $entry  Entry this batch continues, or 0 to start one. Only
-	 *                             ever an ID the plugin stored itself, never one posted.
+	 * @param string      $source One of the SOURCE_ constants.
+	 * @param SweepResult $result What the batch did.
+	 * @param int         $entry  Entry this batch continues, or 0 to start one. Only
+	 *                            ever an ID the plugin stored itself, never one posted.
 	 *
 	 * @return int The entry holding this sweep, or 0 while there is none.
 	 */
-	public static function record( string $source, Sweep_Result $result, int $entry = 0 ): int {
+	public static function record( string $source, SweepResult $result, int $entry = 0 ): int {
 		if ( $result->dry_run || ! self::enabled() ) {
 			return 0;
 		}
 
-		$now     = current_time( 'mysql', true );
-		$user_id = get_current_user_id();
+		$now = current_time( 'mysql', true );
+
+		// The schedule acts for nobody. Cron runs on the request of whoever
+		// happens to visit, or under `wp cron event run --user=`, and that
+		// person did not start the sweep.
+		$user_id = self::SOURCE_CRON === $source ? 0 : get_current_user_id();
 		$types   = self::count_types( $result );
 		$current = $entry > 0 ? self::find( $entry ) : null;
 
@@ -269,16 +291,16 @@ class Log {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table has no API above it.
 			$wpdb->update(
 				self::table(),
-				array(
+				[
 					'revisions'  => (int) $current['revisions'] + $result->revisions,
 					'posts'      => (int) $current['posts'] + $result->affected,
-					'post_types' => (string) wp_json_encode( self::merge_types( is_array( $stored ) ? $stored : array(), $types ) ),
+					'post_types' => (string) wp_json_encode( self::merge_types( is_array( $stored ) ? $stored : [], $types ) ),
 					'finished'   => $result->finished ? 1 : 0,
 					'ended_gmt'  => $now,
-				),
-				array( 'id' => (int) $current['id'] ),
-				array( '%d', '%d', '%s', '%d', '%s' ),
-				array( '%d' )
+				],
+				[ 'id' => (int) $current['id'] ],
+				[ '%d', '%d', '%s', '%d', '%s' ],
+				[ '%d' ]
 			);
 
 			return (int) $current['id'];
@@ -292,10 +314,15 @@ class Log {
 			self::install();
 		}
 
+		// The table could not be created; the sweep goes on without a log line.
+		if ( ! self::installed() ) {
+			return 0;
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- The plugin's own table has no API above it.
 		$inserted = $wpdb->insert(
 			self::table(),
-			array(
+			[
 				'source'      => $source,
 				'user_id'     => $user_id,
 				'revisions'   => $result->revisions,
@@ -304,8 +331,8 @@ class Log {
 				'finished'    => $result->finished ? 1 : 0,
 				'started_gmt' => $now,
 				'ended_gmt'   => $now,
-			),
-			array( '%s', '%d', '%d', '%d', '%s', '%d', '%s', '%s' )
+			],
+			[ '%s', '%d', '%d', '%d', '%s', '%d', '%s', '%s' ]
 		);
 
 		return false === $inserted ? 0 : (int) $wpdb->insert_id;
@@ -328,13 +355,13 @@ class Log {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The plugin's own table has no API above it.
 		$wpdb->update(
 			self::table(),
-			array( 'finished' => self::STOPPED ),
-			array(
+			[ 'finished' => self::STOPPED ],
+			[
 				'id'       => $entry,
 				'finished' => 0,
-			),
-			array( '%d' ),
-			array( '%d', '%d' )
+			],
+			[ '%d' ],
+			[ '%d', '%d' ]
 		);
 	}
 
@@ -372,10 +399,10 @@ class Log {
 		$from = self::from( $network );
 
 		if ( null === $from ) {
-			return array(
-				'rows'  => array(),
+			return [
+				'rows'  => [],
 				'total' => 0,
-			);
+			];
 		}
 
 		global $wpdb;
@@ -384,7 +411,7 @@ class Log {
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$from[0]} WHERE ( '' = %s OR source = %s ) ORDER BY ended_gmt DESC, id DESC LIMIT %d OFFSET %d",
-				...array_merge( $from[1], array( $source, $source, $per_page, max( 0, $page - 1 ) * $per_page ) )
+				...array_merge( $from[1], [ $source, $source, $per_page, max( 0, $page - 1 ) * $per_page ] )
 			),
 			ARRAY_A
 		);
@@ -392,15 +419,15 @@ class Log {
 		$total = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM {$from[0]} WHERE ( '' = %s OR source = %s )",
-				...array_merge( $from[1], array( $source, $source ) )
+				...array_merge( $from[1], [ $source, $source ] )
 			)
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-		return array(
-			'rows'  => is_array( $rows ) ? $rows : array(),
+		return [
+			'rows'  => is_array( $rows ) ? $rows : [],
 			'total' => $total,
-		);
+		];
 	}
 
 	/**
@@ -429,8 +456,8 @@ class Log {
 	 * @return array<string, int> Totals keyed by the `Y-m-d` each period starts on, oldest first, every period present.
 	 */
 	public static function per_period( string $period, int $count, bool $network = false ): array {
-		$totals  = array();
-		$current = self::period_start( $period, new \DateTimeImmutable( 'today', wp_timezone() ) );
+		$totals  = [];
+		$current = self::period_start( $period, new DateTimeImmutable( 'today', wp_timezone() ) );
 		$step    = self::PERIOD_WEEK === $period ? 'weeks' : ( self::PERIOD_MONTH === $period ? 'months' : 'days' );
 
 		for ( $offset = $count - 1; $offset >= 0; --$offset ) {
@@ -451,13 +478,13 @@ class Log {
 		// idea of a day instead of the site's.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( "SELECT ended_gmt, revisions FROM {$from[0]} WHERE ended_gmt >= %s", ...array_merge( $from[1], array( $since ) ) ),
+			$wpdb->prepare( "SELECT ended_gmt, revisions FROM {$from[0]} WHERE ended_gmt >= %s", ...array_merge( $from[1], [ $since ] ) ),
 			ARRAY_A
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
-			$ended = ( new \DateTimeImmutable( '@' . self::timestamp( (string) $row['ended_gmt'] ) ) )->setTimezone( wp_timezone() );
+		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
+			$ended = ( new DateTimeImmutable( '@' . self::timestamp( (string) $row['ended_gmt'] ) ) )->setTimezone( wp_timezone() );
 			$key   = self::period_start( $period, $ended->setTime( 0, 0 ) )->format( 'Y-m-d' );
 
 			if ( isset( $totals[ $key ] ) ) {
@@ -475,23 +502,23 @@ class Log {
 	 * @param string $period One of the PERIOD_ constants.
 	 * @param int    $count  How many periods, the current one included.
 	 *
-	 * @return \DateTimeImmutable
+	 * @return DateTimeImmutable
 	 */
-	public static function oldest( string $period, int $count ): \DateTimeImmutable {
+	public static function oldest( string $period, int $count ): DateTimeImmutable {
 		$step = self::PERIOD_WEEK === $period ? 'weeks' : ( self::PERIOD_MONTH === $period ? 'months' : 'days' );
 
-		return self::period_start( $period, new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $count - 1 ) . " {$step}" );
+		return self::period_start( $period, new DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $count - 1 ) . " {$step}" );
 	}
 
 	/**
 	 * The day a period starts on, for a day inside it.
 	 *
-	 * @param string             $period One of the PERIOD_ constants.
-	 * @param \DateTimeImmutable $day    Midnight of a day, in the site's timezone.
+	 * @param string            $period One of the PERIOD_ constants.
+	 * @param DateTimeImmutable $day    Midnight of a day, in the site's timezone.
 	 *
-	 * @return \DateTimeImmutable
+	 * @return DateTimeImmutable
 	 */
-	private static function period_start( string $period, \DateTimeImmutable $day ): \DateTimeImmutable {
+	private static function period_start( string $period, DateTimeImmutable $day ): DateTimeImmutable {
 		if ( self::PERIOD_MONTH === $period ) {
 			return $day->modify( 'first day of this month' );
 		}
@@ -514,11 +541,11 @@ class Log {
 	 * @return array{runs: int, revisions: int, posts: int}
 	 */
 	public static function totals( bool $network = false, int $days = 0 ): array {
-		$totals = array(
+		$totals = [
 			'runs'      => 0,
 			'revisions' => 0,
 			'posts'     => 0,
-		);
+		];
 
 		$from = self::from( $network );
 
@@ -531,14 +558,14 @@ class Log {
 		// The same days the chart counts: from the start of the oldest one, in
 		// the site's timezone, so the two never disagree.
 		$since = $days > 0
-			? gmdate( 'Y-m-d H:i:s', ( new \DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() )
+			? gmdate( 'Y-m-d H:i:s', ( new DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() )
 			: '0000-00-00 00:00:00';
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]} WHERE ended_gmt >= %s",
-				...array_merge( $from[1], array( $since ) )
+				...array_merge( $from[1], [ $since ] )
 			),
 			ARRAY_A
 		);
@@ -601,20 +628,26 @@ class Log {
 	 */
 	private static function tables( bool $network ): array {
 		if ( ! $network || ! is_multisite() ) {
-			return self::installed() ? array( get_current_blog_id() => self::table() ) : array();
+			return self::installed() ? [ get_current_blog_id() => self::table() ] : [];
+		}
+
+		// The network tab asks for the totals and the chart of three periods,
+		// each over the same tables; listing them once per request is enough.
+		if ( null !== self::$network_tables ) {
+			return self::$network_tables;
 		}
 
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Nothing above the schema lists tables.
 		$existing = array_flip( (array) $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->base_prefix ) . '%' . $wpdb->esc_like( 'rvrt_log' ) ) ) );
-		$tables   = array();
+		$tables   = [];
 
 		$sites = get_sites(
-			array(
+			[
 				'fields' => 'ids',
 				'number' => 0,
-			)
+			]
 		);
 
 		foreach ( $sites as $site_id ) {
@@ -624,6 +657,8 @@ class Log {
 				$tables[ (int) $site_id ] = $table;
 			}
 		}
+
+		self::$network_tables = $tables;
 
 		return $tables;
 	}
@@ -641,11 +676,11 @@ class Log {
 	private static function from( bool $network ): ?array {
 		$tables = self::tables( $network );
 
-		if ( array() === $tables ) {
+		if ( [] === $tables ) {
 			return null;
 		}
 
-		$args = array();
+		$args = [];
 
 		foreach ( $tables as $site_id => $table ) {
 			$args[] = $site_id;
@@ -654,7 +689,7 @@ class Log {
 
 		$select = implode( ' UNION ALL ', array_fill( 0, count( $tables ), 'SELECT *, %d AS blog_id FROM %i' ) );
 
-		return array( "( {$select} ) AS rvrt_entries", $args );
+		return [ "( {$select} ) AS rvrt_entries", $args ];
 	}
 
 	/**
@@ -680,12 +715,12 @@ class Log {
 	/**
 	 * Revisions a batch removed, per post type label.
 	 *
-	 * @param Sweep_Result $result What the batch did.
+	 * @param SweepResult $result What the batch did.
 	 *
 	 * @return array<string, int>
 	 */
-	private static function count_types( Sweep_Result $result ): array {
-		$types = array();
+	private static function count_types( SweepResult $result ): array {
+		$types = [];
 
 		foreach ( $result->items as $item ) {
 			$type           = (string) ( $item['type'] ?? '' );
@@ -704,7 +739,7 @@ class Log {
 	 * @return array<string, int>
 	 */
 	private static function merge_types( array $stored, array $added ): array {
-		$merged = array();
+		$merged = [];
 
 		foreach ( $stored as $type => $count ) {
 			$merged[ (string) $type ] = (int) $count;

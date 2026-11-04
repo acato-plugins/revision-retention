@@ -1,0 +1,112 @@
+# Every check on a pull request, and on main once it is merged, in one
+# workflow. Its jobs share nothing, so they run side by side.
+#
+# PHPCS runs from the project's own phpcs.xml.dist, installed through
+# Composer, so the job checks exactly what `composer install && vendor/bin/phpcs`
+# checks on a developer machine. The full report goes to the job log; cs2pr
+# turns the same findings into inline annotations on the pull request.
+# See: https://github.com/PHPCSStandards/PHP_CodeSniffer
+#
+# Plugin Check runs on the build the deploy would ship. The checkout contains
+# the whole repository, while WordPress.org only ever receives what
+# .distignore lets through; the exclusions keep the two in step.
+# See: https://github.com/WordPress/plugin-check-action
+name: Checks
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request makes the run before it
+# moot, so that one is cancelled rather than left to finish.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runPHPCSInspection:
+    name: Run PHPCS inspection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: cs2pr
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run PHPCS inspection
+        run: vendor/bin/phpcs --report-full --report-checkstyle=./phpcs-report.xml
+
+      - name: Annotate findings
+        if: ${{ failure() }}
+        run: cs2pr ./phpcs-report.xml
+
+  runPHPStanInspection:
+    name: Run PHPStan inspection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run PHPStan inspection
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+  runTests:
+    name: Run the retention logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Run tests
+        run: php tests/test-retention.php
+
+  plugin-check:
+    name: Run Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # dist/ is not in the repository; check what the deploy would build.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # npm ci installs exactly what package-lock.json says. Should that fail,
+      # a plain install is the fallback, so a release is not held up by it.
+      - name: Install build tools
+        run: npm ci --prefer-offline --no-audit --fund=false || npm i --prefer-offline --no-audit --fund=false
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Run Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: "./"
+          exclude-directories: ".github,.idea,.phpstan,.wordpress-org,node_modules,tests,vendor"
+          exclude-files: ".distignore,.editorconfig,.gitattributes,.gitignore,.nvmrc,composer.json,composer.lock,package.json,package-lock.json,phpcs.xml.dist,phpstan.neon,vite.config.js"

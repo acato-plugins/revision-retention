@@ -7,7 +7,18 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Admin;
+
+use Acato\RevisionRetention\Includes\Cleaner;
+use Acato\RevisionRetention\Includes\CronHealth;
+use Acato\RevisionRetention\Includes\Log;
+use Acato\RevisionRetention\Includes\Plugin;
+use Acato\RevisionRetention\Includes\Policy;
+use Acato\RevisionRetention\Includes\PostTypes;
+use Acato\RevisionRetention\Includes\Scheduler;
+use Acato\RevisionRetention\Includes\Settings;
+use Acato\RevisionRetention\Includes\Singleton;
+use Acato\RevisionRetention\Includes\SweepResult;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,7 +34,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Settings_Page {
+class SettingsPage extends Singleton {
 
 	/**
 	 * Slug of the settings screen.
@@ -72,24 +83,24 @@ class Settings_Page {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
+	protected function init(): void {
 		$basename = plugin_basename( RVRT_PLUGIN_FILE );
 
-		add_filter( 'plugin_action_links_' . $basename, array( $this, 'add_action_link' ) );
-		add_filter( 'network_admin_plugin_action_links_' . $basename, array( $this, 'add_action_link' ) );
+		add_filter( 'plugin_action_links_' . $basename, [ $this, 'add_action_link' ] );
+		add_filter( 'network_admin_plugin_action_links_' . $basename, [ $this, 'add_action_link' ] );
 
-		add_action( 'admin_post_' . self::SAVE_ACTION, array( $this, 'save_settings' ) );
-		add_action( 'admin_post_' . self::RUN_ACTION, array( $this, 'run_sweep' ) );
-		add_action( 'wp_ajax_' . self::RUN_ACTION, array( $this, 'ajax_sweep_batch' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'admin_post_' . self::SAVE_ACTION, [ $this, 'save_settings' ] );
+		add_action( 'admin_post_' . self::RUN_ACTION, [ $this, 'run_sweep' ] );
+		add_action( 'wp_ajax_' . self::RUN_ACTION, [ $this, 'ajax_sweep_batch' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
 
-		add_action( 'admin_menu', array( $this, 'add_page' ) );
+		add_action( 'admin_menu', [ $this, 'add_page' ] );
 
 		if ( is_multisite() ) {
-			add_action( 'network_admin_menu', array( $this, 'add_network_page' ) );
-			add_action( 'network_admin_edit_' . self::NETWORK_ACTION, array( $this, 'save_network_settings' ) );
-			add_action( 'network_admin_edit_' . self::NETWORK_RUN_ACTION, array( $this, 'sweep_network' ) );
-			add_action( 'wp_ajax_' . self::NETWORK_RUN_ACTION, array( $this, 'ajax_network_sweep_batch' ) );
+			add_action( 'network_admin_menu', [ $this, 'add_network_page' ] );
+			add_action( 'network_admin_edit_' . self::NETWORK_ACTION, [ $this, 'save_network_settings' ] );
+			add_action( 'network_admin_edit_' . self::NETWORK_RUN_ACTION, [ $this, 'sweep_network' ] );
+			add_action( 'wp_ajax_' . self::NETWORK_RUN_ACTION, [ $this, 'ajax_network_sweep_batch' ] );
 		}
 	}
 
@@ -109,7 +120,7 @@ class Settings_Page {
 			_x( 'Revision Retention', 'admin menu and page title', 'revision-retention' ),
 			$capability,
 			self::PAGE_SLUG,
-			array( $this, 'render_page' )
+			[ $this, 'render_page' ]
 		);
 	}
 
@@ -125,7 +136,7 @@ class Settings_Page {
 			_x( 'Revision Retention', 'admin menu and page title', 'revision-retention' ),
 			Settings::capability( true ),
 			self::PAGE_SLUG,
-			array( $this, 'render_page' )
+			[ $this, 'render_page' ]
 		);
 	}
 
@@ -148,11 +159,11 @@ class Settings_Page {
 		// this only comes up empty when the files are missing altogether. The
 		// screen still works then, unstyled and without the script.
 		if ( null !== $style ) {
-			wp_enqueue_style( 'rvrt-settings', $style, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_style( 'rvrt-settings', $style, [], null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 
 		if ( null !== $script ) {
-			wp_enqueue_script( 'rvrt-settings', $script, array( 'wp-i18n' ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_script( 'rvrt-settings', $script, [ 'wp-a11y', 'wp-i18n' ], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
 		}
 
@@ -160,7 +171,7 @@ class Settings_Page {
 		$chart = Assets::url( 'src/chart.js' );
 
 		if ( null !== $chart ) {
-			wp_enqueue_script( 'rvrt-chart', $chart, array(), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_script( 'rvrt-chart', $chart, [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 	}
 
@@ -253,13 +264,13 @@ class Settings_Page {
 			$this->render_tab_nav( $tabs, $current );
 
 			if ( $read_only ) {
-				$this->render_panel( 'policy', $current, array( $this, 'render_summary' ) );
+				$this->render_panel( 'policy', $current, [ $this, 'render_summary' ] );
 				$this->render_sweep_form( $current );
 				$this->render_panel(
 					'logs',
 					$current,
 					function () {
-						( new Log_View( self::tab_url( 'logs' ) ) )->render();
+						( new LogView( self::tab_url( 'logs' ) ) )->render();
 					}
 				);
 
@@ -297,12 +308,12 @@ class Settings_Page {
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<?php
 			$this->render_stats();
-			$this->render_tab_nav( $tabs, 'logs', array_diff( array_keys( $tabs ), array( 'logs' ) ) );
+			$this->render_tab_nav( $tabs, 'logs', array_diff( array_keys( $tabs ), [ 'logs' ] ) );
 			$this->render_panel(
 				'logs',
 				'logs',
 				function () {
-					( new Log_View( self::tab_url( 'logs' ) ) )->render();
+					( new LogView( self::tab_url( 'logs' ) ) )->render();
 				}
 			);
 			?>
@@ -320,18 +331,18 @@ class Settings_Page {
 	 */
 	private static function tabs( bool $is_network, bool $read_only ): array {
 		if ( $read_only ) {
-			return array(
+			return [
 				'policy' => _x( 'Policy', 'settings tab', 'revision-retention' ),
 				'sweep'  => _x( 'Sweep now', 'settings tab', 'revision-retention' ),
 				'logs'   => _x( 'Logs', 'settings tab', 'revision-retention' ),
-			);
+			];
 		}
 
-		$tabs = array(
+		$tabs = [
 			'policy'     => _x( 'Policy', 'settings tab', 'revision-retention' ),
 			'post-types' => _x( 'Post types', 'settings tab', 'revision-retention' ),
 			'schedule'   => _x( 'Schedule', 'settings tab', 'revision-retention' ),
-		);
+		];
 
 		if ( $is_network ) {
 			$tabs['sites'] = _x( 'Sites', 'settings tab', 'revision-retention' );
@@ -372,7 +383,7 @@ class Settings_Page {
 	 *
 	 * @return void
 	 */
-	private function render_tab_nav( array $tabs, string $current, array $disabled = array() ): void {
+	private function render_tab_nav( array $tabs, string $current, array $disabled = [] ): void {
 		echo '<nav class="nav-tab-wrapper rvrt-tabs" role="tablist">';
 
 		foreach ( $tabs as $slug => $label ) {
@@ -646,16 +657,16 @@ class Settings_Page {
 				</tr>
 			</thead>
 			<tbody>
-			<?php foreach ( Post_Types::eligible() as $post_type => $label ) : ?>
+			<?php foreach ( PostTypes::eligible() as $post_type => $label ) { ?>
 				<?php $rule = Policy::for_post_type( $post_type ); ?>
 				<tr>
 					<th scope="row"><?php echo esc_html( $label ); ?></th>
-					<td><?php echo esc_html( Post_Types::supports_revisions( $post_type ) ? _x( 'On', 'revision support state', 'revision-retention' ) : _x( 'Off', 'revision support state', 'revision-retention' ) ); ?></td>
+					<td><?php echo esc_html( PostTypes::supports_revisions( $post_type ) ? _x( 'On', 'revision support state', 'revision-retention' ) : _x( 'Off', 'revision support state', 'revision-retention' ) ); ?></td>
 					<td><?php echo esc_html( self::describe_keep( $rule->keep ) ); ?></td>
 					<td><?php echo esc_html( Settings::describe_age( $rule->max_age_days ) ); ?></td>
 					<td><?php echo esc_html( number_format_i18n( $counts[ $post_type ] ?? 0 ) ); ?></td>
 				</tr>
-			<?php endforeach; ?>
+			<?php } ?>
 			</tbody>
 		</table>
 		<?php
@@ -761,10 +772,10 @@ class Settings_Page {
 				'secondary',
 				self::PROMOTE_FIELD,
 				false,
-				array(
+				[
 					'data-confirm'       => _x( 'This makes the settings on this screen the defaults for every site on the network. Sites with settings of their own keep them.', 'confirmation', 'revision-retention' ),
 					'data-confirm-title' => _x( 'Make these the network defaults?', 'confirmation title', 'revision-retention' ),
-				)
+				]
 			);
 		}
 
@@ -819,7 +830,7 @@ class Settings_Page {
 				<td>
 					<?php
 					self::render_age_select(
-						array(
+						[
 							'name'        => 'rvrt_settings[max_age_days]',
 							'id'          => 'rvrt-max-age-days',
 							'value'       => isset( $stored['max_age_days'] ) ? (int) $stored['max_age_days'] : null,
@@ -830,7 +841,7 @@ class Settings_Page {
 									Settings::describe_age( (int) ( $inherited['max_age_days'] ?? 0 ) )
 								)
 								: '',
-						)
+						]
 					);
 					?>
 					<p class="description">
@@ -916,7 +927,7 @@ class Settings_Page {
 		global $wp_locale;
 
 		$source = $inheritable && ! isset( $stored['cron_interval'] ) ? $inherited : $stored;
-		$days   = is_array( $source['cron_days'] ?? null ) ? array_map( 'intval', $source['cron_days'] ) : array();
+		$days   = is_array( $source['cron_days'] ?? null ) ? array_map( 'intval', $source['cron_days'] ) : [];
 		$time   = (int) ( $source['cron_time'] ?? 180 );
 		$repeat = (int) ( $source['cron_repeat'] ?? 0 );
 		$mode   = $repeat > 1 ? 'hours' : ( 1 === $repeat ? 'hourly' : 'once' );
@@ -929,14 +940,14 @@ class Settings_Page {
 					<legend class="screen-reader-text"><?php echo esc_html_x( 'On these days', 'field label', 'revision-retention' ); ?></legend>
 					<?php
 					// In the order the site's week starts with.
-					for ( $offset = 0; $offset < 7; $offset++ ) :
+					for ( $offset = 0; $offset < 7; $offset++ ) {
 						$day = ( $first + $offset ) % 7;
 						?>
 						<label>
 							<input type="checkbox" name="rvrt_settings[cron_days][]" value="<?php echo esc_attr( (string) $day ); ?>" <?php checked( in_array( $day, $days, true ) ); ?> />
 							<?php echo esc_html( $wp_locale->get_weekday( $day ) ); ?>
 						</label>
-					<?php endfor; ?>
+					<?php } ?>
 				</fieldset>
 				<p class="description"><?php echo esc_html_x( 'With no day ticked, the sweep runs on Mondays.', 'field description', 'revision-retention' ); ?></p>
 			</td>
@@ -966,9 +977,9 @@ class Settings_Page {
 				<span data-repeat="hourly">
 					<label for="rvrt-cron-minute" class="screen-reader-text"><?php echo esc_html_x( 'Minutes past the hour', 'field label', 'revision-retention' ); ?></label>
 					<select id="rvrt-cron-minute" name="rvrt_settings[cron_time][minute]">
-						<?php for ( $minute = 0; $minute < 60; $minute++ ) : ?>
+						<?php for ( $minute = 0; $minute < 60; $minute++ ) { ?>
 							<option value="<?php echo esc_attr( (string) $minute ); ?>" <?php selected( $minute, $time % 60 ); ?>><?php echo esc_html( sprintf( ':%02d', $minute ) ); ?></option>
-						<?php endfor; ?>
+						<?php } ?>
 					</select>
 				</span>
 				<p class="description">
@@ -995,16 +1006,16 @@ class Settings_Page {
 	 * @return void
 	 */
 	private function render_crontrol_section(): void {
-		$all = Cron_Health::crontrol_url( 'rvrt_' );
+		$all = CronHealth::crontrol_url( 'rvrt_' );
 
 		if ( null === $all ) {
 			return;
 		}
 
-		$events = array(
+		$events = [
 			Scheduler::HOOK => _x( 'Sweeps the next batch, or starts the next full sweep.', 'cron event description', 'revision-retention' ),
 			Log::PRUNE_HOOK => _x( 'Deletes log entries older than the retention, once a day.', 'cron event description', 'revision-retention' ),
-		);
+		];
 		?>
 		<div class="rvrt-events">
 			<h2 class="rvrt-events-title"><?php echo esc_html_x( 'Cron events', 'section heading', 'revision-retention' ); ?></h2>
@@ -1022,7 +1033,7 @@ class Settings_Page {
 				</thead>
 				<tbody>
 					<?php
-					foreach ( $events as $hook => $description ) :
+					foreach ( $events as $hook => $description ) {
 						$next = (int) wp_next_scheduled( $hook );
 						?>
 						<tr>
@@ -1030,28 +1041,14 @@ class Settings_Page {
 								<code><?php echo esc_html( $hook ); ?></code>
 								<span class="rvrt-events-description"><?php echo esc_html( $description ); ?></span>
 							</th>
-							<td>
-								<?php
-								if ( $next < 1 ) {
-									echo '<span class="rvrt-none">' . esc_html_x( 'Not booked', 'cron event state', 'revision-retention' ) . '</span>';
-								} else {
-									self::render_countdown(
-										$next,
-										/* translators: %s: time until the event runs, e.g. "5 minutes". */
-										_x( 'In %s', 'cron event state', 'revision-retention' ),
-										/* translators: %s: how long ago the event was due, e.g. "3 hours". */
-										_x( 'Overdue by %s', 'cron event state', 'revision-retention' )
-									);
-								}
-								?>
-							</td>
+							<td><?php self::render_event_state( $next ); ?></td>
 							<td class="rvrt-events-action">
-								<a href="<?php echo esc_url( (string) Cron_Health::crontrol_url( $hook ) ); ?>">
+								<a href="<?php echo esc_url( (string) CronHealth::crontrol_url( $hook ) ); ?>">
 									<?php echo esc_html_x( 'View in WP Crontrol', 'link label', 'revision-retention' ); ?>
 								</a>
 							</td>
 						</tr>
-					<?php endforeach; ?>
+					<?php } ?>
 				</tbody>
 			</table>
 
@@ -1062,6 +1059,29 @@ class Settings_Page {
 			</p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * When a cron event runs next, counting down, or that it is not booked.
+	 *
+	 * @param int $next Unix timestamp the event is booked for, or 0.
+	 *
+	 * @return void
+	 */
+	private static function render_event_state( int $next ): void {
+		if ( $next < 1 ) {
+			echo '<span class="rvrt-none">' . esc_html_x( 'Not booked', 'cron event state', 'revision-retention' ) . '</span>';
+
+			return;
+		}
+
+		self::render_countdown(
+			$next,
+			/* translators: %s: time until the event runs, e.g. "5 minutes". */
+			_x( 'In %s', 'cron event state', 'revision-retention' ),
+			/* translators: %s: how long ago the event was due, e.g. "3 hours". */
+			_x( 'Overdue by %s', 'cron event state', 'revision-retention' )
+		);
 	}
 
 	/**
@@ -1081,9 +1101,9 @@ class Settings_Page {
 	 * @return void
 	 */
 	private function render_cron_health( bool $is_network ): void {
-		$health = Cron_Health::check();
+		$health = CronHealth::check();
 
-		if ( Cron_Health::STALLED === $health['status'] ) {
+		if ( CronHealth::STALLED === $health['status'] ) {
 			$kind    = 'warning';
 			$message = sprintf(
 				/* translators: %s: how long the oldest scheduled event has been waiting, e.g. "3 hours". */
@@ -1092,7 +1112,7 @@ class Settings_Page {
 			) . ' ' . ( $health['visits']
 				? _x( 'WP-Cron is started by visits to the site, so a site nobody visits, or a server that blocks requests to itself, holds it up. A server cron job that calls wp-cron.php, or runs "wp cron event run --due-now", fixes both.', 'cron health', 'revision-retention' )
 				: _x( 'DISABLE_WP_CRON is set, so visits do not start WP-Cron and a server cron job has to. Add one that calls wp-cron.php, or runs "wp cron event run --due-now", every few minutes.', 'cron health', 'revision-retention' ) );
-		} elseif ( Cron_Health::SYSTEM === $health['status'] ) {
+		} elseif ( CronHealth::SYSTEM === $health['status'] ) {
 			$kind    = 'ok';
 			$message = _x( 'WP-Cron is running. DISABLE_WP_CRON is set, so it is started by a server cron job rather than by visits, and nothing in the schedule is overdue.', 'cron health', 'revision-retention' );
 		} else {
@@ -1159,12 +1179,12 @@ class Settings_Page {
 				esc_html_x( 'Each site keeps its own log, next to its own revisions. Below are the logs of every site together; a site\'s own screen shows just that site.', 'field description', 'revision-retention' )
 			);
 
-			( new Log_View( add_query_arg( 'rvrt-tab', 'logs', self::page_url( true ) ), true ) )->render();
+			( new LogView( add_query_arg( 'rvrt-tab', 'logs', self::page_url( true ) ), true ) )->render();
 
 			return;
 		}
 
-		( new Log_View( self::tab_url( 'logs' ) ) )->render();
+		( new LogView( self::tab_url( 'logs' ) ) )->render();
 	}
 
 	/**
@@ -1249,9 +1269,9 @@ class Settings_Page {
 	 * @return void
 	 */
 	private function render_widget_roles( array $stored, bool $inheritable ): void {
-		$own     = isset( $stored['widget_roles'] ) && is_array( $stored['widget_roles'] ) ? $stored['widget_roles'] : array();
-		$network = $inheritable && is_array( Settings::network()['widget_roles'] ?? null ) ? Settings::network()['widget_roles'] : array();
-		$locked  = array();
+		$own     = isset( $stored['widget_roles'] ) && is_array( $stored['widget_roles'] ) ? $stored['widget_roles'] : [];
+		$network = $inheritable && is_array( Settings::network()['widget_roles'] ?? null ) ? Settings::network()['widget_roles'] : [];
+		$locked  = [];
 
 		if ( is_multisite() ) {
 			$locked['rvrt-network-admin'] = _x( 'Network administrator', 'user role', 'revision-retention' );
@@ -1259,29 +1279,29 @@ class Settings_Page {
 		?>
 		<fieldset id="rvrt-widget-roles" class="rvrt-roles">
 			<legend class="screen-reader-text"><?php echo esc_html_x( 'Roles that see the dashboard widget and the log', 'accessibility label', 'revision-retention' ); ?></legend>
-			<?php foreach ( $locked as $key => $label ) : ?>
+			<?php foreach ( $locked as $key => $label ) { ?>
 				<label class="rvrt-role is-locked">
 					<input type="checkbox" checked disabled />
 					<?php echo esc_html( $label ); ?>
 				</label>
-			<?php endforeach; ?>
+			<?php } ?>
 			<?php
-			foreach ( wp_roles()->get_names() as $role => $name ) :
+			foreach ( wp_roles()->get_names() as $role => $name ) {
 				$always  = Settings::ADMIN_ROLE === $role;
 				$from_up = in_array( $role, $network, true );
 				?>
 				<label class="rvrt-role<?php echo $always || $from_up ? ' is-locked' : ''; ?>">
-					<?php if ( $always || $from_up ) : ?>
+					<?php if ( $always || $from_up ) { ?>
 						<input type="checkbox" checked disabled />
-					<?php else : ?>
+					<?php } else { ?>
 						<input type="checkbox" name="rvrt_settings[widget_roles][]" value="<?php echo esc_attr( $role ); ?>" <?php checked( in_array( $role, $own, true ) ); ?> />
-					<?php endif; ?>
+					<?php } ?>
 					<?php echo esc_html( translate_user_role( $name ) ); ?>
-					<?php if ( $from_up && ! $always ) : ?>
+					<?php if ( $from_up && ! $always ) { ?>
 						<span class="rvrt-role-note"><?php echo esc_html_x( '(set by the network)', 'user role note', 'revision-retention' ); ?></span>
-					<?php endif; ?>
+					<?php } ?>
 				</label>
-			<?php endforeach; ?>
+			<?php } ?>
 		</fieldset>
 		<p class="description">
 			<?php echo esc_html_x( 'Besides the widget, these roles may open the Logs tab, read only, without seeing any of the settings. Administrators always can. Nothing is shown to anybody while the widget is switched off.', 'field description', 'revision-retention' ); ?>
@@ -1300,9 +1320,9 @@ class Settings_Page {
 	private function render_post_types_table( array $stored, bool $show_counts ): void {
 		// A network screen has no single site to count revisions on, so the
 		// column would report the main site's numbers as if they were everyone's.
-		$counts    = $show_counts ? Cleaner::counts() : array();
-		$enabled   = isset( $stored['enable_revisions'] ) && is_array( $stored['enable_revisions'] ) ? $stored['enable_revisions'] : array();
-		$overrides = isset( $stored['post_types'] ) && is_array( $stored['post_types'] ) ? $stored['post_types'] : array();
+		$counts    = $show_counts ? Cleaner::counts() : [];
+		$enabled   = isset( $stored['enable_revisions'] ) && is_array( $stored['enable_revisions'] ) ? $stored['enable_revisions'] : [];
+		$overrides = isset( $stored['post_types'] ) && is_array( $stored['post_types'] ) ? $stored['post_types'] : [];
 		$rows      = self::order_post_types( $counts );
 		$quiet     = 0;
 
@@ -1316,9 +1336,9 @@ class Settings_Page {
 			<thead>
 				<tr>
 					<th scope="col" class="rvrt-col-type"><?php echo esc_html_x( 'Post type', 'column heading', 'revision-retention' ); ?></th>
-					<?php if ( $show_counts ) : ?>
+					<?php if ( $show_counts ) { ?>
 						<th scope="col" class="rvrt-col-number"><?php echo esc_html_x( 'Stored', 'column heading', 'revision-retention' ); ?></th>
-					<?php endif; ?>
+					<?php } ?>
 					<th scope="col" class="rvrt-col-support"><?php echo esc_html_x( 'Revisions', 'column heading', 'revision-retention' ); ?></th>
 					<th scope="col" class="rvrt-col-field"><?php echo esc_html_x( 'Always keep', 'field label', 'revision-retention' ); ?></th>
 					<th scope="col" class="rvrt-col-field"><?php echo esc_html_x( 'Remove older than', 'field label', 'revision-retention' ); ?></th>
@@ -1326,31 +1346,31 @@ class Settings_Page {
 			</thead>
 			<tbody>
 			<?php
-			foreach ( $rows as $post_type => $label ) :
-				$native   = Post_Types::supports_revisions( $post_type ) && ! in_array( $post_type, $enabled, true );
+			foreach ( $rows as $post_type => $label ) {
+				$native   = PostTypes::supports_revisions( $post_type ) && ! in_array( $post_type, $enabled, true );
 				$rule     = Policy::for_post_type( $post_type );
-				$override = isset( $overrides[ $post_type ] ) && is_array( $overrides[ $post_type ] ) ? $overrides[ $post_type ] : array();
+				$override = isset( $overrides[ $post_type ] ) && is_array( $overrides[ $post_type ] ) ? $overrides[ $post_type ] : [];
 				$stored_n = $counts[ $post_type ] ?? 0;
 				?>
-				<tr<?php echo self::is_quiet( $post_type, $counts, $enabled, $overrides ) ? ' class="rvrt-quiet" hidden' : ''; ?>>
+				<tr<?php echo self::is_quiet( $post_type, $counts, $enabled, $overrides ) ? ' class="rvrt-quiet"' : ''; ?>>
 					<th scope="row" class="rvrt-col-type">
 						<span class="rvrt-label"><?php echo esc_html( $label ); ?></span>
 						<code><?php echo esc_html( $post_type ); ?></code>
 					</th>
-					<?php if ( $show_counts ) : ?>
+					<?php if ( $show_counts ) { ?>
 						<td class="rvrt-col-number">
-							<?php if ( $stored_n > 0 ) : ?>
+							<?php if ( $stored_n > 0 ) { ?>
 								<strong><?php echo esc_html( number_format_i18n( $stored_n ) ); ?></strong>
-							<?php else : ?>
+							<?php } else { ?>
 								<span class="rvrt-none" aria-hidden="true">&mdash;</span>
 								<span class="screen-reader-text"><?php echo esc_html_x( 'None', 'stored revision count', 'revision-retention' ); ?></span>
-							<?php endif; ?>
+							<?php } ?>
 						</td>
-					<?php endif; ?>
+					<?php } ?>
 					<td class="rvrt-col-support">
-						<?php if ( $native ) : ?>
+						<?php if ( $native ) { ?>
 							<span class="rvrt-native"><?php echo esc_html_x( 'On', 'revision support state', 'revision-retention' ); ?></span>
-						<?php else : ?>
+						<?php } else { ?>
 							<label>
 								<input type="checkbox" name="rvrt_settings[enable_revisions][]" value="<?php echo esc_attr( $post_type ); ?>" <?php checked( in_array( $post_type, $enabled, true ) ); ?> />
 								<span class="screen-reader-text">
@@ -1364,7 +1384,7 @@ class Settings_Page {
 								</span>
 								<span aria-hidden="true"><?php echo esc_html_x( 'Enable', 'checkbox label', 'revision-retention' ); ?></span>
 							</label>
-						<?php endif; ?>
+						<?php } ?>
 					</td>
 					<td class="rvrt-col-field">
 						<input
@@ -1381,7 +1401,7 @@ class Settings_Page {
 					<td class="rvrt-col-field">
 						<?php
 						self::render_age_select(
-							array(
+							[
 								'name'        => 'rvrt_settings[post_types][' . $post_type . '][max_age_days]',
 								'value'       => isset( $override['max_age_days'] ) ? (int) $override['max_age_days'] : null,
 								'empty_label' => sprintf(
@@ -1394,17 +1414,18 @@ class Settings_Page {
 									_x( 'Age after which revisions of %s are removed', 'accessibility label', 'revision-retention' ),
 									$label
 								),
-							)
+							]
 						);
 						?>
 					</td>
 				</tr>
-			<?php endforeach; ?>
+			<?php } ?>
 			</tbody>
 		</table>
 
-		<?php if ( $quiet > 0 ) : ?>
-			<p class="rvrt-toggle-wrap">
+		<?php if ( $quiet > 0 ) { ?>
+			<?php // Every row is shown without the script; the script folds the quiet ones away and brings in the button. ?>
+			<p class="rvrt-toggle-wrap" hidden>
 				<button type="button" class="button-link rvrt-toggle" data-shown="0"
 					data-show="<?php echo esc_attr( sprintf( /* translators: %s: number of post types. */ _nx( 'Show %s post type without revisions', 'Show %s post types without revisions', $quiet, 'button label', 'revision-retention' ), number_format_i18n( $quiet ) ) ); ?>"
 					data-hide="<?php echo esc_attr_x( 'Hide the post types without revisions', 'button label', 'revision-retention' ); ?>">
@@ -1417,7 +1438,7 @@ class Settings_Page {
 					?>
 				</button>
 			</p>
-		<?php endif; ?>
+		<?php } ?>
 		<?php
 	}
 
@@ -1433,7 +1454,7 @@ class Settings_Page {
 	 * @return array<string, string> Labels keyed by post type slug.
 	 */
 	private static function order_post_types( array $counts ): array {
-		$rows = Post_Types::eligible();
+		$rows = PostTypes::eligible();
 
 		uksort(
 			$rows,
@@ -1470,7 +1491,7 @@ class Settings_Page {
 			return false;
 		}
 
-		return ! Post_Types::supports_revisions( $post_type );
+		return ! PostTypes::supports_revisions( $post_type );
 	}
 
 	/**
@@ -1532,18 +1553,7 @@ class Settings_Page {
 
 			<p class="rvrt-sweep-status">
 				<?php
-				if ( $state['cursor'] > 0 ) {
-					echo esc_html_x( 'A sweep is part way through this site and continues from where it stopped.', 'sweep status', 'revision-retention' );
-				} elseif ( $state['finished'] > 0 ) {
-					printf(
-						/* translators: 1: how long ago the last sweep finished, 2: number of revisions it removed. */
-						esc_html( _nx( 'The last sweep finished %1$s ago and removed %2$s revision.', 'The last sweep finished %1$s ago and removed %2$s revisions.', $state['removed'], 'sweep status', 'revision-retention' ) ),
-						esc_html( human_time_diff( $state['finished'] ) ),
-						esc_html( number_format_i18n( $state['removed'] ) )
-					);
-				} else {
-					echo esc_html_x( 'No sweep has finished on this site yet.', 'sweep status', 'revision-retention' );
-				}
+				echo esc_html( self::describe_sweep_state( $state ) );
 
 				if ( $next ) {
 					echo ' ';
@@ -1563,11 +1573,11 @@ class Settings_Page {
 				<button type="submit" name="mode" value="preview" class="button">
 					<?php echo esc_html_x( 'Preview', 'button label', 'revision-retention' ); ?>
 				</button>
-				<?php if ( Settings::may_sweep() ) : ?>
+				<?php if ( Settings::may_sweep() ) { ?>
 					<button type="submit" name="mode" value="run" class="button button-primary">
 						<?php echo esc_html_x( 'Run now', 'button label', 'revision-retention' ); ?>
 					</button>
-				<?php endif; ?>
+				<?php } ?>
 				<button type="button" class="button rvrt-stop" hidden>
 					<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
 				</button>
@@ -1582,10 +1592,10 @@ class Settings_Page {
 					aria-valuenow="0"
 					aria-label="<?php echo esc_attr_x( 'Sweep progress', 'accessibility label', 'revision-retention' ); ?>"
 				><span class="rvrt-progress-fill"></span></div>
-				<p class="rvrt-progress-text" aria-live="polite"></p>
+				<p class="rvrt-progress-text"></p>
 			</div>
 
-			<div class="rvrt-sweep-result notice inline" role="status" hidden><p></p></div>
+			<div class="rvrt-sweep-result notice inline" hidden><p></p></div>
 
 			<div class="rvrt-affected" hidden>
 				<div class="rvrt-affected-scroll">
@@ -1620,6 +1630,30 @@ class Settings_Page {
 	}
 
 	/**
+	 * Where this site's sweep stands, in a sentence.
+	 *
+	 * @param array{cursor: int, finished: int, removed: int} $state See Scheduler::state().
+	 *
+	 * @return string
+	 */
+	private static function describe_sweep_state( array $state ): string {
+		if ( $state['cursor'] > 0 ) {
+			return _x( 'A sweep is part way through this site and continues from where it stopped.', 'sweep status', 'revision-retention' );
+		}
+
+		if ( $state['finished'] < 1 ) {
+			return _x( 'No sweep has finished on this site yet.', 'sweep status', 'revision-retention' );
+		}
+
+		return sprintf(
+			/* translators: 1: how long ago the last sweep finished, 2: number of revisions it removed. */
+			_nx( 'The last sweep finished %1$s ago and removed %2$s revision.', 'The last sweep finished %1$s ago and removed %2$s revisions.', $state['removed'], 'sweep status', 'revision-retention' ),
+			human_time_diff( $state['finished'] ),
+			number_format_i18n( $state['removed'] )
+		);
+	}
+
+	/**
 	 * Run one batch and report where it got to.
 	 *
 	 * The plain form posts one batch and reloads, which is all the screen can
@@ -1632,7 +1666,7 @@ class Settings_Page {
 	 */
 	public function ajax_sweep_batch(): void {
 		if ( ! current_user_can( Settings::capability() ) ) {
-			self::send_json( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), false, 403 );
+			self::send_json( [ 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ], false, 403 );
 		}
 
 		check_ajax_referer( self::RUN_ACTION );
@@ -1641,34 +1675,21 @@ class Settings_Page {
 
 		if ( ! $dry_run && ! Settings::may_sweep() ) {
 			self::send_json(
-				array( 'message' => _x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) ),
+				[ 'message' => _x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) ],
 				false,
 				403
 			);
 		}
 
 		$cursor = isset( $_POST['cursor'] ) ? absint( wp_unslash( $_POST['cursor'] ) ) : 0;
+		$result = $this->batch( $dry_run, $cursor );
 
-		// A real run resumes whatever the schedule was part way through; a dry
-		// run is asked for from the beginning and keeps its own place.
-		if ( ! $dry_run && 0 === $cursor ) {
-			$cursor = Scheduler::state()['cursor'];
-		}
-
-		$result = ( new Cleaner() )->sweep(
-			(int) Settings::get( 'batch_size' ),
-			$dry_run,
-			$cursor,
-			array(),
-			(int) Settings::get( 'max_deletions' )
-		);
-
-		if ( ! $dry_run ) {
-			$this->remember_sweep( $result );
+		if ( null === $result ) {
+			self::send_json( [ 'message' => self::busy_message() ], false, 409 );
 		}
 
 		self::send_json(
-			array(
+			[
 				'cursor'    => $result->cursor,
 				'posts'     => $result->posts,
 				'revisions' => $result->revisions,
@@ -1676,7 +1697,7 @@ class Settings_Page {
 				'items'     => $result->items,
 				'affected'  => $result->affected,
 				'progress'  => $result->finished ? 100 : min( 99, (int) floor( Cleaner::progress( $result->cursor ) * 100 ) ),
-			)
+			]
 		);
 	}
 
@@ -1693,7 +1714,7 @@ class Settings_Page {
 	 */
 	public function ajax_network_sweep_batch(): void {
 		if ( ! is_multisite() || ! current_user_can( Settings::capability( true ) ) ) {
-			self::send_json( array( 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ), false, 403 );
+			self::send_json( [ 'message' => _x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) ], false, 403 );
 		}
 
 		check_ajax_referer( self::NETWORK_RUN_ACTION );
@@ -1706,18 +1727,18 @@ class Settings_Page {
 		// sweep goes by that list rather than reading every site per batch.
 		$sites = Plugin::sites( 0 === $requested && 0 === $cursor );
 
-		if ( array() === $sites ) {
+		if ( [] === $sites ) {
 			self::send_json(
-				array(
+				[
 					'site'      => 0,
 					'cursor'    => 0,
 					'posts'     => 0,
 					'affected'  => 0,
 					'revisions' => 0,
-					'items'     => array(),
+					'items'     => [],
 					'finished'  => true,
 					'progress'  => 100,
-				)
+				]
 			);
 		}
 
@@ -1734,29 +1755,20 @@ class Settings_Page {
 
 		// Another site means other post types, other plugins and another policy.
 		Policy::flush();
-		Post_Types::flush();
+		PostTypes::flush();
 
 		// A site that switched the sweep off is not overruled from here, the
 		// same as when a sweep is booked, and counts as done straight away.
 		$skipped = ! $dry_run && empty( Settings::get( 'cron_enabled' ) );
 
-		// A real run resumes whatever the schedule was part way through.
-		if ( ! $dry_run && 0 === $cursor ) {
-			$cursor = Scheduler::state()['cursor'];
-		}
+		$result = $skipped ? new SweepResult( 0, 0, 0, true, false ) : $this->batch( $dry_run, $cursor );
 
-		$result = $skipped
-			? new Sweep_Result( 0, 0, 0, true, false )
-			: ( new Cleaner() )->sweep(
-				(int) Settings::get( 'batch_size' ),
-				$dry_run,
-				$cursor,
-				array(),
-				(int) Settings::get( 'max_deletions' )
-			);
+		if ( null === $result ) {
+			restore_current_blog();
+			Policy::flush();
+			PostTypes::flush();
 
-		if ( ! $dry_run && ! $skipped ) {
-			$this->remember_sweep( $result );
+			self::send_json( [ 'message' => self::busy_message() ], false, 409 );
 		}
 
 		// How far through this site, measured while still on it.
@@ -1773,14 +1785,14 @@ class Settings_Page {
 
 		restore_current_blog();
 		Policy::flush();
-		Post_Types::flush();
+		PostTypes::flush();
 
 		// A finished site hands over to the next one; the last one ends the run.
 		$next_index = $result->finished ? $index + 1 : $index;
 		$finished   = $next_index >= count( $sites );
 
 		self::send_json(
-			array(
+			[
 				'site'      => $finished ? 0 : $sites[ $next_index ],
 				'cursor'    => $result->finished ? 0 : $result->cursor,
 				'posts'     => $result->posts,
@@ -1791,7 +1803,7 @@ class Settings_Page {
 				// The sites already done, plus how far this one has got, so the bar
 				// moves while a large site is being worked through.
 				'progress'  => $finished ? 100 : min( 99, (int) floor( ( $index + $share ) / count( $sites ) * 100 ) ),
-			)
+			]
 		);
 	}
 
@@ -1822,19 +1834,81 @@ class Settings_Page {
 	}
 
 	/**
+	 * Run one batch on the current site: a preview from where the screen got
+	 * to, or a real one from where the sweep got to.
+	 *
+	 * A real batch always carries on from the stored cursor rather than the
+	 * one the browser posts back. The schedule or WP-CLI may have moved the
+	 * sweep on since the browser's last batch, and a tab left open would
+	 * otherwise send the shared cursor back to where that tab last was. When
+	 * the sweep the browser was part way through has been finished by
+	 * somebody else, the browser is told it is done instead of starting over.
+	 *
+	 * @param bool $dry_run Count instead of delete.
+	 * @param int  $cursor  Where the browser's previous batch stopped, or 0.
+	 *
+	 * @return SweepResult|null Null when another request is sweeping this site.
+	 */
+	private function batch( bool $dry_run, int $cursor ): ?SweepResult {
+		$cleaner = new Cleaner();
+		$size    = (int) Settings::get( 'batch_size' );
+		$cap     = (int) Settings::get( 'max_deletions' );
+
+		if ( $dry_run ) {
+			return $cleaner->sweep( $size, true, $cursor, [], $cap );
+		}
+
+		if ( ! Scheduler::lock() ) {
+			return null;
+		}
+
+		try {
+			// Read only now the lock is held, so it is where the sweep really is.
+			$stored = Scheduler::state()['cursor'];
+
+			if ( $cursor > 0 && 0 === $stored ) {
+				return new SweepResult( 0, 0, 0, true, false );
+			}
+
+			$result = $cleaner->sweep( $size, false, $stored, [], $cap );
+
+			// A batch that outlasted the lock may have lost it, and the sweep
+			// is then another request's to store; this one says so.
+			if ( ! Scheduler::renew_lock() ) {
+				return null;
+			}
+
+			$this->remember_sweep( $result );
+		} finally {
+			Scheduler::unlock();
+		}
+
+		return $result;
+	}
+
+	/**
+	 * What to say when another request holds the sweep.
+	 *
+	 * @return string
+	 */
+	private static function busy_message(): string {
+		return _x( 'Another sweep is running on this site right now, from the schedule, WP-CLI or an earlier batch that is still being finished. Wait a minute and try again.', 'sweep error', 'revision-retention' );
+	}
+
+	/**
 	 * Log a real batch and store where it got to, so the schedule carries on
 	 * from there and the status reports it once it is done.
 	 *
-	 * @param Sweep_Result $result What the batch did.
+	 * @param SweepResult $result What the batch did.
 	 *
 	 * @return void
 	 */
-	private function remember_sweep( Sweep_Result $result ): void {
+	private function remember_sweep( SweepResult $result ): void {
 		Scheduler::advance( Log::SOURCE_SCREEN, $result );
 
 		// Hand the rest back to the schedule rather than pushing on here, so a
 		// big site does not hold a request open.
-		Scheduler::reschedule( $result->finished ? 0 : MINUTE_IN_SECONDS );
+		Scheduler::reschedule( $result->finished ? 0 : MINUTE_IN_SECONDS, ! $result->finished );
 	}
 
 	/**
@@ -1880,14 +1954,16 @@ class Settings_Page {
 					</p>
 
 					<div class="rvrt-sweep-buttons">
-						<button type="button" name="mode" value="preview" class="button">
+						<?php // Walking the sites takes the script, so these two only appear once it runs. Scheduling works without it. ?>
+						<button type="button" name="mode" value="preview" class="button rvrt-needs-script" hidden>
 							<?php echo esc_html_x( 'Preview every site', 'button label', 'revision-retention' ); ?>
 						</button>
 						<button
 							type="button"
 							name="mode"
 							value="run"
-							class="button button-primary"
+							class="button button-primary rvrt-needs-script"
+							hidden
 							data-confirm="<?php echo esc_attr_x( 'This permanently deletes revisions on every site on the network that has the sweep switched on, under each site\'s own policy. It cannot be undone.', 'confirmation', 'revision-retention' ); ?>"
 							data-confirm-title="<?php echo esc_attr_x( 'Sweep every site now?', 'confirmation title', 'revision-retention' ); ?>"
 							data-confirm-danger="1"
@@ -1911,10 +1987,10 @@ class Settings_Page {
 							aria-valuenow="0"
 							aria-label="<?php echo esc_attr_x( 'Sweep progress', 'accessibility label', 'revision-retention' ); ?>"
 						><span class="rvrt-progress-fill"></span></div>
-						<p class="rvrt-progress-text" aria-live="polite"></p>
+						<p class="rvrt-progress-text"></p>
 					</div>
 
-					<div class="rvrt-sweep-result notice inline" role="status" hidden><p></p></div>
+					<div class="rvrt-sweep-result notice inline" hidden><p></p></div>
 
 					<div class="rvrt-affected" hidden>
 						<div class="rvrt-affected-scroll">
@@ -1982,12 +2058,12 @@ class Settings_Page {
 		}
 
 		$this->redirect(
-			array(
+			[
 				'rvrt-notice'  => 'booked',
 				'rvrt-booked'  => (string) $booked,
 				'rvrt-skipped' => (string) $skipped,
 				'rvrt-tab'     => 'sweep',
-			),
+			],
 			true
 		);
 	}
@@ -2130,7 +2206,7 @@ class Settings_Page {
 		?>
 		<?php // What "Inherit" amounts to, for the script that shows the fields depending on this one. ?>
 		<select id="<?php echo esc_attr( $id ); ?>" name="rvrt_settings[<?php echo esc_attr( $key ); ?>]" data-inherited="<?php echo esc_attr( (string) ( $inherited[ $key ] ?? '' ) ); ?>">
-			<?php if ( $inheritable ) : ?>
+			<?php if ( $inheritable ) { ?>
 				<option value="" <?php selected( '', $value ); ?>>
 					<?php
 					printf(
@@ -2140,12 +2216,12 @@ class Settings_Page {
 					);
 					?>
 				</option>
-			<?php endif; ?>
-			<?php foreach ( $choices as $choice => $label ) : ?>
+			<?php } ?>
+			<?php foreach ( $choices as $choice => $label ) { ?>
 				<option value="<?php echo esc_attr( $choice ); ?>" <?php selected( $choice, $value ); ?>>
 					<?php echo esc_html( $label ); ?>
 				</option>
-			<?php endforeach; ?>
+			<?php } ?>
 		</select>
 		<?php
 	}
@@ -2183,7 +2259,7 @@ class Settings_Page {
 		// leaves its continuation where it was.
 		Scheduler::sync();
 
-		$this->redirect( array( 'rvrt-notice' => $promote ? 'promoted' : 'saved' ) + self::posted_tab() );
+		$this->redirect( [ 'rvrt-notice' => $promote ? 'promoted' : 'saved' ] + self::posted_tab() );
 	}
 
 	/**
@@ -2203,7 +2279,7 @@ class Settings_Page {
 		Settings::update_network( Settings::sanitize( self::posted_settings(), true ) );
 		Policy::flush();
 
-		$this->redirect( array( 'rvrt-notice' => 'saved' ) + self::posted_tab(), true );
+		$this->redirect( [ 'rvrt-notice' => 'saved' ] + self::posted_tab(), true );
 	}
 
 	/**
@@ -2224,27 +2300,20 @@ class Settings_Page {
 			wp_die( esc_html_x( 'The retention policy for this site is set network wide, so only a network administrator can sweep it.', 'permission error', 'revision-retention' ) );
 		}
 
-		$cursor = $dry_run ? 0 : Scheduler::state()['cursor'];
-		$result = ( new Cleaner() )->sweep(
-			(int) Settings::get( 'batch_size' ),
-			$dry_run,
-			$cursor,
-			array(),
-			(int) Settings::get( 'max_deletions' )
-		);
+		$result = $this->batch( $dry_run, 0 );
 
-		if ( ! $dry_run ) {
-			$this->remember_sweep( $result );
+		if ( null === $result ) {
+			wp_die( esc_html( self::busy_message() ), '', [ 'back_link' => true ] );
 		}
 
 		$this->redirect(
-			array(
+			[
 				'rvrt-notice'    => $dry_run ? 'preview' : 'swept',
 				'rvrt-revisions' => (string) $result->revisions,
 				'rvrt-posts'     => (string) $result->affected,
 				'rvrt-finished'  => $result->finished ? '1' : '0',
 				'rvrt-tab'       => 'sweep',
-			)
+			]
 		);
 	}
 
@@ -2256,7 +2325,7 @@ class Settings_Page {
 	private static function posted_settings(): array {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Both callers check the nonce before getting here.
 		if ( ! isset( $_POST['rvrt_settings'] ) || ! is_array( $_POST['rvrt_settings'] ) ) {
-			return array();
+			return [];
 		}
 
 		// Settings::sanitize() reduces this to a fixed set of known keys and
@@ -2274,7 +2343,7 @@ class Settings_Page {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce checked by every caller; the value only decides which section is shown again.
 		$tab = isset( $_POST['rvrt-tab'] ) ? sanitize_key( wp_unslash( $_POST['rvrt-tab'] ) ) : '';
 
-		return '' === $tab ? array() : array( 'rvrt-tab' => $tab );
+		return '' === $tab ? [] : [ 'rvrt-tab' => $tab ];
 	}
 
 	/**

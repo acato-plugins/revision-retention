@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
-<ruleset name="Revision Retention">
-	<description>WordPress Coding Standards for the Revision Retention plugin.</description>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	name="Revision Retention"
+	xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/PHPCSStandards/PHP_CodeSniffer/master/phpcs.xsd">
+	<description>WordPress Coding Standards for the Revision Retention plugin, the Acato way.</description>
 
 	<file>.</file>
 
@@ -9,6 +11,8 @@
 	<exclude-pattern>/languages/*</exclude-pattern>
 	<exclude-pattern>/node_modules/*</exclude-pattern>
 	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/dist/*</exclude-pattern>
+	<exclude-pattern>*.min.js</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="basepath" value="."/>
@@ -19,7 +23,25 @@
 	<config name="minimum_wp_version" value="6.7"/>
 	<config name="testVersion" value="8.2-"/>
 
-	<rule ref="WordPress"/>
+	<rule ref="WordPress-Extra">
+		<!-- Acato uses short array syntax []. -->
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax.Found"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
+		<!-- Acato allows the short ternary. -->
+		<exclude name="WordPress.PHP.DisallowShortTernary.Found"/>
+		<exclude name="Universal.Operators.DisallowShortTernary.Found"/>
+		<!-- Acato names class files class-foobar.php for class FooBar. -->
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+
+	<rule ref="WordPress-Docs"/>
+
+	<!-- Short arrays are not only allowed but required, so the code reads one way. -->
+	<rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
+
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter"/>
+	<rule ref="Generic.Commenting.Todo"/>
+
 	<rule ref="PHPCompatibilityWP"/>
 
 	<rule ref="WordPress.WP.I18n">

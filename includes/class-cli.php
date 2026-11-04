@@ -7,7 +7,12 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
+
+use WP_CLI;
+
+use function WP_CLI\Utils\format_items;
+use function WP_CLI\Utils\get_flag_value;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -20,7 +25,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class CLI {
+class Cli {
 
 	/**
 	 * Register the command with WP-CLI.
@@ -28,7 +33,7 @@ class CLI {
 	 * @return void
 	 */
 	public static function register(): void {
-		\WP_CLI::add_command( 'revision-retention', self::class );
+		WP_CLI::add_command( 'revision-retention', self::class );
 	}
 
 	/**
@@ -63,52 +68,52 @@ class CLI {
 		$next   = wp_next_scheduled( Scheduler::HOOK );
 		$counts = Cleaner::counts();
 
-		$rows = array(
-			array(
+		$rows = [
+			[
 				'setting' => 'keep',
 				'value'   => self::describe_keep( (int) Settings::get( 'keep' ) ),
-			),
-			array(
+			],
+			[
 				'setting' => 'max_age_days',
 				'value'   => Settings::describe_age( (int) Settings::get( 'max_age_days' ) ),
-			),
-			array(
+			],
+			[
 				'setting' => 'batch_size',
 				'value'   => (string) Settings::get( 'batch_size' ),
-			),
-			array(
+			],
+			[
 				'setting' => 'max_deletions',
 				'value'   => ( (int) Settings::get( 'max_deletions' ) ) > 0
 					? sprintf( '%s per run', number_format_i18n( (int) Settings::get( 'max_deletions' ) ) )
 					: 'no cap',
-			),
-			array(
+			],
+			[
 				'setting' => 'scheduled',
 				'value'   => empty( Settings::get( 'cron_enabled' ) )
 					? 'off'
 					: sprintf( '%s, next run %s', self::describe_interval(), $next ? gmdate( 'Y-m-d H:i:s', (int) $next ) . ' GMT' : 'not booked' ),
-			),
-			array(
+			],
+			[
 				'setting' => 'wp_cron',
 				'value'   => self::describe_cron(),
-			),
-			array(
+			],
+			[
 				'setting' => 'revisions_stored',
 				'value'   => (string) array_sum( $counts ),
-			),
-			array(
+			],
+			[
 				'setting' => 'sweep_in_progress',
 				'value'   => $state['cursor'] > 0 ? sprintf( 'yes, resuming after post %d', $state['cursor'] ) : 'no',
-			),
-			array(
+			],
+			[
 				'setting' => 'last_completed_sweep',
 				'value'   => $state['finished'] > 0
 					? sprintf( '%s GMT, removed %d', gmdate( 'Y-m-d H:i:s', $state['finished'] ), $state['removed'] )
 					: 'never',
-			),
-		);
+			],
+		];
 
-		\WP_CLI\Utils\format_items( self::format( $assoc_args ), $rows, array( 'setting', 'value' ) );
+		format_items( self::format( $assoc_args ), $rows, [ 'setting', 'value' ] );
 	}
 
 	/**
@@ -142,27 +147,27 @@ class CLI {
 		unset( $args );
 
 		$counts = Cleaner::counts();
-		$rows   = array();
+		$rows   = [];
 
-		foreach ( Post_Types::eligible() as $post_type => $label ) {
+		foreach ( PostTypes::eligible() as $post_type => $label ) {
 			$rule = Policy::for_post_type( $post_type );
 
-			$rows[] = array(
+			$rows[] = [
 				'post_type' => $post_type,
 				'label'     => $label,
-				'revisions' => Post_Types::supports_revisions( $post_type )
-					? ( Post_Types::is_enabled_by_plugin( $post_type ) ? 'on (by this plugin)' : 'on' )
+				'revisions' => PostTypes::supports_revisions( $post_type )
+					? ( PostTypes::is_enabled_by_plugin( $post_type ) ? 'on (by this plugin)' : 'on' )
 					: 'off',
 				'keep'      => self::describe_keep( $rule->keep ),
 				'max_age'   => Settings::describe_age( $rule->max_age_days ),
 				'stored'    => (string) ( $counts[ $post_type ] ?? 0 ),
-			);
+			];
 		}
 
-		\WP_CLI\Utils\format_items(
+		format_items(
 			self::format( $assoc_args ),
 			$rows,
-			array( 'post_type', 'label', 'revisions', 'keep', 'max_age', 'stored' )
+			[ 'post_type', 'label', 'revisions', 'keep', 'max_age', 'stored' ]
 		);
 	}
 
@@ -215,27 +220,27 @@ class CLI {
 	public function run( array $args, array $assoc_args ): void {
 		unset( $args );
 
-		$dry_run = (bool) \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
-		$restart = (bool) \WP_CLI\Utils\get_flag_value( $assoc_args, 'restart', false );
-		$batch   = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'batch', (int) Settings::get( 'batch_size' ) );
-		$max     = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'max-batches', 0 );
-		$cap     = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'max-deletions', (int) Settings::get( 'max_deletions' ) );
+		$dry_run = (bool) get_flag_value( $assoc_args, 'dry-run', false );
+		$restart = (bool) get_flag_value( $assoc_args, 'restart', false );
+		$batch   = (int) get_flag_value( $assoc_args, 'batch', (int) Settings::get( 'batch_size' ) );
+		$max     = (int) get_flag_value( $assoc_args, 'max-batches', 0 );
+		$cap     = (int) get_flag_value( $assoc_args, 'max-deletions', (int) Settings::get( 'max_deletions' ) );
 
 		$post_types = self::requested_post_types( $assoc_args );
 		$rules      = Policy::sweepable();
 
-		if ( array() !== $post_types ) {
+		if ( [] !== $post_types ) {
 			$rules = array_intersect_key( $rules, array_flip( $post_types ) );
 		}
 
-		if ( array() === $rules ) {
-			\WP_CLI::warning( 'No post type has an age threshold set, so a sweep has nothing to do. Set one on the settings screen, or see `wp revision-retention post-types`.' );
+		if ( [] === $rules ) {
+			WP_CLI::warning( 'No post type has an age threshold set, so a sweep has nothing to do. Set one on the settings screen, or see `wp revision-retention post-types`.' );
 
 			return;
 		}
 
 		if ( ! $dry_run ) {
-			\WP_CLI::confirm(
+			WP_CLI::confirm(
 				sprintf(
 					'This permanently deletes revisions of %s. Continue?',
 					implode( ', ', array_keys( $rules ) )
@@ -247,7 +252,13 @@ class CLI {
 		// Only a full sweep shares the cursor the schedule and the screen carry
 		// on from. A partial one stored there would have the next full sweep
 		// skip every other post type below where it stopped.
-		$shared = ! $dry_run && array() === $post_types;
+		$shared = ! $dry_run && [] === $post_types;
+
+		// The schedule or the screen may be sweeping this site right now, from
+		// the same cursor and into the same log entry.
+		if ( $shared && ! Scheduler::lock() ) {
+			WP_CLI::error( 'Another sweep is running on this site right now, from the schedule or the settings screen. Wait a minute and try again.' );
+		}
 
 		if ( $restart && $shared ) {
 			Scheduler::reset_cursor();
@@ -255,35 +266,51 @@ class CLI {
 
 		$cursor  = $shared ? Scheduler::state()['cursor'] : 0;
 		$cleaner = new Cleaner();
-		$total   = new Sweep_Result( $cursor, 0, 0, false, $dry_run );
+		$total   = new SweepResult( $cursor, 0, 0, false, $dry_run );
 		$batches = 0;
 		$entry   = 0;
 
-		do {
-			$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
-			$total  = $total->add( $result );
-			++$batches;
+		try {
+			do {
+				$result = $cleaner->sweep( max( 1, $batch ), $dry_run, $total->cursor, $post_types, max( 0, $cap ) );
+				$total  = $total->add( $result );
+				++$batches;
 
-			\WP_CLI::log(
-				sprintf(
-					'Batch %d: %d posts checked, %d revisions %s.',
-					$batches,
-					$result->posts,
-					$result->revisions,
-					$dry_run ? 'would be removed' : 'removed'
-				)
-			);
+				WP_CLI::log(
+					sprintf(
+						'Batch %d: %d posts checked, %d revisions %s.',
+						$batches,
+						$result->posts,
+						$result->revisions,
+						$dry_run ? 'would be removed' : 'removed'
+					)
+				);
 
-			// The same sweep the schedule and the screen carry on: one cursor,
-			// one log entry and one total, whoever runs the next batch.
+				// The same sweep the schedule and the screen carry on: one
+				// cursor, one log entry and one total, whoever runs the next
+				// batch. The lock is renewed so a long run keeps it.
+				if ( $shared ) {
+					// A batch that outlasted the lock may have lost it to the
+					// schedule or the screen, which carry the sweep on; this
+					// batch's cursor must not be stored over theirs.
+					if ( ! Scheduler::renew_lock() ) {
+						WP_CLI::warning( 'Another sweep took over this site while this batch ran, so this run stops here and leaves the rest to it.' );
+
+						break;
+					}
+
+					Scheduler::advance( Log::SOURCE_CLI, $result );
+				} elseif ( ! $dry_run ) {
+					$entry = Log::record( Log::SOURCE_CLI, $result, $entry );
+				}
+			} while ( ! $total->finished && ( 0 === $max || $batches < $max ) );
+		} finally {
 			if ( $shared ) {
-				Scheduler::advance( Log::SOURCE_CLI, $result );
-			} elseif ( ! $dry_run ) {
-				$entry = Log::record( Log::SOURCE_CLI, $result, $entry );
+				Scheduler::unlock();
 			}
-		} while ( ! $total->finished && ( 0 === $max || $batches < $max ) );
+		}
 
-		\WP_CLI::success(
+		WP_CLI::success(
 			sprintf(
 				'%d posts lost revisions, %d revisions %s.%s',
 				$total->affected,
@@ -306,7 +333,7 @@ class CLI {
 			return $interval;
 		}
 
-		$names = array( 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' );
+		$names = [ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ];
 		$days  = array_map( static fn ( int $day ): string => $names[ $day ], Settings::days() );
 
 		$repeat = (int) Settings::get( 'cron_repeat' );
@@ -326,12 +353,12 @@ class CLI {
 	 * @return string
 	 */
 	private static function describe_cron(): string {
-		$health = Cron_Health::check();
+		$health = CronHealth::check();
 		$how    = $health['visits'] ? 'started by visits' : 'DISABLE_WP_CRON set, needs a server cron job';
 		$ran    = Scheduler::last_run();
 		$last   = $ran > 0 ? sprintf( ', sweep last ran %s GMT', gmdate( 'Y-m-d H:i:s', $ran ) ) : '';
 
-		if ( Cron_Health::STALLED === $health['status'] ) {
+		if ( CronHealth::STALLED === $health['status'] ) {
 			return sprintf( 'NOT RUNNING, events %d hours overdue (%s)%s', intdiv( $health['overdue'], HOUR_IN_SECONDS ), $how, $last );
 		}
 
@@ -346,18 +373,18 @@ class CLI {
 	 * @return array<int, string>
 	 */
 	private static function requested_post_types( array $assoc_args ): array {
-		$requested = (string) \WP_CLI\Utils\get_flag_value( $assoc_args, 'post-type', '' );
+		$requested = (string) get_flag_value( $assoc_args, 'post-type', '' );
 
 		if ( '' === $requested ) {
-			return array();
+			return [];
 		}
 
 		$post_types = array_filter( array_map( 'trim', explode( ',', $requested ) ) );
-		$eligible   = Post_Types::eligible();
+		$eligible   = PostTypes::eligible();
 
 		foreach ( $post_types as $post_type ) {
 			if ( ! isset( $eligible[ $post_type ] ) ) {
-				\WP_CLI::error( sprintf( 'Unknown or ineligible post type: %s', $post_type ) );
+				WP_CLI::error( sprintf( 'Unknown or ineligible post type: %s', $post_type ) );
 			}
 		}
 
@@ -372,7 +399,7 @@ class CLI {
 	 * @return string
 	 */
 	private static function format( array $assoc_args ): string {
-		return (string) \WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'table' );
+		return (string) get_flag_value( $assoc_args, 'format', 'table' );
 	}
 
 	/**

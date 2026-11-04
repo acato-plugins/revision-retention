@@ -13,21 +13,26 @@ declare( strict_types=1 );
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
-require_once __DIR__ . '/includes/class-retention-rule.php';
-require_once __DIR__ . '/includes/class-post-types.php';
+// The plugin's autoloader is not loaded on uninstall, so every class used
+// below is required by hand, its parent first.
+require_once __DIR__ . '/includes/class-singleton.php';
+require_once __DIR__ . '/includes/class-retentionrule.php';
+require_once __DIR__ . '/includes/class-posttypes.php';
 require_once __DIR__ . '/includes/class-settings.php';
 require_once __DIR__ . '/includes/class-scheduler.php';
-require_once __DIR__ . '/includes/class-cron-health.php';
+require_once __DIR__ . '/includes/class-cronhealth.php';
 require_once __DIR__ . '/includes/class-log.php';
-require_once __DIR__ . '/includes/class-rating-notice.php';
+require_once __DIR__ . '/includes/class-upgrade.php';
 require_once __DIR__ . '/includes/class-plugin.php';
+require_once __DIR__ . '/admin/class-ratingnotice.php';
 
-use Acato\RevisionRetention\Cron_Health;
-use Acato\RevisionRetention\Log;
-use Acato\RevisionRetention\Plugin;
-use Acato\RevisionRetention\Rating_Notice;
-use Acato\RevisionRetention\Scheduler;
-use Acato\RevisionRetention\Settings;
+use Acato\RevisionRetention\Admin\RatingNotice;
+use Acato\RevisionRetention\Includes\CronHealth;
+use Acato\RevisionRetention\Includes\Log;
+use Acato\RevisionRetention\Includes\Plugin;
+use Acato\RevisionRetention\Includes\Scheduler;
+use Acato\RevisionRetention\Includes\Settings;
+use Acato\RevisionRetention\Includes\Upgrade;
 
 /**
  * Remove this site's options and anything it has booked.
@@ -35,23 +40,30 @@ use Acato\RevisionRetention\Settings;
  * @return void
  */
 function rvrt_uninstall_site(): void {
+	// Whatever is kept, nothing may stay booked: with the plugin gone, nothing
+	// would handle the events, and the daily prune would book itself forever.
+	// Network deactivation only clears them on the main site, so every site
+	// is cleared here.
+	wp_clear_scheduled_hook( Scheduler::HOOK );
+	wp_clear_scheduled_hook( Log::PRUNE_HOOK );
+	delete_option( Scheduler::LOCK_OPTION );
+
 	if ( empty( Settings::get( 'remove_data_on_uninstall' ) ) ) {
 		return;
 	}
 
-	wp_clear_scheduled_hook( Scheduler::HOOK );
-
 	delete_option( Settings::OPTION );
 	delete_option( Scheduler::CURSOR_OPTION );
 	delete_option( Scheduler::LAST_RUN_OPTION );
-	delete_transient( Cron_Health::EXCUSED );
+	delete_option( Upgrade::VERSION_OPTION );
+	delete_transient( CronHealth::EXCUSED );
 
 	Log::uninstall();
 }
 
 if ( ! is_multisite() ) {
 	if ( ! empty( Settings::get( 'remove_data_on_uninstall' ) ) ) {
-		Rating_Notice::uninstall();
+		RatingNotice::uninstall();
 	}
 
 	rvrt_uninstall_site();
@@ -65,11 +77,11 @@ $rvrt_offset = 0;
 
 do {
 	$rvrt_sites = get_sites(
-		array(
+		[
 			'fields' => 'ids',
 			'number' => 100,
 			'offset' => $rvrt_offset,
-		)
+		]
 	);
 
 	$rvrt_found = count( $rvrt_sites );
@@ -90,5 +102,5 @@ delete_site_transient( Scheduler::NETWORK_TRANSIENT );
 
 if ( ! empty( Settings::network()['remove_data_on_uninstall'] ) ) {
 	delete_site_option( Settings::NETWORK_OPTION );
-	Rating_Notice::uninstall();
+	RatingNotice::uninstall();
 }

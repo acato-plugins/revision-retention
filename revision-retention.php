@@ -17,7 +17,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+use Acato\RevisionRetention\Includes\Plugin;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -34,45 +34,82 @@ if ( ! defined( 'RVRT_PLUGIN_DIR' ) ) {
 }
 
 /**
- * Autoload the plugin classes.
+ * Autoload the plugin classes, traits and interfaces.
  *
- * Maps `Acato\RevisionRetention\Some_Class` to `includes/class-some-class.php`.
+ * Maps `Acato\RevisionRetention\Admin\SettingsPage` to
+ * `admin/class-settingspage.php`, and likewise for `Includes`, trying
+ * `class-`, then `trait-`, then `interface-`.
  *
- * @param string $class_name Fully qualified class name being loaded.
+ * Up to 1.5.0 every class lived in the `Acato\RevisionRetention` namespace
+ * itself, under its WordPress style name. Code written against those names,
+ * a snippet calling `Acato\RevisionRetention\Settings::get()` for instance,
+ * keeps working: the old name is an alias of the class that took its place.
+ *
+ * @param string $class_name Fully qualified name of the class being loaded.
  *
  * @return void
  */
-spl_autoload_register(
-	static function ( string $class_name ): void {
-		$prefix = __NAMESPACE__ . '\\';
+function rvrt_autoload( string $class_name ): void {
+	$prefix = 'Acato\\RevisionRetention\\';
 
-		if ( ! str_starts_with( $class_name, $prefix ) ) {
-			return;
+	if ( ! str_starts_with( $class_name, $prefix ) ) {
+		return;
+	}
+
+	$relative = substr( $class_name, strlen( $prefix ) );
+	$legacy   = rvrt_legacy_classes()[ $relative ] ?? null;
+
+	if ( null !== $legacy ) {
+		if ( class_exists( $prefix . $legacy ) ) {
+			class_alias( $prefix . $legacy, $class_name );
 		}
 
-		$relative = substr( $class_name, strlen( $prefix ) );
-		$file     = RVRT_PLUGIN_DIR . 'includes/class-' . strtolower( str_replace( '_', '-', $relative ) ) . '.php';
+		return;
+	}
+
+	$parts = explode( '\\', strtolower( str_replace( '_', '-', $relative ) ) );
+	$name  = array_pop( $parts );
+	$dir   = RVRT_PLUGIN_DIR . ( [] === $parts ? 'includes' : implode( '/', $parts ) ) . '/';
+
+	foreach ( [ 'class', 'trait', 'interface' ] as $kind ) {
+		$file = $dir . $kind . '-' . $name . '.php';
 
 		if ( is_readable( $file ) ) {
 			require_once $file;
+
+			return;
 		}
 	}
-);
-
-register_activation_hook( RVRT_PLUGIN_FILE, array( Requirements::class, 'block_activation' ) );
-register_activation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_activation' ) );
-register_activation_hook( RVRT_PLUGIN_FILE, array( Rating_Notice::class, 'remember_install' ) );
-register_activation_hook( RVRT_PLUGIN_FILE, array( Plugin::class, 'forget_sites' ) );
-register_deactivation_hook( RVRT_PLUGIN_FILE, array( Scheduler::class, 'on_deactivation' ) );
-register_deactivation_hook( RVRT_PLUGIN_FILE, array( Log::class, 'on_deactivation' ) );
-register_deactivation_hook( RVRT_PLUGIN_FILE, array( Plugin::class, 'forget_sites' ) );
-
-// A WordPress old enough to miss the revision APIs this plugin builds on would
-// break in ways an administrator cannot act on, so it stops before booting.
-if ( ! Requirements::are_met() ) {
-	( new Requirements() )->register();
-
-	return;
 }
 
-Plugin::instance()->boot();
+/**
+ * The class names up to 1.5.0, each with the name of the class that replaced it.
+ *
+ * @return array<string, string> Old name => new name, both below `Acato\RevisionRetention\`.
+ */
+function rvrt_legacy_classes(): array {
+	return [
+		'Assets'           => 'Admin\\Assets',
+		'CLI'              => 'Includes\\Cli',
+		'Cleaner'          => 'Includes\\Cleaner',
+		'Cron_Health'      => 'Includes\\CronHealth',
+		'Dashboard_Widget' => 'Admin\\DashboardWidget',
+		'Limits'           => 'Includes\\Limits',
+		'Log'              => 'Includes\\Log',
+		'Log_View'         => 'Admin\\LogView',
+		'Plugin'           => 'Includes\\Plugin',
+		'Policy'           => 'Includes\\Policy',
+		'Post_Types'       => 'Includes\\PostTypes',
+		'Rating_Notice'    => 'Admin\\RatingNotice',
+		'Requirements'     => 'Includes\\Requirements',
+		'Retention_Rule'   => 'Includes\\RetentionRule',
+		'Scheduler'        => 'Includes\\Scheduler',
+		'Settings'         => 'Includes\\Settings',
+		'Settings_Page'    => 'Admin\\SettingsPage',
+		'Sweep_Result'     => 'Includes\\SweepResult',
+	];
+}
+
+spl_autoload_register( 'rvrt_autoload' );
+
+Plugin::instance();

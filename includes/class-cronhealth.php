@@ -7,7 +7,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-final class Cron_Health {
+final class CronHealth {
 
 	/**
 	 * Cron is triggered by page visits and keeps up.
@@ -91,7 +91,7 @@ final class Cron_Health {
 	private static function oldest(): int {
 		$crons = _get_cron_array();
 
-		if ( ! is_array( $crons ) || array() === $crons ) {
+		if ( ! is_array( $crons ) || [] === $crons ) {
 			return 0;
 		}
 
@@ -130,7 +130,7 @@ final class Cron_Health {
 	 */
 	private static function excused( int $oldest ): bool {
 		// Asked more than once in a request, the answer stays the same.
-		static $granted = array();
+		static $granted = [];
 
 		if ( isset( $granted[ $oldest ] ) ) {
 			return true;
@@ -163,10 +163,10 @@ final class Cron_Health {
 		}
 
 		return add_query_arg(
-			array(
+			[
 				'page' => 'wp-crontrol',
 				's'    => $search,
-			),
+			],
 			admin_url( 'tools.php' )
 		);
 	}
@@ -186,10 +186,10 @@ final class Cron_Health {
 			$status = $visits ? self::RUNNING : self::SYSTEM;
 		}
 
-		return array(
+		return [
 			'status'  => $status,
 			'overdue' => $overdue,
 			'visits'  => $visits,
-		);
+		];
 	}
 }

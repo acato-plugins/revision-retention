@@ -1,17 +1,18 @@
 <?php
 require_once __DIR__ . '/wp-stubs.php';
 
-use Acato\RevisionRetention\Assets;
-use Acato\RevisionRetention\Cleaner;
-use Acato\RevisionRetention\Cron_Health;
-use Acato\RevisionRetention\Log;
-use Acato\RevisionRetention\Plugin;
-use Acato\RevisionRetention\Rating_Notice;
-use Acato\RevisionRetention\Scheduler;
-use Acato\RevisionRetention\Sweep_Result;
-use Acato\RevisionRetention\Policy;
-use Acato\RevisionRetention\Retention_Rule;
-use Acato\RevisionRetention\Settings;
+use Acato\RevisionRetention\Admin\Assets;
+use Acato\RevisionRetention\Includes\Cleaner;
+use Acato\RevisionRetention\Includes\CronHealth;
+use Acato\RevisionRetention\Includes\Log;
+use Acato\RevisionRetention\Includes\Plugin;
+use Acato\RevisionRetention\Admin\RatingNotice;
+use Acato\RevisionRetention\Includes\Scheduler;
+use Acato\RevisionRetention\Includes\SweepResult;
+use Acato\RevisionRetention\Includes\Policy;
+use Acato\RevisionRetention\Includes\RetentionRule;
+use Acato\RevisionRetention\Includes\Settings;
+use Acato\RevisionRetention\Includes\Upgrade;
 
 $pass = 0;
 $fail = 0;
@@ -45,10 +46,10 @@ function reset_state(): void {
 /* ---------------------------------------------------------------- 1. Rule */
 echo "\nRetention_Rule\n";
 reset_state();
-check( 'unlimited keep is never sweepable', ( new Retention_Rule( -1, 30 ) )->is_sweepable(), false );
-check( 'no age threshold is never sweepable', ( new Retention_Rule( 5, 0 ) )->is_sweepable(), false );
-check( 'keep plus age is sweepable', ( new Retention_Rule( 5, 30 ) )->is_sweepable(), true );
-check( 'unlimited keep has no cutoff', ( new Retention_Rule( -1, 30 ) )->cutoff_gmt(), '' );
+check( 'unlimited keep is never sweepable', ( new RetentionRule( -1, 30 ) )->is_sweepable(), false );
+check( 'no age threshold is never sweepable', ( new RetentionRule( 5, 0 ) )->is_sweepable(), false );
+check( 'keep plus age is sweepable', ( new RetentionRule( 5, 30 ) )->is_sweepable(), true );
+check( 'unlimited keep has no cutoff', ( new RetentionRule( -1, 30 ) )->cutoff_gmt(), '' );
 
 /* ------------------------------------------------- 2. Single site policy */
 echo "\nPolicy, single site\n";
@@ -83,7 +84,7 @@ check( 'site per post type rule layers over the network one', [ Policy::for_post
 /* --------------------------------------------------- 4. Eligibility */
 echo "\nPost_Types::eligible\n";
 reset_state();
-$eligible = array_keys( Acato\RevisionRetention\Post_Types::eligible() );
+$eligible = array_keys( Acato\RevisionRetention\Includes\PostTypes::eligible() );
 check( 'a post type with an editor is offered', in_array( 'product', $eligible, true ), true );
 check( 'a post type with nothing to revise is left out', in_array( 'ledger', $eligible, true ), false );
 check( 'the revision post type itself is never offered', in_array( 'revision', $eligible, true ), false );
@@ -119,7 +120,7 @@ Settings::promote_to_network();
 Policy::flush();
 check( 'the overridden value becomes the network default', (int) Settings::network()['keep'], 20 );
 check( 'the inherited value is carried up unchanged', (int) Settings::network()['max_age_days'], 365 );
-check( 'the site keeps nothing of its own', get_option( Settings::OPTION, 'gone' ), 'gone' );
+check( 'the site keeps nothing of its own', get_option( Settings::OPTION, 'gone' ), array() );
 check( 'and so ends up with exactly what it had', [ (int) Settings::get( 'keep' ), (int) Settings::get( 'max_age_days' ) ], [ 20, 365 ] );
 check( 'the network keeps deciding who may override', Settings::allows_site_override(), true );
 
@@ -299,12 +300,12 @@ foreach ( $GLOBALS['wpdb']->queries as $q ) {
 	if ( str_contains( $q['query'], 'GROUP BY r.post_parent' ) && $excludes ) {
 		$looked_for_parents = true;
 	}
-	if ( str_contains( $q['query'], 'ORDER BY post_date_gmt DESC' ) && $excludes ) {
+	if ( str_contains( $q['query'], 'post_parent IN' ) && $excludes ) {
 		$looked_for_one = true;
 	}
 }
 check( 'the candidate query excludes autosaves', $looked_for_parents, true );
-check( 'the per post query excludes autosaves', $looked_for_one, true );
+check( 'the batch revisions query excludes autosaves', $looked_for_one, true );
 check( 'and the counts query does too', str_contains( Cleaner::counts() === array() ? implode( '', array_column( $GLOBALS['wpdb']->queries, 'query' ) ) : implode( '', array_column( $GLOBALS['wpdb']->queries, 'query' ) ), 'post_name NOT LIKE %s' ), true );
 
 /* --------------------------------------------------------- 12. Sanitizing */
@@ -461,11 +462,11 @@ check( 'a chosen slot lands on a chosen day at the hour', array( in_array( (int)
 echo "\nScheduler::advance\n";
 reset_state();
 update_option( Settings::OPTION, array( 'log_enabled' => false ) );
-Scheduler::advance( Log::SOURCE_CLI, new Sweep_Result( 120, 4, 9, false, false ) );
+Scheduler::advance( Log::SOURCE_CLI, new SweepResult( 120, 4, 9, false, false ) );
 $state = Scheduler::state();
 check( 'a batch part way stores the cursor and the running totals', [ $state['cursor'], $state['revisions'], $state['finished'] ], [ 120, 9, 0 ] );
 
-Scheduler::advance( Log::SOURCE_CLI, new Sweep_Result( 0, 2, 3, true, false ) );
+Scheduler::advance( Log::SOURCE_CLI, new SweepResult( 0, 2, 3, true, false ) );
 $state = Scheduler::state();
 check( 'the batch that finishes resets the cursor and reports the whole sweep', [ $state['cursor'], $state['removed'], $state['finished'] > 0 ], [ 0, 12, true ] );
 
@@ -491,50 +492,50 @@ check( 'a stopped entry reads as stopped straight away', Log::status( array( 'fi
 check( 'a finished entry reads as finished', Log::status( array( 'finished' => 1, 'ended_gmt' => $now ) ), 'finished' );
 check( 'an open entry with a recent batch reads as running', Log::status( array( 'finished' => 0, 'ended_gmt' => $now ) ), 'running' );
 
-/* ------------------------------------------------------- 16. Cron_Health */
+/* ------------------------------------------------------- 16. CronHealth */
 echo "\nCron_Health\n";
 reset_state();
-check( 'an empty queue is never overdue', Cron_Health::overdue(), 0 );
-check( 'and cron counts as running', Cron_Health::check()['status'], Cron_Health::RUNNING );
+check( 'an empty queue is never overdue', CronHealth::overdue(), 0 );
+check( 'and cron counts as running', CronHealth::check()['status'], CronHealth::RUNNING );
 
 $GLOBALS['t_cron']['rvrt_sweep'] = time() - 2 * HOUR_IN_SECONDS;
-check( 'an event two hours late with nothing firing it is stalled', Cron_Health::check()['status'], Cron_Health::STALLED );
+check( 'an event two hours late with nothing firing it is stalled', CronHealth::check()['status'], CronHealth::STALLED );
 
 $GLOBALS['timestart'] = microtime( true );
 set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) ) );
-check( 'the visit that just woke a quiet site is not a false alarm', Cron_Health::check()['status'], Cron_Health::RUNNING );
-check( 'asked again in the same request, the answer holds', Cron_Health::check()['status'], Cron_Health::RUNNING );
+check( 'the visit that just woke a quiet site is not a false alarm', CronHealth::check()['status'], CronHealth::RUNNING );
+check( 'asked again in the same request, the answer holds', CronHealth::check()['status'], CronHealth::RUNNING );
 
 reset_state();
 $late = time() - 3 * HOUR_IN_SECONDS;
 $GLOBALS['t_cron']['rvrt_sweep'] = $late;
-set_transient( Cron_Health::EXCUSED, $late );
+set_transient( CronHealth::EXCUSED, $late );
 set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) ) );
-check( 'the same event still late after it was excused once is stalled', Cron_Health::check()['status'], Cron_Health::STALLED );
+check( 'the same event still late after it was excused once is stalled', CronHealth::check()['status'], CronHealth::STALLED );
 
 reset_state();
 $GLOBALS['t_cron']['rvrt_sweep'] = time() - 5 * HOUR_IN_SECONDS;
 set_transient( 'doing_cron', sprintf( '%.22F', microtime( true ) - 300 ) );
-check( 'a lock from an earlier request excuses nothing', Cron_Health::check()['status'], Cron_Health::STALLED );
+check( 'a lock from an earlier request excuses nothing', CronHealth::check()['status'], CronHealth::STALLED );
 
-/* ----------------------------------------------------- 17. Rating_Notice */
+/* ----------------------------------------------------- 17. RatingNotice */
 echo "\nRating_Notice::is_due\n";
 reset_state();
-check( 'not before the plugin knows when it was installed', Rating_Notice::is_due( false ), false );
-$installed_option = ( new ReflectionClassConstant( Rating_Notice::class, 'INSTALLED_OPTION' ) )->getValue();
+check( 'not before the plugin knows when it was installed', RatingNotice::is_due( false ), false );
+$installed_option = ( new ReflectionClassConstant( RatingNotice::class, 'INSTALLED_OPTION' ) )->getValue();
 $GLOBALS['t_site_options'] = array( $installed_option => time() - 10 * DAY_IN_SECONDS );
-check( 'not within the first month', Rating_Notice::is_due( false ), false );
+check( 'not within the first month', RatingNotice::is_due( false ), false );
 $GLOBALS['t_site_options'][ $installed_option ] = time() - 40 * DAY_IN_SECONDS;
-check( 'due a month after activation', Rating_Notice::is_due( false ), true );
-$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = (string) ( time() + DAY_IN_SECONDS );
-check( 'not while "Maybe later" is running', Rating_Notice::is_due( false ), false );
-$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = (string) ( time() - 1 );
-check( 'due again once it has run out', Rating_Notice::is_due( false ), true );
-$GLOBALS['t_user_meta'][ Rating_Notice::USER_META ] = 'done';
-check( 'never again after an answer', Rating_Notice::is_due( false ), false );
+check( 'due a month after activation', RatingNotice::is_due( false ), true );
+$GLOBALS['t_user_meta'][ RatingNotice::USER_META ] = (string) ( time() + DAY_IN_SECONDS );
+check( 'not while "Maybe later" is running', RatingNotice::is_due( false ), false );
+$GLOBALS['t_user_meta'][ RatingNotice::USER_META ] = (string) ( time() - 1 );
+check( 'due again once it has run out', RatingNotice::is_due( false ), true );
+$GLOBALS['t_user_meta'][ RatingNotice::USER_META ] = 'done';
+check( 'never again after an answer', RatingNotice::is_due( false ), false );
 $GLOBALS['t_caps'] = array();
 $GLOBALS['t_user_meta'] = array();
-check( 'never for a user who cannot change the settings', Rating_Notice::is_due( false ), false );
+check( 'never for a user who cannot change the settings', RatingNotice::is_due( false ), false );
 
 /* ------------------------------------------------------------ 18. Assets */
 echo "\nAssets::url\n";
@@ -617,10 +618,134 @@ echo "\nuninstall.php\n";
 // Uninstall runs without the plugin's autoloader, so every class it names
 // has to be required by hand, or it stops with a fatal half way.
 $uninstall = (string) file_get_contents( __DIR__ . '/../uninstall.php' );
-preg_match_all( '/\b([A-Z][A-Za-z_]+)::/', $uninstall, $used );
-preg_match_all( "#includes/class-([a-z-]+)\.php#", $uninstall, $loaded );
-$missing = array_values( array_diff( array_unique( $used[1] ), array_map( static fn( string $f ): string => str_replace( ' ', '_', ucwords( str_replace( '-', ' ', $f ) ) ), $loaded[1] ) ) );
+preg_match_all( '/\b([A-Z][A-Za-z]+)::/', $uninstall, $used );
+preg_match_all( "#(?:admin|includes)/class-([a-z]+)\.php#", $uninstall, $loaded );
+$missing = array_values( array_diff( array_map( 'strtolower', array_unique( $used[1] ) ), $loaded[1] ) );
 check( 'every class uninstall.php uses is required by it', $missing, array() );
+
+/* ------------------------------------------------------ 22. Sweep lock */
+echo "\nScheduler: the sweep lock\n";
+reset_state();
+$GLOBALS['wpdb']->lock = null;
+check( 'the first request gets the lock', Scheduler::lock(), true );
+check( 'a second one does not', Scheduler::lock(), false );
+Scheduler::unlock();
+check( 'once let go, it can be had again', Scheduler::lock(), true );
+Scheduler::unlock();
+$GLOBALS['wpdb']->lock = ( time() - HOUR_IN_SECONDS ) . ':someone-else';
+check( 'a lock left by a request that died is taken over', Scheduler::lock(), true );
+check( 'and is then this request\'s own', (int) $GLOBALS['wpdb']->lock >= time() - 1 && ! str_ends_with( $GLOBALS['wpdb']->lock, ':someone-else' ), true );
+// The request that died wakes up after all, and finds its lock taken.
+$GLOBALS['wpdb']->lock = time() . ':the-new-owner';
+check( 'a request whose lock was taken over learns it lost it', Scheduler::renew_lock(), false );
+Scheduler::unlock();
+check( 'and letting go leaves the new owner\'s lock alone', $GLOBALS['wpdb']->lock, time() . ':the-new-owner' );
+check( 'deactivating leaves a running sweep\'s lock alone', ( static function () { Scheduler::on_deactivation(); return $GLOBALS['wpdb']->lock; } )(), time() . ':the-new-owner' );
+$GLOBALS['wpdb']->lock = null;
+$GLOBALS['wpdb']->lock_released_meanwhile = true;
+check( 'a lock let go of while it was being looked at is tried for again', Scheduler::lock(), true );
+Scheduler::unlock();
+
+// A scheduled batch while the screen holds the lock deletes nothing, and
+// still leaves the next batch booked.
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 30, 'cron_enabled' => true, 'log_enabled' => false ) );
+$GLOBALS['wpdb']->candidates = array( array( 'parent_id' => 7, 'post_type' => 'post' ) );
+$GLOBALS['wpdb']->revisions  = array( 7 => array( array( 'ID' => 70, 'post_date_gmt' => '2001-01-01 00:00:00' ) ) );
+Policy::flush();
+$GLOBALS['wpdb']->lock = time() . ':the-screen';
+$locked = Scheduler::instance()->run();
+check( 'a locked sweep deletes nothing', array( $locked->revisions, $GLOBALS['t_deleted'] ), array( 0, array() ) );
+check( 'and books the next try', (int) wp_next_scheduled( Scheduler::HOOK ) > time(), true );
+$GLOBALS['wpdb']->lock = null;
+$unlocked = Scheduler::instance()->run();
+check( 'without the lock held, the batch runs', $unlocked->revisions, 1 );
+check( 'and lets go of the lock after', $GLOBALS['wpdb']->lock, null );
+
+/* -------------------------------------------- 23. Failed deletes */
+echo "\nCleaner: only what is gone is counted\n";
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 30 ) );
+$GLOBALS['wpdb']->candidates = array( array( 'parent_id' => 8, 'post_type' => 'post' ) );
+$GLOBALS['wpdb']->revisions  = array(
+	8 => array(
+		array( 'ID' => 81, 'post_date_gmt' => '2001-01-02 00:00:00' ),
+		array( 'ID' => 82, 'post_date_gmt' => '2001-01-01 00:00:00' ),
+	),
+);
+$GLOBALS['t_undeletable'] = array( 82 );
+Policy::flush();
+$partial = ( new Cleaner() )->sweep( 100, false );
+check( 'a revision that could not be deleted is not counted', array( $partial->revisions, $partial->items[0]['kept'] ), array( 1, 1 ) );
+$GLOBALS['t_undeletable'] = array();
+
+// Revisions are read 25 posts at a time, and not at all past the cap.
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 0, 'max_age_days' => 30 ) );
+$GLOBALS['wpdb']->candidates = array();
+$GLOBALS['wpdb']->revisions  = array();
+for ( $n = 1; $n <= 60; $n++ ) {
+	$GLOBALS['wpdb']->candidates[]     = array( 'parent_id' => $n, 'post_type' => 'post' );
+	$GLOBALS['wpdb']->revisions[ $n ] = array( array( 'ID' => 1000 + $n, 'post_date_gmt' => '2001-01-01 00:00:00' ) );
+}
+Policy::flush();
+$reads = static fn(): int => count( array_filter( $GLOBALS['wpdb']->queries, static fn( $q ) => str_contains( $q['query'], 'post_parent IN' ) ) );
+$GLOBALS['wpdb']->queries = array();
+$all = ( new Cleaner() )->sweep( 100, true );
+check( 'sixty posts take three revisions queries', array( $all->revisions, $reads() ), array( 60, 3 ) );
+$GLOBALS['wpdb']->queries = array();
+$capped = ( new Cleaner() )->sweep( 100, true, 0, array(), 10 );
+check( 'and a cap reached in the first chunk reads no more', array( $capped->revisions, $reads() ), array( 10, 1 ) );
+
+/* ------------------------------------------------------ 24. Upgrade */
+echo "\nUpgrade\n";
+reset_state();
+$GLOBALS['t_autoload'] = array();
+Upgrade::run();
+check( 'a site that never saved gets autoloaded, empty settings', array( get_option( Settings::OPTION ), $GLOBALS['t_autoload'][ Settings::OPTION ] ), array( array(), true ) );
+check( 'and an autoloaded log version that reads as not installed', array( Log::installed(), $GLOBALS['t_autoload'][ Log::DB_VERSION_OPTION ] ), array( false, true ) );
+check( 'the install time is backfilled', is_int( get_site_option( RatingNotice::INSTALLED_OPTION ) ), true );
+check( 'and the version recorded', get_option( Upgrade::VERSION_OPTION ), RVRT_VERSION );
+reset_state();
+update_option( Settings::OPTION, array( 'keep' => 9 ) );
+Upgrade::run();
+check( 'saved settings are left alone', get_option( Settings::OPTION ), array( 'keep' => 9 ) );
+
+/* ------------------------------------------ 25. Updating from 1.5.0 */
+echo "\nUpdating a 1.5.0 site in place\n";
+reset_state();
+// What 1.5.0 left behind on a site that has been running for a while: saved
+// settings, a log table, a sweep part way through, and no record of the
+// version its data was brought up to.
+$old_settings = array( 'keep' => 7, 'max_age_days' => 90, 'cron_enabled' => true );
+$old_cursor   = array( 'cursor' => 420, 'revisions' => 12, 'posts' => 30, 'started' => time() - 600, 'finished' => 0, 'removed' => 0, 'log' => 3 );
+update_option( Settings::OPTION, $old_settings );
+update_option( Log::DB_VERSION_OPTION, '1' );
+update_option( Scheduler::CURSOR_OPTION, $old_cursor );
+update_site_option( RatingNotice::INSTALLED_OPTION, 1700000000 );
+
+// The bootstrap, as WordPress loads it after the update.
+function register_activation_hook( $file, $cb ) {}
+function register_deactivation_hook( $file, $cb ) {}
+function get_bloginfo( $what = '' ) { return 'version' === $what ? '6.8' : 'Test site'; }
+require __DIR__ . '/../revision-retention.php';
+
+check( 'the update brings the site up to this version', get_option( Upgrade::VERSION_OPTION ), RVRT_VERSION );
+check( 'its saved settings are untouched', get_option( Settings::OPTION ), $old_settings );
+check( 'its log table still counts as installed', Log::installed(), true );
+check( 'the sweep part way through carries on where it was', Scheduler::state()['cursor'], 420 );
+check( 'and the install date is not reset', get_site_option( RatingNotice::INSTALLED_OPTION ), 1700000000 );
+
+// Code written against the 1.5.0 class names keeps working.
+check( 'an old class name is the new class', class_exists( 'Acato\\RevisionRetention\\Settings' ) && is_a( 'Acato\\RevisionRetention\\Settings', Settings::class, true ), true );
+check( 'and reads the same settings', \Acato\RevisionRetention\Settings::get( 'keep' ), 7 );
+check( 'an old WordPress style name too', \Acato\RevisionRetention\Sweep_Result::class, 'Acato\\RevisionRetention\\Sweep_Result' );
+check( 'which resolves to its new class', get_class( new \Acato\RevisionRetention\Sweep_Result( 0, 0, 0, true, true ) ), SweepResult::class );
+check( 'the old Plugin::instance() is the one plugin', \Acato\RevisionRetention\Plugin::instance() === Plugin::instance(), true );
+// A parameter type or instanceof never asks the autoloader, so the rule
+// handed to the filter has to be the old class already.
+add_filter( 'revision_retention_rule', static fn( \Acato\RevisionRetention\Retention_Rule $rule ): \Acato\RevisionRetention\Retention_Rule => $rule );
+Policy::flush();
+check( 'a filter typed against the 1.5.0 rule class still runs', Policy::for_post_type( 'post' )->keep, 7 );
 
 echo "\n" . str_repeat( '-', 52 ) . "\n";
 printf( "%d passed, %d failed\n", $pass, $fail );

@@ -7,7 +7,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
-class Post_Types {
+class PostTypes extends Singleton {
 
 	/**
 	 * Post types that are never offered, whatever they are registered as.
@@ -27,7 +27,7 @@ class Post_Types {
 	 *
 	 * @var array<int, string>
 	 */
-	private const EXCLUDED = array(
+	private const EXCLUDED = [
 		'attachment',
 		'revision',
 		'nav_menu_item',
@@ -42,7 +42,7 @@ class Post_Types {
 		'wp_template_part',
 		'wp_font_family',
 		'wp_font_face',
-	);
+	];
 
 	/**
 	 * Eligible post types resolved in this request.
@@ -59,8 +59,8 @@ class Post_Types {
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		add_action( 'init', array( $this, 'add_revision_support' ), 99 );
+	protected function init(): void {
+		add_action( 'init', [ $this, 'add_revision_support' ], 99 );
 	}
 
 	/**
@@ -104,9 +104,9 @@ class Post_Types {
 			return self::$eligible;
 		}
 
-		$eligible = array();
+		$eligible = [];
 
-		foreach ( get_post_types( array(), 'objects' ) as $post_type ) {
+		foreach ( get_post_types( [], 'objects' ) as $post_type ) {
 			if ( in_array( $post_type->name, self::EXCLUDED, true ) ) {
 				continue;
 			}

@@ -7,7 +7,7 @@
 
 declare( strict_types=1 );
 
-namespace Acato\RevisionRetention;
+namespace Acato\RevisionRetention\Includes;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,18 +26,18 @@ class Policy {
 	/**
 	 * Rules already resolved in this request, keyed by post type.
 	 *
-	 * @var array<string, Retention_Rule>
+	 * @var array<string, RetentionRule>
 	 */
-	private static array $cache = array();
+	private static array $cache = [];
 
 	/**
 	 * The rule in effect for one post type.
 	 *
 	 * @param string $post_type Post type slug.
 	 *
-	 * @return Retention_Rule
+	 * @return RetentionRule
 	 */
-	public static function for_post_type( string $post_type ): Retention_Rule {
+	public static function for_post_type( string $post_type ): RetentionRule {
 		if ( isset( self::$cache[ $post_type ] ) ) {
 			return self::$cache[ $post_type ];
 		}
@@ -46,7 +46,7 @@ class Policy {
 		$keep     = (int) $settings['keep'];
 		$max_age  = (int) $settings['max_age_days'];
 
-		$overrides = is_array( $settings['post_types'] ) ? $settings['post_types'] : array();
+		$overrides = is_array( $settings['post_types'] ) ? $settings['post_types'] : [];
 		$override  = $overrides[ $post_type ] ?? null;
 
 		if ( is_array( $override ) ) {
@@ -54,19 +54,27 @@ class Policy {
 			$max_age = isset( $override['max_age_days'] ) ? (int) $override['max_age_days'] : $max_age;
 		}
 
-		$rule = new Retention_Rule( $keep, $max_age );
+		$rule = new RetentionRule( $keep, $max_age );
+
+		// Up to 1.5.0 this class was Acato\RevisionRetention\Retention_Rule,
+		// and a callback may still name it in its parameter type or in an
+		// instanceof. Neither asks the autoloader, so the alias that makes the
+		// old name this class is made here, before the rule is handed out.
+		if ( has_filter( 'revision_retention_rule' ) ) {
+			class_exists( 'Acato\RevisionRetention\Retention_Rule' );
+		}
 
 		/**
 		 * Filters the retention rule that applies to a post type.
 		 *
-		 * @param Retention_Rule $rule      The rule resolved from the settings.
-		 * @param string         $post_type Post type the rule applies to.
+		 * @param RetentionRule $rule      The rule resolved from the settings.
+		 * @param string        $post_type Post type the rule applies to.
 		 */
 		$filtered = apply_filters( 'revision_retention_rule', $rule, $post_type );
 
 		// A filter that hands back something else is ignored rather than
 		// trusted: the rest of the plugin reads the two numbers off this object.
-		self::$cache[ $post_type ] = $filtered instanceof Retention_Rule ? $filtered : $rule;
+		self::$cache[ $post_type ] = $filtered instanceof RetentionRule ? $filtered : $rule;
 
 		return self::$cache[ $post_type ];
 	}
@@ -78,12 +86,12 @@ class Policy {
 	 * capped by WordPress on every save, and there is nothing to clean up
 	 * after the fact.
 	 *
-	 * @return array<string, Retention_Rule> Rules keyed by post type slug.
+	 * @return array<string, RetentionRule> Rules keyed by post type slug.
 	 */
 	public static function sweepable(): array {
-		$sweepable = array();
+		$sweepable = [];
 
-		foreach ( array_keys( Post_Types::eligible() ) as $post_type ) {
+		foreach ( array_keys( PostTypes::eligible() ) as $post_type ) {
 			$rule = self::for_post_type( $post_type );
 
 			if ( $rule->is_sweepable() ) {
@@ -103,6 +111,6 @@ class Policy {
 	 * @return void
 	 */
 	public static function flush(): void {
-		self::$cache = array();
+		self::$cache = [];
 	}
 }

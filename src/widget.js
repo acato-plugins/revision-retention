@@ -1,27 +1,33 @@
 /**
  * Dashboard widget of the Revision Retention plugin.
  *
- * Makes the Site and Network tabs a network administrator gets in the widget
- * switch between the two views, and the Daily, Weekly and Monthly buttons
- * switch between the charts.
+ * Without this, the widget shows everything at once: the Site and Network
+ * views one under the other, and the Daily, Weekly and Monthly charts each
+ * under its own heading. With it, the views become tabs and the charts a
+ * switch, one shown at a time.
  */
 ( () => {
 	'use strict';
 
 	const syncWidgetTabs = ( widget ) => {
+		const list = widget.querySelector( '.rvrt-widget-tabs' );
 		const tabs = [ ...widget.querySelectorAll( '.rvrt-widget-tab' ) ];
 
-		if ( ! tabs.length ) {
+		if ( ! list || ! tabs.length ) {
 			return;
 		}
 
 		const select = ( tab, focus ) => {
 			for ( const other of tabs ) {
 				const active = other === tab;
+				const panel = document.getElementById( other.getAttribute( 'aria-controls' ) );
 
 				other.setAttribute( 'aria-selected', active ? 'true' : 'false' );
 				other.tabIndex = active ? 0 : -1;
-				document.getElementById( other.getAttribute( 'aria-controls' ) ).hidden = ! active;
+
+				if ( panel ) {
+					panel.hidden = ! active;
+				}
 			}
 
 			if ( focus ) {
@@ -33,16 +39,33 @@
 			tab.addEventListener( 'click', () => select( tab, false ) );
 
 			tab.addEventListener( 'keydown', ( event ) => {
-				const step = { ArrowRight: 1, ArrowLeft: -1 }[ event.key ] ?? 0;
+				// The arrows follow the reading direction, so in a right to
+				// left language the right arrow goes back.
+				const rtl = getComputedStyle( list ).direction === 'rtl';
+				const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[ event.key ] ?? 0;
+				const jump = { Home: 0, End: tabs.length - 1 }[ event.key ];
 
-				if ( ! step ) {
+				if ( ! step && jump === undefined ) {
 					return;
 				}
 
 				event.preventDefault();
-				select( tabs[ ( index + step + tabs.length ) % tabs.length ], true );
+				select( tabs[ jump ?? ( index + step + tabs.length ) % tabs.length ], true );
 			} );
 		} );
+
+		// The tabs name the views from here on, and the views become their panels.
+		for ( const title of widget.querySelectorAll( '.rvrt-widget-view-title' ) ) {
+			title.hidden = true;
+		}
+
+		for ( const panel of widget.querySelectorAll( '.rvrt-widget-panel[data-tab]' ) ) {
+			panel.setAttribute( 'role', 'tabpanel' );
+			panel.setAttribute( 'aria-labelledby', panel.dataset.tab );
+		}
+
+		list.hidden = false;
+		select( tabs.find( ( tab ) => tab.getAttribute( 'aria-selected' ) === 'true' ) ?? tabs[ 0 ], false );
 	};
 
 	// Remembered in this browser only, as a convenience: without it, the
@@ -79,17 +102,18 @@
 	};
 
 	const syncPeriods = ( widget ) => {
-		const buttons = widget.querySelectorAll( '.rvrt-period-button' );
+		const buttons = [ ...widget.querySelectorAll( '.rvrt-period-button' ) ];
 
 		if ( ! buttons.length ) {
 			return;
 		}
 
+		// Compared with the buttons rather than put in a selector, so a stored
+		// value that is no period at all is simply not found.
+		const periods = buttons.map( ( button ) => button.dataset.period );
 		const stored = remembered();
-
-		if ( stored && widget.querySelector( `.rvrt-period[data-period="${ stored }"]` ) ) {
-			showPeriod( widget, stored );
-		}
+		const pressed = buttons.find( ( button ) => button.getAttribute( 'aria-pressed' ) === 'true' );
+		const start = periods.includes( stored ) ? stored : pressed?.dataset.period ?? periods[ 0 ];
 
 		for ( const button of buttons ) {
 			button.addEventListener( 'click', () => {
@@ -97,6 +121,17 @@
 				remember( button.dataset.period );
 			} );
 		}
+
+		// The switch names the period from here on.
+		for ( const title of widget.querySelectorAll( '.rvrt-period-title' ) ) {
+			title.hidden = true;
+		}
+
+		for ( const group of widget.querySelectorAll( '.rvrt-period-switch' ) ) {
+			group.hidden = false;
+		}
+
+		showPeriod( widget, start );
 	};
 
 	document.addEventListener( 'DOMContentLoaded', () => {
