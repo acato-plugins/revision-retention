@@ -79,6 +79,14 @@ class SettingsPage extends Singleton {
 	private const NETWORK_RUN_ACTION = 'rvrt_run_network_sweep';
 
 	/**
+	 * Nonce action for booking a sweep on every site, kept apart from the one
+	 * the AJAX sweep runs on, so a nonce for one cannot be used for the other.
+	 *
+	 * @var string
+	 */
+	private const NETWORK_BOOK_NONCE = 'rvrt_book_network_sweep';
+
+	/**
 	 * Hook the screens into WordPress.
 	 *
 	 * @return void
@@ -93,6 +101,7 @@ class SettingsPage extends Singleton {
 		add_action( 'admin_post_' . self::RUN_ACTION, [ $this, 'run_sweep' ] );
 		add_action( 'wp_ajax_' . self::RUN_ACTION, [ $this, 'ajax_sweep_batch' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+		add_filter( 'admin_body_class', [ $this, 'body_class' ] );
 
 		add_action( 'admin_menu', [ $this, 'add_page' ] );
 
@@ -102,6 +111,26 @@ class SettingsPage extends Singleton {
 			add_action( 'network_admin_edit_' . self::NETWORK_RUN_ACTION, [ $this, 'sweep_network' ] );
 			add_action( 'wp_ajax_' . self::NETWORK_RUN_ACTION, [ $this, 'ajax_network_sweep_batch' ] );
 		}
+	}
+
+	/**
+	 * Mark the plugin's own screen, so the dark scheme can paint all of it,
+	 * WordPress's parts included, and not only the plugin's cards.
+	 *
+	 * Left untyped on purpose, like the other filter callbacks in this file.
+	 *
+	 * @param mixed $classes Space separated body classes.
+	 *
+	 * @return mixed
+	 */
+	public function body_class( $classes ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! is_string( $classes ) || null === $screen || ! str_contains( $screen->id, self::PAGE_SLUG ) ) {
+			return $classes;
+		}
+
+		return $classes . ' rvrt-page';
 	}
 
 	/**
@@ -212,7 +241,7 @@ class SettingsPage extends Singleton {
 	 *
 	 * @return string
 	 */
-	private static function page_url( bool $network = false ): string {
+	public static function page_url( bool $network = false ): string {
 		return $network
 			? network_admin_url( 'settings.php?page=' . self::PAGE_SLUG )
 			: admin_url( 'options-general.php?page=' . self::PAGE_SLUG );
@@ -1835,14 +1864,8 @@ class SettingsPage extends Singleton {
 
 	/**
 	 * Run one batch on the current site: a preview from where the screen got
-	 * to, or a real one from where the sweep got to.
-	 *
-	 * A real batch always carries on from the stored cursor rather than the
-	 * one the browser posts back. The schedule or WP-CLI may have moved the
-	 * sweep on since the browser's last batch, and a tab left open would
-	 * otherwise send the shared cursor back to where that tab last was. When
-	 * the sweep the browser was part way through has been finished by
-	 * somebody else, the browser is told it is done instead of starting over.
+	 * to, or a real one from where the sweep got to. Scheduler::run_batch()
+	 * holds the rules, shared with the run-sweep ability.
 	 *
 	 * @param bool $dry_run Count instead of delete.
 	 * @param int  $cursor  Where the browser's previous batch stopped, or 0.
@@ -1850,40 +1873,7 @@ class SettingsPage extends Singleton {
 	 * @return SweepResult|null Null when another request is sweeping this site.
 	 */
 	private function batch( bool $dry_run, int $cursor ): ?SweepResult {
-		$cleaner = new Cleaner();
-		$size    = (int) Settings::get( 'batch_size' );
-		$cap     = (int) Settings::get( 'max_deletions' );
-
-		if ( $dry_run ) {
-			return $cleaner->sweep( $size, true, $cursor, [], $cap );
-		}
-
-		if ( ! Scheduler::lock() ) {
-			return null;
-		}
-
-		try {
-			// Read only now the lock is held, so it is where the sweep really is.
-			$stored = Scheduler::state()['cursor'];
-
-			if ( $cursor > 0 && 0 === $stored ) {
-				return new SweepResult( 0, 0, 0, true, false );
-			}
-
-			$result = $cleaner->sweep( $size, false, $stored, [], $cap );
-
-			// A batch that outlasted the lock may have lost it, and the sweep
-			// is then another request's to store; this one says so.
-			if ( ! Scheduler::renew_lock() ) {
-				return null;
-			}
-
-			$this->remember_sweep( $result );
-		} finally {
-			Scheduler::unlock();
-		}
-
-		return $result;
+		return Scheduler::run_batch( Log::SOURCE_SCREEN, $dry_run, $cursor );
 	}
 
 	/**
@@ -1893,22 +1883,6 @@ class SettingsPage extends Singleton {
 	 */
 	private static function busy_message(): string {
 		return _x( 'Another sweep is running on this site right now, from the schedule, WP-CLI or an earlier batch that is still being finished. Wait a minute and try again.', 'sweep error', 'revision-retention' );
-	}
-
-	/**
-	 * Log a real batch and store where it got to, so the schedule carries on
-	 * from there and the status reports it once it is done.
-	 *
-	 * @param SweepResult $result What the batch did.
-	 *
-	 * @return void
-	 */
-	private function remember_sweep( SweepResult $result ): void {
-		Scheduler::advance( Log::SOURCE_SCREEN, $result );
-
-		// Hand the rest back to the schedule rather than pushing on here, so a
-		// big site does not hold a request open.
-		Scheduler::reschedule( $result->finished ? 0 : MINUTE_IN_SECONDS, ! $result->finished );
 	}
 
 	/**
@@ -1940,7 +1914,7 @@ class SettingsPage extends Singleton {
 					data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 					data-nonce="<?php echo esc_attr( wp_create_nonce( self::NETWORK_RUN_ACTION ) ); ?>"
 				>
-					<?php wp_nonce_field( self::NETWORK_RUN_ACTION ); ?>
+					<?php wp_nonce_field( self::NETWORK_BOOK_NONCE ); ?>
 
 					<p class="rvrt-sweep-status">
 						<?php
@@ -2029,7 +2003,7 @@ class SettingsPage extends Singleton {
 			wp_die( esc_html_x( 'You are not allowed to do this.', 'permission error', 'revision-retention' ) );
 		}
 
-		check_admin_referer( self::NETWORK_RUN_ACTION );
+		check_admin_referer( self::NETWORK_BOOK_NONCE );
 
 		$booked  = 0;
 		$skipped = 0;

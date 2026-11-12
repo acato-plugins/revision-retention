@@ -25,8 +25,10 @@ require_once __DIR__ . '/includes/class-log.php';
 require_once __DIR__ . '/includes/class-upgrade.php';
 require_once __DIR__ . '/includes/class-plugin.php';
 require_once __DIR__ . '/admin/class-ratingnotice.php';
+require_once __DIR__ . '/admin/class-tour.php';
 
 use Acato\RevisionRetention\Admin\RatingNotice;
+use Acato\RevisionRetention\Admin\Tour;
 use Acato\RevisionRetention\Includes\CronHealth;
 use Acato\RevisionRetention\Includes\Log;
 use Acato\RevisionRetention\Includes\Plugin;
@@ -64,6 +66,7 @@ function rvrt_uninstall_site(): void {
 if ( ! is_multisite() ) {
 	if ( ! empty( Settings::get( 'remove_data_on_uninstall' ) ) ) {
 		RatingNotice::uninstall();
+		Tour::uninstall();
 	}
 
 	rvrt_uninstall_site();
@@ -103,4 +106,5 @@ delete_site_transient( Scheduler::NETWORK_TRANSIENT );
 if ( ! empty( Settings::network()['remove_data_on_uninstall'] ) ) {
 	delete_site_option( Settings::NETWORK_OPTION );
 	RatingNotice::uninstall();
+	Tour::uninstall();
 }

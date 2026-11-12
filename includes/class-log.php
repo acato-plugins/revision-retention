@@ -71,6 +71,13 @@ class Log extends Singleton {
 	public const SOURCE_CLI = 'cli';
 
 	/**
+	 * A sweep run through the plugin's `revision-retention/run-sweep` ability.
+	 *
+	 * @var string
+	 */
+	public const SOURCE_ABILITY = 'ability';
+
+	/**
 	 * A day, as one bar of a chart.
 	 *
 	 * @var string

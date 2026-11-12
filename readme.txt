@@ -46,9 +46,17 @@ There are also **Preview** and **Run one batch now** buttons on the settings scr
 
 = A log of every sweep =
 
-The log is on from the start, and every sweep that removes revisions gets an entry on the **Logs** tab: whether the schedule, somebody on the settings screen, or WP-CLI ran it, who that was, how many revisions it removed from how many posts, and per post type. A sweep spread over many batches is one entry. The tab shows them on a timeline, with a bar per day for the last month. Entries are kept for as long as you choose, from a week to a year, and older ones are deleted daily. Previews are never logged, and the log can be switched off on the Logs tab.
+The log is on from the start, and every sweep that removes revisions gets an entry on the **Logs** tab: whether the schedule, somebody on the settings screen, WP-CLI or the plugin's run-sweep ability ran it, who that was, how many revisions it removed from how many posts, and per post type. A sweep spread over many batches is one entry. The tab shows them on a timeline, with a bar per day for the last month. Entries are kept for as long as you choose, from a week to a year, and older ones are deleted daily. Previews are never logged, and the log can be switched off on the Logs tab.
 
 Each site keeps its own log, next to its own revisions. On multisite the network screen's **Logs** tab shows every site's log together on one timeline, with each entry naming the site it ran on and linking to that site's own log.
+
+= A walkthrough of the settings =
+
+The first time somebody who manages the plugin opens the WordPress admin after installing it, a card beside the **Settings** menu offers a short walkthrough of the settings screen: the numbers at the top, the policy, the post types, the schedule, sweeping now, the log, with an example of a log entry, and the Dashboard widget. After an update that adds to the screen, the walkthrough comes back with only what is new, so it reads as what changed. **Not now** puts the card away until the next update that brings something new, and the walkthrough can always be taken again from the link at the foot of the settings screen.
+
+= Light, dark and high contrast =
+
+The settings screen, the Dashboard widget and the walkthrough follow the contrast setting of the system: more contrast, less contrast, or Windows High Contrast and other forced colours. On its own settings screen the plugin also follows the system's dark mode, the whole page included. Text meets WCAG 2.2 AA contrast in every one of them, on every admin colour scheme.
 
 = From WP-CLI =
 
@@ -88,6 +96,20 @@ Its **Logs** tab brings the log of every site together, so you can see what was 
 
     // Change which post types can have a policy at all.
     add_filter( 'revision_retention_eligible_post_types', $callback );
+
+= Abilities (WordPress 7.1) =
+
+On WordPress 7.1 and later the plugin registers its work with the Abilities API, in the `revision-retention` category:
+
+* `revision-retention/get-status`: revisions stored, the policy, the next sweep, whether WP-Cron runs, and where the current sweep stands.
+* `revision-retention/get-post-types`: per post type, the revisions it stores and the rule that applies to it.
+* `revision-retention/preview-sweep`: what a sweep would remove, per post type, without deleting anything.
+* `revision-retention/get-sweep-log`: the most recent sweeps, where each came from and what it removed.
+* `revision-retention/run-sweep`: removes one batch of revisions now, under the same rules as **Run one batch now**, and is logged as such.
+
+They work on the current site and ask for `manage_options`, the capability that also opens the settings screen; on a network that keeps the policy to itself, run-sweep is for network administrators only. They are not public and not on the REST API, so only code running on the site can call them, and none of them returns who ran a sweep, user IDs or post titles.
+
+    $status = wp_get_ability( 'revision-retention/get-status' )->execute();
 
 Deletion goes through `wp_delete_post_revision()` rather than a bulk query, so post meta and term relationships are cleaned up the way WordPress expects and other plugins see the hooks they are listening for.
 
@@ -129,6 +151,10 @@ Revisions start being recorded from the next time such a post is saved. Nothing 
 = Does the count limit work without the sweep? =
 
 Yes. The **Always keep** number is handed to WordPress through `wp_revisions_to_keep`, so it caps revisions as posts are saved whether or not a sweep ever runs.
+
+= Does the plugin send anything to an AI service? =
+
+No. Its abilities only run for code on the site itself, they are not on the REST API or offered to AI clients, and what they return holds counts, settings and dates: never who ran a sweep, user IDs or post titles. A request or answer that carries an e-mail address or another personal-data field is refused.
 
 = Where are the translations? =
 
