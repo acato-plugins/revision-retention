@@ -13,6 +13,7 @@ use Acato\RevisionRetention\Admin\Assets;
 use Acato\RevisionRetention\Admin\DashboardWidget;
 use Acato\RevisionRetention\Admin\RatingNotice;
 use Acato\RevisionRetention\Admin\SettingsPage;
+use Acato\RevisionRetention\Admin\Tour;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -148,6 +149,8 @@ final class Plugin extends Singleton {
 		SettingsPage::instance();
 		RatingNotice::instance();
 		DashboardWidget::instance();
+		Tour::instance();
+		Abilities::instance();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			Cli::register();

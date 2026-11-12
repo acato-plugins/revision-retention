@@ -29,7 +29,7 @@ export default defineConfig( {
 			// The chart's script is an entry of its own rather than imported by
 			// the other two, which would split it into a shared module chunk
 			// that a classic script cannot load.
-			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js', 'src/chart.js' ],
+			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js', 'src/chart.js', 'src/tour.js', 'src/menu-pointer.js', 'src/pointer.css' ],
 		},
 	},
 } );

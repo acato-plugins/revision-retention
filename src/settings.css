@@ -5,23 +5,50 @@
  * the writing mode WordPress is running in rather than assuming left to right.
  */
 
-.rvrt-settings {
-	/* Admin screens stretch to the window, which on a wide monitor drags every
-	   line of explanation out to a width nobody can read. */
-	--rvrt-measure: 46em;
-	--rvrt-border: #c3c4c7;
-	--rvrt-rule: #dcdcde;
-	--rvrt-muted: #646970;
+/* Theme ------------------------------------------------------------------- */
+
+/* Every colour of the screen, the Dashboard widget and the walkthrough is a
+   token, set once per scheme here: light, more and less contrast, and on the
+   plugin's own screen dark, with more and less contrast again. The
+   walkthrough is appended to <body>, outside .rvrt-settings, so it takes
+   the tokens itself. Text is at least 4.5:1 and every boundary that means
+   something at least 3:1, in every scheme; the ratios are measured on the
+   surface each colour sits on. */
+:is(.rvrt-settings, .rvrt-pointer) {
+	--rvrt-page: #f0f0f1;
 	--rvrt-surface: #fff;
 	--rvrt-soft: #f6f7f7;
 	--rvrt-divider: #f0f0f1;
+	--rvrt-track: #f0f0f1;
+	--rvrt-track-strong: #e0e0e1;
+	--rvrt-rule: #dcdcde;
+	--rvrt-border: #c3c4c7;
+	--rvrt-ink: #1d2327;
+	--rvrt-ink-soft: #3c434a;
+	--rvrt-muted: #646970;
+	/* Decoration only, such as the dash for an empty count: never text that
+	   has to be read, which is what WCAG exempts it under. */
+	--rvrt-faint: #8c8f94;
+	--rvrt-fainter: #a7aaad;
+	--rvrt-good: #00a32a;
+	--rvrt-good-bg: #edfaef;
+	--rvrt-good-ink: #005c12;
+	--rvrt-warn: #dba617;
+	--rvrt-warn-bg: #fcf9e8;
+	--rvrt-warn-ink: #996800;
+	--rvrt-danger: #d63638;
+	--rvrt-danger-hover: #b32d2e;
+	--rvrt-tip-bg: #1d2327;
+	--rvrt-tip-ink: #fff;
+	--rvrt-cli: #1d2327;
+	--rvrt-screen: #7a3fb4;
 	--rvrt-radius: 8px;
 
 	/* The admin colour scheme sets this; the fallback is the default scheme's
 	   blue, for the few screens that do not. */
 	--rvrt-accent: var(--wp-admin-theme-color, #2271b1);
 
-	/* The accent for what has to stand out against white or carry white
+	/* The accent for what has to stand out against the surface or carry
 	   text. Most admin colour schemes' accents do that as they are; the few
 	   that are too light get darkened below, each by no more than it needs. */
 	--rvrt-accent-strong: var(--rvrt-accent);
@@ -30,22 +57,252 @@
 	   pills in the log, which needs 4.5:1 against that tint. */
 	--rvrt-accent-ink: color-mix(in srgb, var(--rvrt-accent-strong) 85%, #000);
 
-	max-inline-size: 1100px;
-}
-
-.rvrt-settings :is(.rvrt-intro, .form-table td .description, .rvrt-panel-intro) {
-	max-inline-size: var(--rvrt-measure);
+	/* Text and icons on a fill of the accent. */
+	--rvrt-on-accent: #fff;
 }
 
 /* The admin colour schemes whose accent is too light for white text at 4.5:1
    or a bar at 3:1 against the chart. Measured on each: Light, Midnight and
    Ocean need a tenth darker, Sunrise a quarter. */
-:is(.admin-color-light, .admin-color-midnight, .admin-color-ocean) .rvrt-settings {
+:is(.admin-color-light, .admin-color-midnight, .admin-color-ocean) :is(.rvrt-settings, .rvrt-pointer) {
 	--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 90%, #000);
 }
 
-.admin-color-sunrise .rvrt-settings {
+.admin-color-sunrise :is(.rvrt-settings, .rvrt-pointer) {
 	--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 75%, #000);
+}
+
+/* More contrast: black text, every grey a step darker, rules that read as
+   lines, and the accent darkened on every colour scheme. The .wp-admin in
+   front outranks the colour scheme rules above. */
+@media (prefers-contrast: more) {
+	.wp-admin :is(.rvrt-settings, .rvrt-pointer) {
+		--rvrt-soft: #f0f0f1;
+		--rvrt-track: #dcdcde;
+		--rvrt-track-strong: #c3c4c7;
+		--rvrt-rule: #8c8f94;
+		--rvrt-border: #646970;
+		--rvrt-ink: #000;
+		--rvrt-ink-soft: #1d2327;
+		--rvrt-muted: #3c434a;
+		--rvrt-faint: #50575e;
+		--rvrt-fainter: #646970;
+		--rvrt-good: #007017;
+		--rvrt-good-ink: #003d0c;
+		--rvrt-warn: #996800;
+		--rvrt-warn-ink: #614200;
+		--rvrt-danger: #b32d2e;
+		--rvrt-danger-hover: #8a2424;
+		--rvrt-tip-bg: #000;
+		--rvrt-screen: #5b2d8a;
+		--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 70%, #000);
+		--rvrt-accent-ink: color-mix(in srgb, var(--rvrt-accent) 50%, #000);
+	}
+}
+
+/* Less contrast, for those who find stark black on white tiring: softer ink
+   and hairlines, an off-white surface. Text still reads at 4.5:1 and more. */
+@media (prefers-contrast: less) {
+	.wp-admin :is(.rvrt-settings, .rvrt-pointer) {
+		--rvrt-surface: #fcfcfd;
+		--rvrt-soft: #f7f7f8;
+		--rvrt-rule: #e6e6e8;
+		--rvrt-border: #d0d1d4;
+		--rvrt-ink: #2c3338;
+		--rvrt-ink-soft: #50575e;
+		--rvrt-tip-bg: #3c434a;
+		--rvrt-cli: #3c434a;
+	}
+}
+
+/* Dark, on the plugin's own screen, which paints the whole page to match
+   (see the end of this section). On the Dashboard the widget sits among
+   core's light boxes and stays light. The accent is mixed with white until
+   it reads on the dark surface, and what sits on a fill of it turns dark. */
+@media (prefers-color-scheme: dark) {
+	.rvrt-page,
+	.rvrt-page :is(.rvrt-settings, .rvrt-pointer) {
+		color-scheme: dark;
+
+		--rvrt-page: #121417;
+		--rvrt-surface: #1c1f24;
+		--rvrt-soft: #22262c;
+		--rvrt-divider: #2a2f36;
+		--rvrt-track: #2a2f36;
+		--rvrt-track-strong: #353b43;
+		--rvrt-rule: #353b43;
+		--rvrt-border: #5c646e;
+		--rvrt-ink: #f0f0f1;
+		--rvrt-ink-soft: #dcdcde;
+		--rvrt-muted: #a7aaad;
+		--rvrt-faint: #8c8f94;
+		--rvrt-fainter: #646970;
+		--rvrt-good: #4ab866;
+		--rvrt-good-bg: #173322;
+		--rvrt-good-ink: #8fdc9f;
+		--rvrt-warn: #f0c33c;
+		--rvrt-warn-bg: #33290f;
+		--rvrt-warn-ink: #f2d675;
+		--rvrt-danger: #c9393c;
+		--rvrt-danger-hover: #b32d2e;
+		--rvrt-tip-bg: #f0f0f1;
+		--rvrt-tip-ink: #1d2327;
+		--rvrt-cli: #dcdcde;
+		--rvrt-screen: #c49ef0;
+		--rvrt-accent: var(--wp-admin-theme-color, #2271b1);
+		--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 50%, #fff);
+		--rvrt-accent-ink: color-mix(in srgb, var(--rvrt-accent) 35%, #fff);
+		--rvrt-on-accent: #1d2327;
+	}
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+	.rvrt-page,
+	.rvrt-page :is(.rvrt-settings, .rvrt-pointer) {
+		--rvrt-page: #000;
+		--rvrt-surface: #0a0a0a;
+		--rvrt-soft: #141414;
+		--rvrt-track: #2a2a2a;
+		--rvrt-track-strong: #3c3c3c;
+		--rvrt-rule: #8c8f94;
+		--rvrt-border: #a7aaad;
+		--rvrt-ink: #fff;
+		--rvrt-ink-soft: #f0f0f1;
+		--rvrt-muted: #dcdcde;
+		--rvrt-faint: #a7aaad;
+		--rvrt-fainter: #8c8f94;
+		--rvrt-good-ink: #b8f0c3;
+		--rvrt-warn-ink: #f8e6a0;
+		--rvrt-tip-bg: #fff;
+		--rvrt-tip-ink: #000;
+		--rvrt-cli: #fff;
+		--rvrt-screen: #dcc4f7;
+		--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 30%, #fff);
+		--rvrt-accent-ink: color-mix(in srgb, var(--rvrt-accent) 20%, #fff);
+		--rvrt-on-accent: #000;
+	}
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: less) {
+	.rvrt-page,
+	.rvrt-page :is(.rvrt-settings, .rvrt-pointer) {
+		--rvrt-page: #1c1f24;
+		--rvrt-surface: #24282e;
+		--rvrt-soft: #2a2f36;
+		--rvrt-rule: #3a4048;
+		--rvrt-border: #50575e;
+		--rvrt-ink: #d6d8da;
+		--rvrt-ink-soft: #c3c4c7;
+		--rvrt-tip-bg: #c3c4c7;
+		--rvrt-accent-strong: color-mix(in srgb, var(--rvrt-accent) 60%, #fff);
+	}
+}
+
+/* WordPress's own parts of the plugin's screen, in the dark: the page, the
+   headings and labels, the fields, the buttons that are not ours, and the
+   notices of WordPress and other plugins, whose fixed dark text would
+   otherwise vanish. Everything here reads the tokens above. */
+@media (prefers-color-scheme: dark) {
+	html:has(body.rvrt-page),
+	body.rvrt-page,
+	.rvrt-page #wpwrap {
+		background: var(--rvrt-page);
+	}
+
+	.rvrt-page :is(#wpbody-content, #wpfooter) {
+		color: var(--rvrt-ink);
+	}
+
+	.rvrt-page #wpbody-content :is(h1, h2, h3, label, legend, .form-table th, .form-table td) {
+		color: var(--rvrt-ink);
+	}
+
+	.rvrt-page #wpbody-content :is(.description, p.description),
+	.rvrt-page #wpfooter {
+		color: var(--rvrt-muted);
+	}
+
+	.rvrt-page #wpbody-content a:not(.button, .nav-tab, .page-title-action),
+	.rvrt-page #wpbody-content .button-link,
+	.rvrt-page #wpfooter a {
+		color: var(--rvrt-accent-strong);
+	}
+
+	.rvrt-page #wpbody-content :is(input[type="text"], input[type="number"], input[type="time"], input[type="search"], input[type="checkbox"], select, textarea) {
+		background-color: var(--rvrt-soft);
+		border-color: var(--rvrt-border);
+		color: var(--rvrt-ink);
+	}
+
+	/* Core draws the select's chevron in a fixed dark grey. */
+	.rvrt-page #wpbody-content select {
+		background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 6l5 5 5-5 2 1-7 7-7-7 2-1z' fill='%23dcdcde'/%3E%3C/svg%3E");
+	}
+
+	.rvrt-page #wpbody-content input[type="checkbox"]:checked::before {
+		filter: brightness(0) invert(1);
+	}
+
+	.rvrt-page #wpbody-content :is(input, select, textarea):disabled {
+		background-color: var(--rvrt-track);
+		border-color: var(--rvrt-rule);
+		color: var(--rvrt-muted);
+	}
+
+	.rvrt-page #wpbody-content .button:not(.button-primary, .button-link) {
+		background: transparent;
+		border-color: var(--rvrt-accent-strong);
+		color: var(--rvrt-accent-strong);
+	}
+
+	.rvrt-page #wpbody-content .button:not(.button-primary, .button-link):hover {
+		background: color-mix(in srgb, var(--rvrt-accent-strong) 12%, transparent);
+	}
+
+	.rvrt-page #wpbody-content .button:is(:disabled, .disabled) {
+		background: var(--rvrt-track) !important; /* Core marks its disabled buttons important. */
+		border-color: var(--rvrt-rule) !important;
+		color: var(--rvrt-muted) !important;
+	}
+
+	.rvrt-page #wpbody-content .widefat {
+		background: var(--rvrt-surface);
+		border-color: var(--rvrt-rule);
+	}
+
+	.rvrt-page #wpbody-content .widefat :is(td, th, tbody th) {
+		color: var(--rvrt-ink);
+	}
+
+	.rvrt-page #wpbody-content :is(.notice, .error, .updated, .update-nag) {
+		background: var(--rvrt-surface);
+		color: var(--rvrt-ink);
+	}
+
+	.rvrt-page #wpbody-content :is(.notice, .error, .updated, .update-nag) :is(p, li, strong, span, h2, h3) {
+		color: inherit;
+	}
+
+	.rvrt-page #wpbody-content .notice-dismiss::before {
+		color: var(--rvrt-muted);
+	}
+
+	.rvrt-page #wpbody-content code {
+		background: var(--rvrt-soft);
+		color: var(--rvrt-ink);
+	}
+}
+
+.rvrt-settings {
+	/* Admin screens stretch to the window, which on a wide monitor drags every
+	   line of explanation out to a width nobody can read. */
+	--rvrt-measure: 46em;
+
+	max-inline-size: 1100px;
+}
+
+.rvrt-settings :is(.rvrt-intro, .form-table td .description, .rvrt-panel-intro) {
+	max-inline-size: var(--rvrt-measure);
 }
 
 /* Tabs and panels --------------------------------------------------------- */
@@ -84,14 +341,14 @@
 .rvrt-settings .rvrt-tabs .nav-tab:hover {
 	background: none;
 	border-block-end-color: var(--rvrt-border);
-	color: #1d2327;
+	color: var(--rvrt-ink);
 }
 
 .rvrt-settings .rvrt-tabs .nav-tab-active,
 .rvrt-settings .rvrt-tabs .nav-tab-active:hover {
 	background: none;
 	border-block-end-color: var(--rvrt-accent-strong);
-	color: #1d2327;
+	color: var(--rvrt-ink);
 	font-weight: 600;
 }
 
@@ -194,7 +451,7 @@
 }
 
 .rvrt-settings .rvrt-choice-text {
-	color: #1d2327;
+	color: var(--rvrt-ink);
 }
 
 /* The days of the week on one line, wrapping on a narrow screen. */
@@ -349,14 +606,14 @@
 }
 
 .rvrt-settings .rvrt-none {
-	color: #8c8f94;
+	color: var(--rvrt-faint);
 }
 
 /* Support the post type has of its own, as a status rather than a control. */
 .rvrt-settings .rvrt-native {
-	background: #edfaef;
+	background: var(--rvrt-good-bg);
 	border-radius: 999px;
-	color: #005c12;
+	color: var(--rvrt-good-ink);
 	display: inline-block;
 	font-size: 12px;
 	font-weight: 500;
@@ -509,8 +766,6 @@
 	/* A tint of the admin colour for surfaces that belong to the log, so the
 	   timeline follows whichever colour scheme the user picked. */
 	--rvrt-tint: color-mix(in srgb, var(--rvrt-accent) 10%, var(--rvrt-surface));
-	--rvrt-cli: #1d2327;
-	--rvrt-screen: #7a3fb4;
 	--rvrt-rail: 18px;
 
 	margin-block-start: 0.5em;
@@ -537,7 +792,7 @@
 
 /* A segmented control, built from plain links. */
 .rvrt-settings .rvrt-log-filter {
-	background: #f0f0f1;
+	background: var(--rvrt-track);
 	border-radius: 999px;
 	display: inline-flex;
 	gap: 2px;
@@ -556,13 +811,13 @@
 }
 
 .rvrt-settings .rvrt-log-filter a:hover {
-	color: #1d2327;
+	color: var(--rvrt-ink);
 }
 
 .rvrt-settings .rvrt-log-filter a[aria-current="page"] {
 	background: var(--rvrt-surface);
 	box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
-	color: #1d2327;
+	color: var(--rvrt-ink);
 }
 
 /* Activity chart ---------------------------------------------------------- */
@@ -587,7 +842,7 @@
 
 .rvrt-settings .rvrt-chart-bar {
 	appearance: none;
-	background: linear-gradient(to top, var(--rvrt-accent-strong), color-mix(in srgb, var(--rvrt-accent-strong) 80%, #fff));
+	background: linear-gradient(to top, var(--rvrt-accent-strong), color-mix(in srgb, var(--rvrt-accent-strong) 80%, var(--rvrt-surface)));
 	border: 0;
 	cursor: pointer;
 	padding: 0;
@@ -612,10 +867,10 @@
 
 /* What a bar covers and how many revisions went, above the bar. */
 .rvrt-settings .rvrt-chart-tip {
-	background: #1d2327;
+	background: var(--rvrt-tip-bg);
 	border-radius: 4px;
 	box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
-	color: #fff;
+	color: var(--rvrt-tip-ink);
 	display: flex;
 	flex-direction: column;
 	font-size: 12px;
@@ -634,7 +889,7 @@
 	/* Only a faint baseline: an empty period is drawn but not a control,
 	   hidden from assistive technology, and the absence of a bar is what
 	   says nothing was removed, so it needs no 3:1 of its own. */
-	background: #e0e0e1;
+	background: var(--rvrt-track-strong);
 	cursor: default;
 	block-size: 3px;
 }
@@ -701,11 +956,11 @@
 
 .rvrt-settings .rvrt-marker {
 	align-items: center;
-	background: var(--rvrt-accent);
+	background: var(--rvrt-accent-strong);
 	block-size: 36px;
 	border-radius: 50%;
-	box-shadow: 0 0 0 4px var(--rvrt-surface), 0 2px 8px color-mix(in srgb, var(--rvrt-accent) 45%, transparent);
-	color: #fff;
+	box-shadow: 0 0 0 4px var(--rvrt-surface), 0 2px 8px color-mix(in srgb, var(--rvrt-accent-strong) 45%, transparent);
+	color: var(--rvrt-on-accent);
 	display: flex;
 	inline-size: 36px;
 	justify-content: center;
@@ -810,12 +1065,12 @@
 }
 
 .rvrt-settings .rvrt-pill-screen {
-	background: color-mix(in srgb, var(--rvrt-screen) 10%, #fff);
+	background: color-mix(in srgb, var(--rvrt-screen) 10%, var(--rvrt-surface));
 	color: var(--rvrt-screen);
 }
 
 .rvrt-settings .rvrt-pill-cli {
-	background: #f0f0f1;
+	background: var(--rvrt-track);
 	color: var(--rvrt-cli);
 	font-family: Consolas, Monaco, monospace;
 }
@@ -836,7 +1091,7 @@
 }
 
 .rvrt-settings .rvrt-card-count {
-	background: linear-gradient(120deg, #1d2327, var(--rvrt-accent));
+	background: linear-gradient(120deg, var(--rvrt-ink), var(--rvrt-accent-strong));
 	background-clip: text;
 	color: transparent;
 	font-size: 26px;
@@ -852,7 +1107,7 @@
 
 /* How this sweep compares with the biggest one on the page. */
 .rvrt-settings .rvrt-meter {
-	background: #f0f0f1;
+	background: var(--rvrt-track);
 	block-size: 4px;
 	border-radius: 999px;
 	display: block;
@@ -862,7 +1117,7 @@
 .rvrt-settings .rvrt-meter span {
 	animation: rvrt-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 	animation-delay: calc(var(--rvrt-i, 0) * 45ms + 150ms);
-	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-accent) 50%, #fff), var(--rvrt-accent));
+	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-accent) 50%, var(--rvrt-surface)), var(--rvrt-accent));
 	block-size: 100%;
 	border-radius: inherit;
 	display: block;
@@ -870,11 +1125,11 @@
 }
 
 .rvrt-settings .rvrt-entry-screen .rvrt-meter span {
-	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-screen) 50%, #fff), var(--rvrt-screen));
+	background: linear-gradient(90deg, color-mix(in srgb, var(--rvrt-screen) 50%, var(--rvrt-surface)), var(--rvrt-screen));
 }
 
 .rvrt-settings .rvrt-entry-cli .rvrt-meter span {
-	background: linear-gradient(90deg, #8c8f94, var(--rvrt-cli));
+	background: linear-gradient(90deg, var(--rvrt-faint), var(--rvrt-cli));
 }
 
 .rvrt-settings .rvrt-types {
@@ -895,7 +1150,7 @@
 }
 
 .rvrt-settings .rvrt-types b {
-	color: #1d2327;
+	color: var(--rvrt-ink);
 	font-variant-numeric: tabular-nums;
 	margin-inline-start: 0.2em;
 }
@@ -910,7 +1165,7 @@
 }
 
 .rvrt-settings .rvrt-status-dot {
-	background: #00a32a;
+	background: var(--rvrt-good);
 	block-size: 7px;
 	border-radius: 50%;
 	flex: none;
@@ -918,7 +1173,7 @@
 }
 
 .rvrt-settings .rvrt-status-stopped .rvrt-status-dot {
-	background: #dba617;
+	background: var(--rvrt-warn);
 }
 
 .rvrt-settings .rvrt-status-running {
@@ -957,7 +1212,7 @@
 }
 
 .rvrt-settings .rvrt-log-empty-icon {
-	background: color-mix(in srgb, var(--rvrt-accent) 10%, #fff);
+	background: color-mix(in srgb, var(--rvrt-accent) 10%, var(--rvrt-surface));
 	block-size: 56px;
 	border-radius: 50%;
 	color: var(--rvrt-accent-strong);
@@ -1072,7 +1327,7 @@
 .rvrt-settings .rvrt-tabs .rvrt-tab-disabled,
 .rvrt-settings .rvrt-tabs .rvrt-tab-disabled:hover {
 	border-block-end-color: transparent;
-	color: #a7aaad;
+	color: var(--rvrt-fainter);
 	cursor: not-allowed;
 }
 
@@ -1131,12 +1386,12 @@
 
 .rvrt-widget .rvrt-widget-tab:hover {
 	border-block-end-color: var(--rvrt-border);
-	color: #1d2327;
+	color: var(--rvrt-ink);
 }
 
 .rvrt-widget .rvrt-widget-tab[aria-selected="true"] {
 	border-block-end-color: var(--rvrt-accent-strong);
-	color: #1d2327;
+	color: var(--rvrt-ink);
 	font-weight: 600;
 }
 
@@ -1180,15 +1435,15 @@
 .rvrt-widget .rvrt-log-stall {
 	align-items: flex-start;
 	margin-block: 0 1em;
-	background: #fcf9e8;
-	border-inline-start: 4px solid #dba617;
+	background: var(--rvrt-warn-bg);
+	border-inline-start: 4px solid var(--rvrt-warn);
 	display: flex;
 	gap: 0.5em;
 	padding: 0.5em 0.75em;
 }
 
 .rvrt-widget .rvrt-log-stall .dashicons {
-	color: #996800;
+	color: var(--rvrt-warn-ink);
 	flex: none;
 }
 
@@ -1213,7 +1468,7 @@
    reads at 3:1 and more whatever the colour vision. */
 .rvrt-widget .rvrt-period-switch {
 	--rvrt-thumb: 0;
-	background: #f0f0f1;
+	background: var(--rvrt-track);
 	border: 1px solid var(--rvrt-rule);
 	border-radius: 999px;
 	display: inline-grid;
@@ -1253,7 +1508,7 @@
 	background: none;
 	border: 0;
 	border-radius: 999px;
-	color: #3c434a;
+	color: var(--rvrt-ink-soft);
 	cursor: pointer;
 	font: inherit;
 	font-size: 12px;
@@ -1266,12 +1521,12 @@
 }
 
 .rvrt-widget .rvrt-period-button:hover {
-	color: #1d2327;
+	color: var(--rvrt-ink);
 	text-decoration: underline;
 }
 
 .rvrt-widget .rvrt-period-button[aria-pressed="true"] {
-	color: #fff;
+	color: var(--rvrt-on-accent);
 	text-decoration: none;
 }
 
@@ -1384,7 +1639,7 @@
 	border-radius: var(--rvrt-radius);
 	box-shadow: 0 12px 40px rgb(0 0 0 / 0.25);
 	box-sizing: border-box;
-	color: #1d2327;
+	color: var(--rvrt-ink);
 	inline-size: min(32em, calc(100vw - 32px));
 	padding: 24px;
 }
@@ -1414,17 +1669,17 @@
 
 /* The yes of a press that deletes is red, like the admin's delete buttons. */
 .rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger {
-	background: #d63638;
-	border-color: #d63638;
+	background: var(--rvrt-danger);
+	border-color: var(--rvrt-danger);
 }
 
 .rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:is(:hover, :focus) {
-	background: #b32d2e;
-	border-color: #b32d2e;
+	background: var(--rvrt-danger-hover);
+	border-color: var(--rvrt-danger-hover);
 }
 
 .rvrt-settings .rvrt-dialog .button-primary.rvrt-dialog-danger:focus {
-	box-shadow: 0 0 0 1px #fff, 0 0 0 3px #d63638;
+	box-shadow: 0 0 0 1px var(--rvrt-surface), 0 0 0 3px var(--rvrt-danger);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1448,4 +1703,9 @@
 	from {
 		opacity: 0;
 	}
+}
+
+/* The way back into the walkthrough, at the foot of the screen. */
+.rvrt-settings .rvrt-tour-replay {
+	margin-block: 2em 0;
 }

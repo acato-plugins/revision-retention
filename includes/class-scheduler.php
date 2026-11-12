@@ -299,6 +299,67 @@ class Scheduler extends Singleton {
 	}
 
 	/**
+	 * Work through one batch for somebody who asked for it now: the settings
+	 * screen, or the plugin's run-sweep ability.
+	 *
+	 * A dry run only counts, from the cursor it is given. A real batch always
+	 * carries on from the stored cursor rather than one handed in. The
+	 * schedule or WP-CLI may have moved the sweep on since the caller's last
+	 * batch, and a browser tab left open would otherwise send the shared
+	 * cursor back to where that tab last was. When the sweep the caller was
+	 * part way through has been finished by somebody else, it is told it is
+	 * done instead of starting over. The rest is handed back to the schedule
+	 * rather than pushed on here, so a big site does not hold a request open.
+	 *
+	 * Whoever calls this has checked that the user may: the capability, the
+	 * nonce where there is one, and Settings::may_sweep() for a real batch.
+	 *
+	 * @param string $source  Log source the batch is recorded under.
+	 * @param bool   $dry_run Count instead of delete.
+	 * @param int    $cursor  Where the caller's previous batch stopped, or 0.
+	 *
+	 * @return SweepResult|null Null when another request is sweeping this site.
+	 */
+	public static function run_batch( string $source, bool $dry_run, int $cursor = 0 ): ?SweepResult {
+		$cleaner = new Cleaner();
+		$size    = (int) Settings::get( 'batch_size' );
+		$cap     = (int) Settings::get( 'max_deletions' );
+
+		if ( $dry_run ) {
+			return $cleaner->sweep( $size, true, $cursor, [], $cap );
+		}
+
+		if ( ! self::lock() ) {
+			return null;
+		}
+
+		try {
+			// Read only now the lock is held, so it is where the sweep really is.
+			$stored = self::state()['cursor'];
+
+			if ( $cursor > 0 && 0 === $stored ) {
+				return new SweepResult( 0, 0, 0, true, false );
+			}
+
+			$result = $cleaner->sweep( $size, false, $stored, [], $cap );
+
+			// A batch that outlasted the lock may have lost it, and the sweep
+			// is then another request's to store; this one says so.
+			if ( ! self::renew_lock() ) {
+				return null;
+			}
+
+			self::advance( $source, $result );
+		} finally {
+			self::unlock();
+		}
+
+		self::reschedule( $result->finished ? 0 : MINUTE_IN_SECONDS, ! $result->finished );
+
+		return $result;
+	}
+
+	/**
 	 * Claim the sweep on this site, so no other request runs a real batch at the same time.
 	 *
 	 * The option is inserted with INSERT IGNORE, the same way WP_Upgrader takes

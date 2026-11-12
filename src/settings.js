@@ -33,6 +33,28 @@
 		/* translators: %s: number of posts. */
 		sprintf( _nx( '%s post', '%s posts', value, 'sweep count', 'revision-retention' ), count( value ) );
 
+	/**
+	 * A link the screen may follow: an http or https address, or null.
+	 *
+	 * The server already passes edit links through sanitize_url(), which
+	 * drops javascript: and data: addresses. This keeps the link safe should
+	 * a future path ever leave that out.
+	 */
+	const webUrl = ( value ) => {
+		// An empty value would otherwise resolve to this screen's own address.
+		if ( ! value ) {
+			return null;
+		}
+
+		try {
+			const url = new URL( String( value ?? '' ), window.location.href );
+
+			return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+		} catch {
+			return null;
+		}
+	};
+
 	/** What a sweep has done so far, for the small text beside the bar. */
 	const describeBusy = ( mode, totals ) =>
 		sprintf(
@@ -384,10 +406,12 @@
 
 				title.scope = 'row';
 
-				if ( item.editUrl ) {
+				const editUrl = webUrl( item.editUrl );
+
+				if ( editUrl ) {
 					const link = document.createElement( 'a' );
 
-					link.href = item.editUrl;
+					link.href = editUrl;
 					link.textContent = item.title || _x( '(no title)', 'affected posts list', 'revision-retention' );
 					title.append( link );
 				} else {

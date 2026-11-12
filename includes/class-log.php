@@ -71,6 +71,13 @@ class Log extends Singleton {
 	public const SOURCE_CLI = 'cli';
 
 	/**
+	 * A sweep run through the plugin's `revision-retention/run-sweep` ability.
+	 *
+	 * @var string
+	 */
+	public const SOURCE_ABILITY = 'ability';
+
+	/**
 	 * A day, as one bar of a chart.
 	 *
 	 * @var string
@@ -407,7 +414,7 @@ class Log extends Singleton {
 
 		global $wpdb;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables, read for display right after a sweep may have written to them. The FROM clause is built from placeholders in from().
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- The plugin's own tables, read for display right after a sweep may have written to them. The FROM clause is built from placeholders in from().
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$from[0]} WHERE ( '' = %s OR source = %s ) ORDER BY ended_gmt DESC, id DESC LIMIT %d OFFSET %d",
@@ -422,7 +429,7 @@ class Log extends Singleton {
 				...array_merge( $from[1], [ $source, $source ] )
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return [
 			'rows'  => is_array( $rows ) ? $rows : [],
@@ -476,12 +483,12 @@ class Log extends Singleton {
 
 		// Grouped here rather than in SQL, which would group by the database's
 		// idea of a day instead of the site's.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$rows = $wpdb->get_results(
 			$wpdb->prepare( "SELECT ended_gmt, revisions FROM {$from[0]} WHERE ended_gmt >= %s", ...array_merge( $from[1], [ $since ] ) ),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		foreach ( is_array( $rows ) ? $rows : [] as $row ) {
 			$ended = ( new DateTimeImmutable( '@' . self::timestamp( (string) $row['ended_gmt'] ) ) )->setTimezone( wp_timezone() );
@@ -561,7 +568,7 @@ class Log extends Singleton {
 			? gmdate( 'Y-m-d H:i:s', ( new DateTimeImmutable( 'today', wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->getTimestamp() )
 			: '0000-00-00 00:00:00';
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- The plugin's own tables; the FROM clause is built from placeholders in from().
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- The plugin's own tables; the FROM clause is built from placeholders in from().
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COUNT(*) AS runs, SUM( revisions ) AS revisions, SUM( posts ) AS posts FROM {$from[0]} WHERE ended_gmt >= %s",
@@ -569,7 +576,7 @@ class Log extends Singleton {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		if ( is_array( $row ) ) {
 			$totals['runs']      = (int) $row['runs'];

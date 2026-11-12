@@ -448,6 +448,39 @@ class LogView {
 	}
 
 	/**
+	 * A made up sweep, for the walkthrough to show what an entry looks like
+	 * before the log holds one of its own: the schedule, an hour ago, finished.
+	 *
+	 * @return void
+	 */
+	public function render_example(): void {
+		$ended = time() - HOUR_IN_SECONDS;
+
+		echo '<ol class="rvrt-day-entries">';
+		$this->render_entry(
+			[
+				'source'      => Log::SOURCE_CRON,
+				'user_id'     => 0,
+				'revisions'   => 48,
+				'posts'       => 12,
+				'started_gmt' => gmdate( 'Y-m-d H:i:s', $ended - 95 ),
+				'ended_gmt'   => gmdate( 'Y-m-d H:i:s', $ended ),
+				'post_types'  => (string) wp_json_encode(
+					[
+						'post' => 30,
+						'page' => 18,
+					]
+				),
+				'finished'    => 1,
+				'blog_id'     => get_current_blog_id(),
+			],
+			48,
+			0
+		);
+		echo '</ol>';
+	}
+
+	/**
 	 * One sweep on the timeline.
 	 *
 	 * @param array<string, mixed> $entry   The entry.
@@ -538,7 +571,14 @@ class LogView {
 
 		printf(
 			'<span class="rvrt-marker" aria-hidden="true"><span class="dashicons dashicons-%s"></span></span>',
-			esc_attr( Log::SOURCE_CLI === $source ? 'editor-code' : ( Log::SOURCE_CRON === $source ? 'clock' : 'admin-users' ) )
+			esc_attr(
+				match ( $source ) {
+					Log::SOURCE_CLI     => 'editor-code',
+					Log::SOURCE_CRON    => 'clock',
+					Log::SOURCE_ABILITY => 'admin-generic',
+					default             => 'admin-users',
+				}
+			)
 		);
 	}
 
@@ -655,9 +695,10 @@ class LogView {
 	 */
 	private static function sources(): array {
 		return [
-			Log::SOURCE_CRON   => _x( 'Scheduled', 'log source', 'revision-retention' ),
-			Log::SOURCE_SCREEN => _x( 'Run now', 'log source', 'revision-retention' ),
-			Log::SOURCE_CLI    => _x( 'WP-CLI', 'log source', 'revision-retention' ),
+			Log::SOURCE_CRON    => _x( 'Scheduled', 'log source', 'revision-retention' ),
+			Log::SOURCE_SCREEN  => _x( 'Run now', 'log source', 'revision-retention' ),
+			Log::SOURCE_CLI     => _x( 'WP-CLI', 'log source', 'revision-retention' ),
+			Log::SOURCE_ABILITY => _x( 'Ability', 'log source', 'revision-retention' ),
 		];
 	}
 

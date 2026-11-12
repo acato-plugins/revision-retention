@@ -7,6 +7,7 @@ use Acato\RevisionRetention\Includes\CronHealth;
 use Acato\RevisionRetention\Includes\Log;
 use Acato\RevisionRetention\Includes\Plugin;
 use Acato\RevisionRetention\Admin\RatingNotice;
+use Acato\RevisionRetention\Admin\Tour;
 use Acato\RevisionRetention\Includes\Scheduler;
 use Acato\RevisionRetention\Includes\SweepResult;
 use Acato\RevisionRetention\Includes\Policy;
@@ -536,6 +537,24 @@ check( 'never again after an answer', RatingNotice::is_due( false ), false );
 $GLOBALS['t_caps'] = array();
 $GLOBALS['t_user_meta'] = array();
 check( 'never for a user who cannot change the settings', RatingNotice::is_due( false ), false );
+
+echo "\nTour\n";
+reset_state();
+$tour_sinces = array_column( Tour::steps(), 'since' );
+usort( $tour_sinces, 'version_compare' );
+check( 'the version is the newest step\'s', Tour::version(), end( $tour_sinces ) );
+check( 'every step names its version, target, title and text', array_filter( Tour::steps(), static fn( $s ) => '' === ( $s['since'] ?? '' ) || '' === ( $s['target'] ?? '' ) || '' === ( $s['title'] ?? '' ) || '' === ( $s['text'] ?? '' ) ), array() );
+check( 'pending for somebody who never took it', Tour::is_pending( false ), true );
+check( 'who never took it gets every step', count( Tour::steps_since( '' ) ), count( Tour::steps() ) );
+$GLOBALS['t_user_meta'][ Tour::USER_META ] = '1.6.0';
+check( 'pending after an update that added steps', Tour::is_pending( false ), true );
+check( 'who took an older one gets only the newer steps', count( Tour::steps_since( '1.6.0' ) ), count( array_filter( Tour::steps(), static fn( $s ) => version_compare( $s['since'], '1.6.0', '>' ) ) ) );
+$GLOBALS['t_user_meta'][ Tour::USER_META ] = Tour::version();
+check( 'not pending once this version was taken', Tour::is_pending( false ), false );
+check( 'and nothing left to show', Tour::steps_since( Tour::version() ), array() );
+$GLOBALS['t_user_meta'] = array();
+$GLOBALS['t_caps']      = array();
+check( 'never for a user who cannot change the settings', Tour::is_pending( false ), false );
 
 /* ------------------------------------------------------------ 18. Assets */
 echo "\nAssets::url\n";

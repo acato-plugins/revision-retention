@@ -87,6 +87,10 @@ jobs:
   plugin-check:
     name: Run Plugin Check
     runs-on: ubuntu-latest
+    # The action posts its results as a comment on the pull request.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 
@@ -96,10 +100,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # npm ci installs exactly what package-lock.json says. Should that fail,
-      # a plain install is the fallback, so a release is not held up by it.
+      # npm ci installs exactly what package-lock.json says, the same as the
+      # release. A lockfile out of step with package.json fails here, rather
+      # than being papered over by a plain install and only failing on release.
       - name: Install build tools
-        run: npm ci --prefer-offline --no-audit --fund=false || npm i --prefer-offline --no-audit --fund=false
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Build assets
         run: npm run build
