@@ -172,6 +172,10 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 == Changelog ==
 
 = 1.6.0 =
+* A walkthrough of the settings screen. The first time somebody who manages the plugin opens the admin, a card beside the **Settings** menu offers it; after an update it comes back with only what is new, and it can always be taken again from the link at the foot of the settings screen.
+* The settings screen, the Dashboard widget and the walkthrough follow the system's contrast setting, Windows High Contrast and other forced colours included, and the settings screen follows its dark mode.
+* On WordPress 7.1 and later, the plugin registers its status, post types, a preview, the log and a sweep with the Abilities API. They ask for `manage_options`, are not public and not on the REST API, and never return who ran a sweep, user IDs or post titles.
+* Hardening: the network's booking form has a nonce of its own, the walkthrough checks the user's capability before the nonce, and a swept post is only linked when its edit link is an http or https address.
 * A sweep runs once at a time on a site. When the schedule, **Run now** and WP-CLI met on the same site, they could work through the same batch together and count its revisions twice. Now whichever comes second waits: the schedule tries again a minute later, and the screen and WP-CLI say another sweep is running.
 * A revision that could not be deleted is no longer counted as removed.
 * A scheduled batch books the next one before it starts, so a batch that dies halfway no longer stops the schedule on a site nobody logs in to.
