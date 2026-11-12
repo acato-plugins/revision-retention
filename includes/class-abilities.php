@@ -114,10 +114,18 @@ final class Abilities extends Singleton {
 	/**
 	 * Hook registration and the personal-data guard. Requires WordPress 7.1.
 	 *
+	 * The plugin supports WordPress versions older than the Abilities API
+	 * (6.9), so both of its functions are checked by name: Plugin Check only
+	 * accepts a function_exists() guard as proof, not a version comparison.
+	 *
 	 * @return void
 	 */
 	protected function init(): void {
-		if ( ! function_exists( 'wp_register_ability' ) || ! is_wp_version_compatible( '7.1' ) ) {
+		if (
+			! function_exists( 'wp_register_ability_category' )
+			|| ! function_exists( 'wp_register_ability' )
+			|| ! is_wp_version_compatible( '7.1' )
+		) {
 			return;
 		}
 
