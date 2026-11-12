@@ -87,6 +87,10 @@ jobs:
   plugin-check:
     name: Run Plugin Check
     runs-on: ubuntu-latest
+    # The action posts its results as a comment on the pull request.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
 
