@@ -28,6 +28,8 @@ jobs:
   trunk:
     name: Push to main
     runs-on: ubuntu-latest
+    # The same approval and credentials as a release, see deploy.yml.
+    environment: wordpress-org
     steps:
       - uses: actions/checkout@v7
         with:
@@ -45,7 +47,8 @@ jobs:
 
       - name: WordPress.org plugin asset/readme update
         if: steps.release.outputs.skip != 'true'
-        uses: 10up/action-wordpress-plugin-asset-update@stable
+        # Pinned to a commit: it is handed the SVN credentials. 2.2.0.
+        uses: 10up/action-wordpress-plugin-asset-update@2480306f6f693672726d08b5917ea114cb2825f7
         env:
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}

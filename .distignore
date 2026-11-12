@@ -22,3 +22,7 @@
 /.phpstan
 /tests
 /bin
+/.env
+/.env.*
+/auth.json
+/.npmrc

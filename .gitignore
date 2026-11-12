@@ -8,3 +8,8 @@ vendor/
 .prd/
 composer.lock
 phpcs-report.xml
+# Credentials never belong in the repository.
+.env
+.env.*
+auth.json
+.npmrc
