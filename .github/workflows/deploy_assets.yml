@@ -45,11 +45,32 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Whoever pushed to main sends the readme with their own SVN account when
+      # SVN_<LOGIN>_USERNAME and SVN_<LOGIN>_PASSWORD are set, and with the
+      # company account otherwise. See .github/scripts/svn-account.sh.
+      - name: Find the pusher's SVN secrets
+        id: who
+        if: steps.release.outputs.skip != 'true'
+        env:
+          LOGIN: ${{ github.actor }}
+        run: .github/scripts/svn-account.sh key "$LOGIN"
+
+      - name: Choose personal or company SVN credentials
+        id: svn
+        if: steps.release.outputs.skip != 'true'
+        env:
+          KEY: ${{ steps.who.outputs.key }}
+          PERSONAL_USERNAME: ${{ secrets[format('SVN_{0}_USERNAME', steps.who.outputs.key)] }}
+          PERSONAL_PASSWORD: ${{ secrets[format('SVN_{0}_PASSWORD', steps.who.outputs.key)] }}
+          COMPANY_USERNAME: ${{ secrets.SVN_USERNAME }}
+          COMPANY_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: .github/scripts/svn-account.sh choose
+
       - name: WordPress.org plugin asset/readme update
         if: steps.release.outputs.skip != 'true'
         # Pinned to a commit: it is handed the SVN credentials. 2.2.0.
         uses: 10up/action-wordpress-plugin-asset-update@2480306f6f693672726d08b5917ea114cb2825f7
         env:
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ steps.svn.outputs.variant == 'personal' && secrets[format('SVN_{0}_PASSWORD', steps.who.outputs.key)] || secrets.SVN_PASSWORD }}
+          SVN_USERNAME: ${{ steps.svn.outputs.variant == 'personal' && secrets[format('SVN_{0}_USERNAME', steps.who.outputs.key)] || secrets.SVN_USERNAME }}
           IGNORE_OTHER_FILES: true

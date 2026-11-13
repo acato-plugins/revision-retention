@@ -52,9 +52,28 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      # Whoever pushed the tag releases with their own SVN account when
+      # SVN_<LOGIN>_USERNAME and SVN_<LOGIN>_PASSWORD are set, and with the
+      # company account otherwise. See .github/scripts/svn-account.sh.
+      - name: Find the releaser's SVN secrets
+        id: who
+        env:
+          LOGIN: ${{ github.actor }}
+        run: .github/scripts/svn-account.sh key "$LOGIN"
+
+      - name: Choose personal or company SVN credentials
+        id: svn
+        env:
+          KEY: ${{ steps.who.outputs.key }}
+          PERSONAL_USERNAME: ${{ secrets[format('SVN_{0}_USERNAME', steps.who.outputs.key)] }}
+          PERSONAL_PASSWORD: ${{ secrets[format('SVN_{0}_PASSWORD', steps.who.outputs.key)] }}
+          COMPANY_USERNAME: ${{ secrets.SVN_USERNAME }}
+          COMPANY_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: .github/scripts/svn-account.sh choose
+
       - name: WordPress Plugin Deploy
         # Pinned to a commit: it is handed the SVN credentials. 2.3.0.
         uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2
         env:
-          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ steps.svn.outputs.variant == 'personal' && secrets[format('SVN_{0}_PASSWORD', steps.who.outputs.key)] || secrets.SVN_PASSWORD }}
+          SVN_USERNAME: ${{ steps.svn.outputs.variant == 'personal' && secrets[format('SVN_{0}_USERNAME', steps.who.outputs.key)] || secrets.SVN_USERNAME }}
