@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-12T22:08:11+00:00\n"
+"POT-Creation-Date: 2026-11-17T18:23:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: revision-retention\n"
 
@@ -495,12 +495,12 @@ msgctxt "rating notice"
 msgid "Don't ask again"
 msgstr ""
 
-#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1698 admin/class-settingspage.php:1746 admin/class-settingspage.php:2003 admin/class-settingspage.php:2266
+#: admin/class-ratingnotice.php:162 admin/class-settingspage.php:1713 admin/class-settingspage.php:1761 admin/class-settingspage.php:2018 admin/class-settingspage.php:2281
 msgctxt "permission error"
 msgid "You are not allowed to do this."
 msgstr ""
 
-#: admin/class-settingspage.php:148 admin/class-settingspage.php:149 admin/class-settingspage.php:164 admin/class-settingspage.php:165 admin/class-tour.php:286
+#: admin/class-settingspage.php:148 admin/class-settingspage.php:149 admin/class-settingspage.php:164 admin/class-settingspage.php:165
 msgctxt "admin menu and page title"
 msgid "Revision Retention"
 msgstr ""
@@ -647,12 +647,12 @@ msgctxt "admin notice"
 msgid "There is more to do; the rest continues in the background."
 msgstr ""
 
-#: admin/class-settingspage.php:681 admin/class-settingspage.php:1367
+#: admin/class-settingspage.php:681 admin/class-settingspage.php:1382
 msgctxt "column heading"
 msgid "Post type"
 msgstr ""
 
-#: admin/class-settingspage.php:682 admin/class-settingspage.php:1371
+#: admin/class-settingspage.php:682 admin/class-settingspage.php:1386
 msgctxt "column heading"
 msgid "Revisions"
 msgstr ""
@@ -662,7 +662,7 @@ msgctxt "column heading"
 msgid "Keep"
 msgstr ""
 
-#: admin/class-settingspage.php:684 admin/class-settingspage.php:857 admin/class-settingspage.php:1373
+#: admin/class-settingspage.php:684 admin/class-settingspage.php:857 admin/class-settingspage.php:1388
 msgctxt "field label"
 msgid "Remove older than"
 msgstr ""
@@ -672,12 +672,12 @@ msgctxt "column heading"
 msgid "Stored now"
 msgstr ""
 
-#: admin/class-settingspage.php:693 admin/class-settingspage.php:1401 admin/class-settingspage.php:2158
+#: admin/class-settingspage.php:693 admin/class-settingspage.php:1416 admin/class-settingspage.php:2173
 msgctxt "revision support state"
 msgid "On"
 msgstr ""
 
-#: admin/class-settingspage.php:693 admin/class-settingspage.php:2159
+#: admin/class-settingspage.php:693 admin/class-settingspage.php:2174
 msgctxt "revision support state"
 msgid "Off"
 msgstr ""
@@ -707,7 +707,7 @@ msgctxt "confirmation title"
 msgid "Make these the network defaults?"
 msgstr ""
 
-#: admin/class-settingspage.php:846 admin/class-settingspage.php:1372
+#: admin/class-settingspage.php:846 admin/class-settingspage.php:1387
 msgctxt "field label"
 msgid "Always keep"
 msgstr ""
@@ -719,7 +719,7 @@ msgstr ""
 
 #. translators: %s: the age inherited from the network.
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:869 admin/class-settingspage.php:2153 admin/class-settingspage.php:2188
+#: admin/class-settingspage.php:869 admin/class-settingspage.php:2168 admin/class-settingspage.php:2203
 msgctxt "inherited setting option"
 msgid "Inherit (%s)"
 msgstr ""
@@ -1005,231 +1005,251 @@ msgstr ""
 
 #: admin/class-settingspage.php:1277
 msgctxt "field label"
-msgid "On removal"
+msgid "Walkthrough"
 msgstr ""
 
 #: admin/class-settingspage.php:1279
 msgctxt "checkbox label"
+msgid "Offer the walkthrough of this screen"
+msgstr ""
+
+#: admin/class-settingspage.php:1284
+msgctxt "field description"
+msgid "Adds a Start walkthrough link to the plugin on the Plugins screen, and at the foot of this screen, on the network and on every site that does not switch it off. It never starts by itself."
+msgstr ""
+
+#: admin/class-settingspage.php:1285
+msgctxt "field description"
+msgid "Adds a Start walkthrough link to the plugin on the Plugins screen, and at the foot of this screen. It never starts by itself."
+msgstr ""
+
+#: admin/class-settingspage.php:1292
+msgctxt "field label"
+msgid "On removal"
+msgstr ""
+
+#: admin/class-settingspage.php:1294
+msgctxt "checkbox label"
 msgid "Remove all data of this plugin when it is uninstalled"
 msgstr ""
 
-#: admin/class-settingspage.php:1280
+#: admin/class-settingspage.php:1295
 msgctxt "field description"
 msgid "Deletes these settings. Revisions already removed cannot be brought back either way."
 msgstr ""
 
-#: admin/class-settingspage.php:1306
+#: admin/class-settingspage.php:1321
 msgctxt "user role"
 msgid "Network administrator"
 msgstr ""
 
-#: admin/class-settingspage.php:1310
+#: admin/class-settingspage.php:1325
 msgctxt "accessibility label"
 msgid "Roles that see the dashboard widget and the log"
 msgstr ""
 
-#: admin/class-settingspage.php:1330
+#: admin/class-settingspage.php:1345
 msgctxt "user role note"
 msgid "(set by the network)"
 msgstr ""
 
-#: admin/class-settingspage.php:1336
+#: admin/class-settingspage.php:1351
 msgctxt "field description"
 msgid "Besides the widget, these roles may open the Logs tab, read only, without seeing any of the settings. Administrators always can. Nothing is shown to anybody while the widget is switched off."
 msgstr ""
 
-#: admin/class-settingspage.php:1369
+#: admin/class-settingspage.php:1384
 msgctxt "column heading"
 msgid "Stored"
 msgstr ""
 
-#: admin/class-settingspage.php:1395 admin/class-settingspage.php:2349
+#: admin/class-settingspage.php:1410 admin/class-settingspage.php:2364
 msgctxt "stored revision count"
 msgid "None"
 msgstr ""
 
 #. translators: %s: post type label.
-#: admin/class-settingspage.php:1409
+#: admin/class-settingspage.php:1424
 msgctxt "accessibility label"
 msgid "Store revisions for %s"
 msgstr ""
 
 #. translators: %s: post type label.
-#: admin/class-settingspage.php:1414
+#: admin/class-settingspage.php:1429
 msgctxt "checkbox label"
 msgid "Enable"
 msgstr ""
 
 #. translators: %s: post type label.
-#: admin/class-settingspage.php:1427
+#: admin/class-settingspage.php:1442
 msgctxt "accessibility label"
 msgid "Revisions to always keep for %s"
 msgstr ""
 
 #. translators: %s: the age set for the whole site.
-#: admin/class-settingspage.php:1438
+#: admin/class-settingspage.php:1453
 msgctxt "inherited setting option"
 msgid "Policy above (%s)"
 msgstr ""
 
 #. translators: %s: post type label.
-#: admin/class-settingspage.php:1443
+#: admin/class-settingspage.php:1458
 msgctxt "accessibility label"
 msgid "Age after which revisions of %s are removed"
 msgstr ""
 
 #. translators: %s: number of post types.
-#: admin/class-settingspage.php:1460
+#: admin/class-settingspage.php:1475
 msgctxt "button label"
 msgid "Hide the post types without revisions"
 msgstr ""
 
 #. translators: %s: time until the next scheduled sweep.
-#: admin/class-settingspage.php:1593
+#: admin/class-settingspage.php:1608
 msgctxt "sweep status"
 msgid "The next one is due in %s."
 msgstr ""
 
 #. translators: %s: how long ago the next scheduled sweep was due, e.g. "2 minutes".
-#: admin/class-settingspage.php:1595
+#: admin/class-settingspage.php:1610
 msgctxt "sweep status"
 msgid "The next one was due %s ago and runs as soon as WP-Cron does."
 msgstr ""
 
-#: admin/class-settingspage.php:1603
+#: admin/class-settingspage.php:1618
 msgctxt "button label"
 msgid "Preview"
 msgstr ""
 
-#: admin/class-settingspage.php:1607
+#: admin/class-settingspage.php:1622
 msgctxt "button label"
 msgid "Run now"
 msgstr ""
 
-#: admin/class-settingspage.php:1611 admin/class-settingspage.php:1951
+#: admin/class-settingspage.php:1626 admin/class-settingspage.php:1966
 msgctxt "button label"
 msgid "Stop"
 msgstr ""
 
-#: admin/class-settingspage.php:1622 admin/class-settingspage.php:1962
+#: admin/class-settingspage.php:1637 admin/class-settingspage.php:1977
 msgctxt "accessibility label"
 msgid "Sweep progress"
 msgstr ""
 
-#: admin/class-settingspage.php:1634 admin/class-settingspage.php:1974
+#: admin/class-settingspage.php:1649 admin/class-settingspage.php:1989
 msgctxt "column heading"
 msgid "Post"
 msgstr ""
 
-#: admin/class-settingspage.php:1635 admin/class-settingspage.php:1976
+#: admin/class-settingspage.php:1650 admin/class-settingspage.php:1991
 msgctxt "column heading"
 msgid "Type"
 msgstr ""
 
-#: admin/class-settingspage.php:1636 admin/class-settingspage.php:1977
+#: admin/class-settingspage.php:1651 admin/class-settingspage.php:1992
 msgctxt "column heading"
 msgid "Removing"
 msgstr ""
 
-#: admin/class-settingspage.php:1637 admin/class-settingspage.php:1978
+#: admin/class-settingspage.php:1652 admin/class-settingspage.php:1993
 msgctxt "column heading"
 msgid "Remaining"
 msgstr ""
 
-#: admin/class-settingspage.php:1647
+#: admin/class-settingspage.php:1662
 msgctxt "field description"
 msgid "Preview goes through the whole site and reports what the policy would remove, without deleting anything. Run now does the same and deletes as it goes, batch after batch, until the site is clean. Either one can be stopped, and the schedule picks up whatever is left."
 msgstr ""
 
-#: admin/class-settingspage.php:1651
+#: admin/class-settingspage.php:1666
 msgctxt "field description"
 msgid "This network keeps the retention policy to itself, so only a network administrator can sweep this site. The scheduled sweep still runs if the network has it switched on."
 msgstr ""
 
-#: admin/class-settingspage.php:1670
+#: admin/class-settingspage.php:1685
 msgctxt "sweep status"
 msgid "A sweep is part way through this site and continues from where it stopped."
 msgstr ""
 
-#: admin/class-settingspage.php:1674
+#: admin/class-settingspage.php:1689
 msgctxt "sweep status"
 msgid "No sweep has finished on this site yet."
 msgstr ""
 
-#: admin/class-settingspage.php:1707 admin/class-settingspage.php:2274
+#: admin/class-settingspage.php:1722 admin/class-settingspage.php:2289
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide, so only a network administrator can sweep it."
 msgstr ""
 
-#: admin/class-settingspage.php:1885
+#: admin/class-settingspage.php:1900
 msgctxt "sweep error"
 msgid "Another sweep is running on this site right now, from the schedule, WP-CLI or an earlier batch that is still being finished. Wait a minute and try again."
 msgstr ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1927
+#: admin/class-settingspage.php:1942
 msgctxt "sweep status"
 msgid "Revisions live in each site's own database, so a sweep belongs to the site rather than to the network."
 msgstr ""
 
-#: admin/class-settingspage.php:1933
+#: admin/class-settingspage.php:1948
 msgctxt "button label"
 msgid "Preview every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1941
+#: admin/class-settingspage.php:1956
 msgctxt "confirmation"
 msgid "This permanently deletes revisions on every site on the network that has the sweep switched on, under each site's own policy. It cannot be undone."
 msgstr ""
 
-#: admin/class-settingspage.php:1942
+#: admin/class-settingspage.php:1957
 msgctxt "confirmation title"
 msgid "Sweep every site now?"
 msgstr ""
 
-#: admin/class-settingspage.php:1945
+#: admin/class-settingspage.php:1960
 msgctxt "button label"
 msgid "Sweep every site now"
 msgstr ""
 
-#: admin/class-settingspage.php:1948
+#: admin/class-settingspage.php:1963
 msgctxt "button label"
 msgid "Schedule a sweep on every site"
 msgstr ""
 
-#: admin/class-settingspage.php:1975
+#: admin/class-settingspage.php:1990
 msgctxt "column heading"
 msgid "Site"
 msgstr ""
 
-#: admin/class-settingspage.php:1988
+#: admin/class-settingspage.php:2003
 msgctxt "field description"
 msgid "Preview every site walks the whole network and reports what the policy would remove, without deleting anything. Sweep every site now does the same and deletes as it goes, site after site, and logs what it removed on each one. It can be stopped, and the schedule picks up whatever is left. Schedule a sweep on every site leaves the work to WP-Cron instead, starting each site within the next few minutes. Both pass over the sites that have switched the sweep off."
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2154
+#: admin/class-settingspage.php:2169
 msgctxt "inherited boolean value"
 msgid "off"
 msgstr ""
 
 #. translators: %s: the value inherited from the network.
-#: admin/class-settingspage.php:2154
+#: admin/class-settingspage.php:2169
 msgctxt "inherited boolean value"
 msgid "on"
 msgstr ""
 
-#: admin/class-settingspage.php:2210 admin/class-settingspage.php:2248
+#: admin/class-settingspage.php:2225 admin/class-settingspage.php:2263
 msgctxt "permission error"
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: admin/class-settingspage.php:2216
+#: admin/class-settingspage.php:2231
 msgctxt "permission error"
 msgid "The retention policy for this site is set network wide."
 msgstr ""
 
-#: admin/class-settingspage.php:2346
+#: admin/class-settingspage.php:2361
 msgctxt "revisions kept"
 msgid "All"
 msgstr ""
@@ -1267,7 +1287,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of post types.
-#: admin/class-settingspage.php:1459 admin/class-settingspage.php:1464
+#: admin/class-settingspage.php:1474 admin/class-settingspage.php:1479
 msgctxt "button label"
 msgid "Show %s post type without revisions"
 msgid_plural "Show %s post types without revisions"
@@ -1275,7 +1295,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: how long ago the last sweep finished, 2: number of revisions it removed.
-#: admin/class-settingspage.php:1679
+#: admin/class-settingspage.php:1694
 msgctxt "sweep status"
 msgid "The last sweep finished %1$s ago and removed %2$s revision."
 msgid_plural "The last sweep finished %1$s ago and removed %2$s revisions."
@@ -1283,111 +1303,101 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: number of sites on the network the plugin is active on.
-#: admin/class-settingspage.php:1923
+#: admin/class-settingspage.php:1938
 msgctxt "sweep status"
 msgid "Revision Retention is active on %s site."
 msgid_plural "Revision Retention is active on %s sites."
 msgstr[0] ""
 msgstr[1] ""
 
-#: admin/class-tour.php:87
+#: admin/class-tour.php:101
 msgctxt "walkthrough step title"
 msgid "At a glance"
 msgstr ""
 
-#: admin/class-tour.php:88
+#: admin/class-tour.php:102
 msgctxt "walkthrough step"
 msgid "How many revisions this site stores, how many of them every post always keeps, from what age the rest are removed, and how long until the next sweep."
 msgstr ""
 
-#: admin/class-tour.php:94
+#: admin/class-tour.php:108
 msgctxt "walkthrough step title"
 msgid "Your policy"
 msgstr ""
 
-#: admin/class-tour.php:95
+#: admin/class-tour.php:109
 msgctxt "walkthrough step"
 msgid "Keep the newest few revisions of every post, and remove the ones past an age. The newest ones are kept however old they get."
 msgstr ""
 
-#: admin/class-tour.php:101
+#: admin/class-tour.php:115
 msgctxt "walkthrough step title"
 msgid "Per post type"
 msgstr ""
 
-#: admin/class-tour.php:102
+#: admin/class-tour.php:116
 msgctxt "walkthrough step"
 msgid "Give a post type a policy of its own, or switch revisions on for one that has none."
 msgstr ""
 
-#: admin/class-tour.php:108
+#: admin/class-tour.php:122
 msgctxt "walkthrough step title"
 msgid "Schedule"
 msgstr ""
 
-#: admin/class-tour.php:109
+#: admin/class-tour.php:123
 msgctxt "walkthrough step"
 msgid "How often the sweep runs in the background, on which days and at what time. A warning shows here when WP-Cron is not running on the site."
 msgstr ""
 
-#: admin/class-tour.php:115
+#: admin/class-tour.php:129
 msgctxt "walkthrough step title"
 msgid "Sites"
 msgstr ""
 
-#: admin/class-tour.php:116
+#: admin/class-tour.php:130
 msgctxt "walkthrough step"
 msgid "Whether the sites of the network may set a policy of their own, or all follow the one set here."
 msgstr ""
 
-#: admin/class-tour.php:122
+#: admin/class-tour.php:136
 msgctxt "walkthrough step title"
 msgid "Sweep now"
 msgstr ""
 
-#: admin/class-tour.php:123
+#: admin/class-tour.php:137
 msgctxt "walkthrough step"
 msgid "Preview lists what the policy would remove, without deleting anything. Run now removes it straight away, in batches you can stop."
 msgstr ""
 
-#: admin/class-tour.php:129
+#: admin/class-tour.php:143
 msgctxt "walkthrough step title"
 msgid "Logs"
 msgstr ""
 
-#: admin/class-tour.php:130
+#: admin/class-tour.php:144
 msgctxt "walkthrough step"
 msgid "Every sweep that removed revisions, who or what ran it, and how many went, with a bar per day."
 msgstr ""
 
-#: admin/class-tour.php:137
+#: admin/class-tour.php:151
 msgctxt "walkthrough step title"
 msgid "Dashboard widget"
 msgstr ""
 
-#: admin/class-tour.php:138
+#: admin/class-tour.php:152
 msgctxt "walkthrough step"
 msgid "Choose who sees the recent sweeps on their Dashboard, and may read the log."
 msgstr ""
 
-#: admin/class-tour.php:288
-msgctxt "walkthrough pointer"
-msgid "Keep the revisions you need and sweep out the rest. A short walkthrough shows you around the settings."
+#: admin/class-tour.php:302
+msgctxt "walkthrough tag on the Plugins screen"
+msgid "New"
 msgstr ""
 
-#: admin/class-tour.php:289
-msgctxt "walkthrough pointer"
-msgid "Revision Retention has changed. A short walkthrough shows what is new."
-msgstr ""
-
-#: admin/class-tour.php:291
-msgctxt "walkthrough pointer"
-msgid "Take the walkthrough"
-msgstr ""
-
-#: admin/class-tour.php:292
-msgctxt "walkthrough pointer"
-msgid "Not now"
+#: admin/class-tour.php:308
+msgctxt "plugin action link"
+msgid "Start walkthrough"
 msgstr ""
 
 #: includes/class-abilities.php:147
@@ -1831,128 +1841,128 @@ msgctxt "activation error"
 msgid "Revision Retention requires WordPress %1$s or newer, but this site runs WordPress %2$s. The plugin has been deactivated. Please update WordPress and activate the plugin again."
 msgstr ""
 
-#: includes/class-settings.php:227
+#: includes/class-settings.php:229
 msgctxt "sweep interval"
 msgid "Every hour"
 msgstr ""
 
-#: includes/class-settings.php:228
+#: includes/class-settings.php:230
 msgctxt "sweep interval"
 msgid "Every 4 hours"
 msgstr ""
 
-#: includes/class-settings.php:229
+#: includes/class-settings.php:231
 msgctxt "sweep interval"
 msgid "Every 12 hours (twice a day)"
 msgstr ""
 
-#: includes/class-settings.php:230
+#: includes/class-settings.php:232
 msgctxt "sweep interval"
 msgid "Once a day"
 msgstr ""
 
-#: includes/class-settings.php:231
+#: includes/class-settings.php:233
 msgctxt "sweep interval"
 msgid "Once a week"
 msgstr ""
 
-#: includes/class-settings.php:232
+#: includes/class-settings.php:234
 msgctxt "sweep interval"
 msgid "Every 14 days"
 msgstr ""
 
-#: includes/class-settings.php:233
+#: includes/class-settings.php:235
 msgctxt "sweep interval"
 msgid "Once a month"
 msgstr ""
 
-#: includes/class-settings.php:234
+#: includes/class-settings.php:236
 msgctxt "sweep interval"
 msgid "On chosen days of the week"
 msgstr ""
 
-#: includes/class-settings.php:245
+#: includes/class-settings.php:247
 msgctxt "log retention"
 msgid "One week"
 msgstr ""
 
-#: includes/class-settings.php:246
+#: includes/class-settings.php:248
 msgctxt "log retention"
 msgid "One month"
 msgstr ""
 
-#: includes/class-settings.php:247
+#: includes/class-settings.php:249
 msgctxt "log retention"
 msgid "Three months"
 msgstr ""
 
-#: includes/class-settings.php:248
+#: includes/class-settings.php:250
 msgctxt "log retention"
 msgid "Six months"
 msgstr ""
 
-#: includes/class-settings.php:249
+#: includes/class-settings.php:251
 msgctxt "log retention"
 msgid "One year"
 msgstr ""
 
-#: includes/class-settings.php:278
+#: includes/class-settings.php:280
 msgctxt "age threshold"
 msgid "Never"
 msgstr ""
 
-#: includes/class-settings.php:279
+#: includes/class-settings.php:281
 msgctxt "age threshold"
 msgid "7 days"
 msgstr ""
 
-#: includes/class-settings.php:280
+#: includes/class-settings.php:282
 msgctxt "age threshold"
 msgid "14 days"
 msgstr ""
 
-#: includes/class-settings.php:281
+#: includes/class-settings.php:283
 msgctxt "age threshold"
 msgid "30 days"
 msgstr ""
 
-#: includes/class-settings.php:282
+#: includes/class-settings.php:284
 msgctxt "age threshold"
 msgid "60 days"
 msgstr ""
 
-#: includes/class-settings.php:283
+#: includes/class-settings.php:285
 msgctxt "age threshold"
 msgid "90 days"
 msgstr ""
 
-#: includes/class-settings.php:284
+#: includes/class-settings.php:286
 msgctxt "age threshold"
 msgid "180 days"
 msgstr ""
 
-#: includes/class-settings.php:285
+#: includes/class-settings.php:287
 msgctxt "age threshold"
 msgid "1 year"
 msgstr ""
 
-#: includes/class-settings.php:286
+#: includes/class-settings.php:288
 msgctxt "age threshold"
 msgid "2 years"
 msgstr ""
 
-#: includes/class-settings.php:287
+#: includes/class-settings.php:289
 msgctxt "age threshold"
 msgid "3 years"
 msgstr ""
 
-#: includes/class-settings.php:288
+#: includes/class-settings.php:290
 msgctxt "age threshold"
 msgid "5 years"
 msgstr ""
 
 #. translators: %s: number of days.
-#: includes/class-settings.php:307
+#: includes/class-settings.php:309
 msgctxt "age threshold"
 msgid "%s day"
 msgid_plural "%s days"
@@ -2045,38 +2055,38 @@ msgid_plural "And %s more posts."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/tour.js:58
+#: src/tour.js:60
 msgctxt "walkthrough log preview"
 msgid "Your latest sweep"
 msgstr ""
 
-#: src/tour.js:59
+#: src/tour.js:61
 msgctxt "walkthrough log preview"
 msgid "An example"
 msgstr ""
 
 #. translators: 1: number of this step, 2: number of steps.
-#: src/tour.js:144
+#: src/tour.js:146
 msgctxt "walkthrough progress"
 msgid "Step %1$d of %2$d"
 msgstr ""
 
-#: src/tour.js:191
+#: src/tour.js:193
 msgctxt "walkthrough button"
 msgid "Skip walkthrough"
 msgstr ""
 
-#: src/tour.js:200
+#: src/tour.js:202
 msgctxt "walkthrough button"
 msgid "Done"
 msgstr ""
 
-#: src/tour.js:201
+#: src/tour.js:203
 msgctxt "walkthrough button"
 msgid "Next"
 msgstr ""
 
-#: src/tour.js:251
+#: src/tour.js:253
 msgctxt "walkthrough button"
 msgid "Take the walkthrough"
 msgstr ""

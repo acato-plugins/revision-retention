@@ -1,10 +1,12 @@
 /**
  * The walkthrough of the settings screen, on WordPress's own admin pointers.
  *
- * The steps come from Admin\Tour, each with the tab it lives on. It starts on
- * its own when there are steps this user has not seen, which after an update
- * are only the new ones, and can be taken again in full from the link at the
- * bottom of the screen.
+ * The steps come from Admin\Tour, each with the tab it lives on. It never
+ * starts on its own: it starts from the "Start walkthrough" link on the
+ * Plugins screen, which opens this screen with a query argument, or from the
+ * link at the bottom of the screen. From the Plugins screen, somebody who
+ * took an older walkthrough gets only the steps added since; the link at the
+ * bottom always gives all of it.
  */
 ( () => {
 	'use strict';
@@ -255,10 +257,18 @@
 		wrap.append( replay );
 	}
 
-	// On the first visit, and after an update that added steps, only those.
-	// A screen with nothing of them on it, a site that only follows the
-	// network for instance, counts as seen.
-	if ( data.pending.length && ! run( present( data.pending ) ) ) {
-		markSeen();
+	// Asked for from the Plugins screen. The argument comes off the address
+	// first, so a reload or a saved form does not start it again.
+	const url = new URL( window.location.href );
+
+	if ( url.searchParams.has( data.start ) ) {
+		url.searchParams.delete( data.start );
+		window.history.replaceState( window.history.state, '', url );
+
+		// What this user has not seen, or all of it when they saw everything.
+		const steps = present( data.pending ).length ? present( data.pending ) : present( data.steps );
+
+		// Once the screen has settled, so the first step points at its place.
+		window.requestAnimationFrame( () => run( steps ) );
 	}
 } )();

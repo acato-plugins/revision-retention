@@ -553,7 +553,12 @@ $GLOBALS['t_user_meta'][ Tour::USER_META ] = Tour::version();
 check( 'not pending once this version was taken', Tour::is_pending( false ), false );
 check( 'and nothing left to show', Tour::steps_since( Tour::version() ), array() );
 $GLOBALS['t_user_meta'] = array();
-$GLOBALS['t_caps']      = array();
+check( 'offered by default', Tour::is_enabled( false ), true );
+$GLOBALS['t_options'][ Settings::OPTION ] = array( 'walkthrough' => false );
+check( 'not offered once the site switches it off', Tour::is_enabled( false ), false );
+check( 'and nothing pending then', Tour::is_pending( false ), false );
+reset_state();
+$GLOBALS['t_caps'] = array();
 check( 'never for a user who cannot change the settings', Tour::is_pending( false ), false );
 
 /* ------------------------------------------------------------ 18. Assets */

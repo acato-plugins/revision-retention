@@ -1,20 +1,16 @@
 /**
  * The walkthrough's cards, in the plugin's own look: the banner's near black
- * with its green and purple glow, and its Wapuu, so they read as this
- * plugin's and not as core's blue pointer.
+ * with its green and purple glow, so they read as this plugin's and not as
+ * core's blue pointer.
  *
- * Two kinds. The card beside the Settings menu is drawn by menu-pointer.js
- * and loads on every admin screen until the walkthrough is taken, so it uses
- * fixed colours and nothing of the settings screen. The walkthrough's steps
- * are core's wp-pointer, on the settings screen only: a header in the
- * banner's look over a body in the screen's own tokens (settings.css), so
+ * The steps are core's wp-pointer, on the settings screen only: a header in
+ * the banner's look over a body in the screen's own tokens (settings.css), so
  * they follow its light, dark and contrast schemes.
  */
 
 /* The banner's look: near black, a green glow top right and a purple one
    bottom right, and a faint ring that echoes the arcs of the banner. White
    at 85% on the lightest point of the glow is still 7:1. */
-.rvrt-menu-pointer,
 .rvrt-pointer .rvrt-pointer-head {
 	background:
 		radial-gradient(circle at 112% 50%, transparent 34%, rgb(255 255 255 / 0.05) 34.5%, rgb(255 255 255 / 0.05) 44%, transparent 44.5%),
@@ -22,125 +18,6 @@
 		radial-gradient(110% 110% at 100% 100%, rgb(168 44 184 / 0.38), transparent 58%),
 		linear-gradient(135deg, #0b0c10, #16181e);
 	color: #fff;
-}
-
-/* The card beside the Settings menu ---------------------------------------- */
-
-.rvrt-menu-pointer {
-	border-radius: 8px;
-	box-shadow: 0 10px 28px rgb(11 12 16 / 0.4);
-	font-size: 13px;
-	inline-size: min(320px, calc(100vw - 200px));
-	line-height: 1.5;
-	position: fixed;
-	z-index: 9999;
-}
-
-/* Arrow towards the menu item, in the card's darkest corner. */
-.rvrt-menu-pointer::after {
-	background: #0d0e12;
-	block-size: 14px;
-	content: "";
-	inline-size: 14px;
-	inset-block-start: var(--rvrt-arrow, 32px);
-	inset-inline-start: -7px;
-	position: absolute;
-	transform: rotate(45deg);
-}
-
-.rvrt-menu-pointer-body {
-	display: grid;
-	gap: 10px;
-	padding-block: 16px;
-	padding-inline: 18px;
-	position: relative;
-	z-index: 1;
-}
-
-.rvrt-menu-pointer-head {
-	align-items: center;
-	display: flex;
-	gap: 12px;
-}
-
-.rvrt-menu-pointer-wapuu {
-	block-size: 44px;
-	border-radius: 10px;
-	flex: none;
-	inline-size: 44px;
-}
-
-.rvrt-menu-pointer-title {
-	color: #fff;
-	font-size: 16px;
-	font-weight: 600;
-	line-height: 1.3;
-	margin: 0;
-}
-
-.rvrt-menu-pointer-text {
-	color: rgb(255 255 255 / 0.85);
-	margin: 0;
-}
-
-.rvrt-menu-pointer-actions {
-	align-items: center;
-	display: flex;
-	gap: 12px;
-	justify-content: space-between;
-	margin-block-start: 4px;
-}
-
-.rvrt-menu-pointer-go {
-	align-items: center;
-	background: #fff;
-	border-radius: 4px;
-	color: #0b0c10;
-	display: inline-flex;
-	font-weight: 600;
-	min-block-size: 36px;
-	padding-inline: 14px;
-	text-decoration: none;
-}
-
-.rvrt-menu-pointer-go:hover,
-.rvrt-menu-pointer-go:focus {
-	background: #f0f0f1;
-	color: #0b0c10;
-}
-
-.rvrt-menu-pointer-dismiss {
-	background: none;
-	border: 0;
-	color: rgb(255 255 255 / 0.85);
-	cursor: pointer;
-	font: inherit;
-	padding-block: 4px;
-	padding-inline: 2px;
-	text-decoration: underline;
-}
-
-.rvrt-menu-pointer-dismiss:hover {
-	color: #fff;
-}
-
-.rvrt-menu-pointer :is(.rvrt-menu-pointer-go, .rvrt-menu-pointer-dismiss):focus-visible {
-	box-shadow: none;
-	outline: 2px solid #fff;
-	outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-	.rvrt-menu-pointer {
-		animation: rvrt-menu-pointer-in 200ms ease-out;
-	}
-}
-
-@keyframes rvrt-menu-pointer-in {
-	from {
-		opacity: 0;
-		transform: translateX(-6px);
-	}
 }
 
 /* The walkthrough's steps ------------------------------------------------- */
@@ -301,18 +178,10 @@
 /* More contrast: a plain black header, no glow behind the text, and a
    visible edge around the card. */
 @media (prefers-contrast: more) {
-	.rvrt-menu-pointer,
 	.rvrt-pointer .rvrt-pointer-head {
 		background: #000;
 	}
 
-	.rvrt-menu-pointer {
-		outline: 2px solid #fff;
-		outline-offset: -2px;
-	}
-
-	.rvrt-menu-pointer-text,
-	.rvrt-menu-pointer-dismiss,
 	.rvrt-pointer .wp-pointer-content .rvrt-pointer-eyebrow {
 		color: #fff;
 	}
@@ -324,25 +193,15 @@
 
 /* Less contrast: the glow and the ring go, the header softens to charcoal. */
 @media (prefers-contrast: less) {
-	.rvrt-menu-pointer,
 	.rvrt-pointer .rvrt-pointer-head {
 		background: linear-gradient(135deg, #2c3036, #353a42);
-	}
-
-	.rvrt-menu-pointer {
-		box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
 	}
 }
 
 /* Forced colours drop the backgrounds; the system's own take over, and
    the cards keep an edge so they still stand apart from the page. */
 @media (forced-colors: active) {
-	.rvrt-menu-pointer,
 	.rvrt-pointer .wp-pointer-content {
-		border: 1px solid CanvasText;
-	}
-
-	.rvrt-menu-pointer::after {
 		border: 1px solid CanvasText;
 	}
 
