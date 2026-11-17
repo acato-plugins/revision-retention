@@ -222,4 +222,4 @@ spl_autoload_register(
 );
 
 define( 'RVRT_PLUGIN_FILE', __DIR__ . '/../revision-retention.php' );
-define( 'RVRT_VERSION', '1.7.0' );
+define( 'RVRT_VERSION', '1.8.0' );
