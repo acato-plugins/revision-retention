@@ -4,7 +4,7 @@ Tags: revisions, database, cleanup, performance, post types
 Requires at least: 6.7
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 1.7.0
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,7 +52,9 @@ Each site keeps its own log, next to its own revisions. On multisite the network
 
 = A walkthrough of the settings =
 
-The first time somebody who manages the plugin opens the WordPress admin after installing it, a card beside the **Settings** menu offers a short walkthrough of the settings screen: the numbers at the top, the policy, the post types, the schedule, sweeping now, the log, with an example of a log entry, and the Dashboard widget. After an update that adds to the screen, the walkthrough comes back with only what is new, so it reads as what changed. **Not now** puts the card away until the next update that brings something new, and the walkthrough can always be taken again from the link at the foot of the settings screen.
+A short walkthrough shows you around the settings screen: the numbers at the top, the policy, the post types, the schedule, sweeping now, the log, with an example of a log entry, and the Dashboard widget. It never starts by itself. Start it from the **Start walkthrough** link beside **Settings** on the Plugins screen, tagged **New** while there is something you have not seen, or from the link at the foot of the settings screen. After an update that adds to the screen, the link on the Plugins screen shows only what is new.
+
+Don't want it? Switch off **Walkthrough** on the **Advanced** tab, for a site or for the whole network, and both links go. In code, `define( 'RVRT_DISABLE_WALKTHROUGH', true );` or the `revision_retention_walkthrough` filter does the same.
 
 = Light, dark and high contrast =
 
@@ -170,6 +172,10 @@ Translations are managed on [translate.wordpress.org](https://translate.wordpres
 6. The Dashboard widget: the sweeps of the last days, weeks or months, for this site or the whole network, and when the next one is due.
 
 == Changelog ==
+
+= 1.8.0 =
+* The walkthrough no longer starts by itself, and the card beside the **Settings** menu is gone. Start it from the new **Start walkthrough** link beside **Settings** on the Plugins screen, tagged **New** until you have taken it, or from the link at the foot of the settings screen.
+* The walkthrough can be switched off on the **Advanced** tab, for a site or the whole network, with the `RVRT_DISABLE_WALKTHROUGH` constant, or with the `revision_retention_walkthrough` filter.
 
 = 1.7.0 =
 * A walkthrough of the settings screen. The first time somebody who manages the plugin opens the admin, a card beside the **Settings** menu offers it; after an update it comes back with only what is new, and it can always be taken again from the link at the foot of the settings screen.

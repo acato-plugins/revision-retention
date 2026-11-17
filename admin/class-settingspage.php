@@ -1274,6 +1274,21 @@ class SettingsPage extends Singleton {
 				<td><?php $this->render_widget_roles( $stored, $inheritable ); ?></td>
 			</tr>
 			<tr>
+				<th scope="row"><?php echo esc_html_x( 'Walkthrough', 'field label', 'revision-retention' ); ?></th>
+				<td>
+					<?php $this->render_bool( 'walkthrough', 'rvrt-walkthrough', _x( 'Offer the walkthrough of this screen', 'checkbox label', 'revision-retention' ), $stored, $inherited, $inheritable ); ?>
+					<p class="description">
+						<?php
+						echo esc_html(
+							$is_network
+								? _x( 'Adds a Start walkthrough link to the plugin on the Plugins screen, and at the foot of this screen, on the network and on every site that does not switch it off. It never starts by itself.', 'field description', 'revision-retention' )
+								: _x( 'Adds a Start walkthrough link to the plugin on the Plugins screen, and at the foot of this screen. It never starts by itself.', 'field description', 'revision-retention' )
+						);
+						?>
+					</p>
+				</td>
+			</tr>
+			<tr>
 				<th scope="row"><?php echo esc_html_x( 'On removal', 'field label', 'revision-retention' ); ?></th>
 				<td>
 					<?php $this->render_bool( 'remove_data_on_uninstall', 'rvrt-remove-data', _x( 'Remove all data of this plugin when it is uninstalled', 'checkbox label', 'revision-retention' ), $stored, $inherited, $inheritable ); ?>

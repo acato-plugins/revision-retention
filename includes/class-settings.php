@@ -174,6 +174,7 @@ class Settings {
 			'remove_data_on_uninstall' => false,
 			'dashboard_widget'         => false,
 			'widget_roles'             => [],
+			'walkthrough'              => true,
 		];
 	}
 
@@ -214,6 +215,7 @@ class Settings {
 			'log_retention'            => 'enum',
 			'remove_data_on_uninstall' => 'bool',
 			'dashboard_widget'         => 'bool',
+			'walkthrough'              => 'bool',
 		];
 	}
 

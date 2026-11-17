@@ -1,6 +1,6 @@
 <?php
 /**
- * A short walkthrough of the settings screen, shown again when it grows.
+ * A short walkthrough of the settings screen, taken when somebody asks for it.
  *
  * @package RevisionRetention
  */
@@ -25,10 +25,12 @@ defined( 'ABSPATH' ) || exit;
  * only the new steps, so it reads as what changed. Adding a step with a newer
  * `since` is all a release has to do: there is no version to bump next to it.
  *
- * Until then a card beside the Settings menu says there is something to
- * see, on every admin screen but the plugin's own, until it is taken or put
- * off with "Not now". It has the plugin's own look, the banner's dark glow
- * and its Wapuu, so it reads as this plugin's and not as one of core's.
+ * It never starts by itself. It is started from the "Start walkthrough"
+ * link beside Settings on the Plugins screen, tagged "New" while this user
+ * has steps they have not seen, or from the link at the foot of the settings
+ * screen. The site, or the network, can switch it off in the settings, and
+ * code can with the `revision_retention_walkthrough` filter or the
+ * RVRT_DISABLE_WALKTHROUGH constant; then neither link shows.
  *
  * @author Paul van Impelen <paul@acato.nl>
  */
@@ -49,6 +51,13 @@ final class Tour extends Singleton {
 	private const ACTION = 'rvrt_tour_seen';
 
 	/**
+	 * Query argument on the settings screen's URL that starts the walkthrough.
+	 *
+	 * @var string
+	 */
+	public const START_ARG = 'rvrt-walkthrough';
+
+	/**
 	 * Whether the walkthrough was loaded on this request's screen.
 	 *
 	 * @var bool
@@ -61,8 +70,13 @@ final class Tour extends Singleton {
 	 * @return void
 	 */
 	protected function init(): void {
+		$basename = plugin_basename( RVRT_PLUGIN_FILE );
+
+		// After SettingsPage's own link, at 10, so this one comes next to it.
+		add_filter( 'plugin_action_links_' . $basename, [ $this, 'add_action_link' ], 11 );
+		add_filter( 'network_admin_plugin_action_links_' . $basename, [ $this, 'add_action_link' ], 11 );
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
-		add_action( 'admin_enqueue_scripts', [ $this, 'menu_pointer' ] );
+		add_action( 'admin_enqueue_scripts', [ $this, 'tag_style' ] );
 		add_action( 'admin_footer', [ $this, 'render_templates' ] );
 		add_action( 'wp_ajax_' . self::ACTION, [ $this, 'mark_seen' ] );
 	}
@@ -163,6 +177,34 @@ final class Tour extends Singleton {
 	}
 
 	/**
+	 * Whether the walkthrough is offered at all, on a site or on the network.
+	 *
+	 * The setting can be inherited from the network like any other. Code has
+	 * the last word: the RVRT_DISABLE_WALKTHROUGH constant switches it off
+	 * everywhere, and the `revision_retention_walkthrough` filter decides
+	 * per screen.
+	 *
+	 * @param bool $network Whether the network admin is meant.
+	 *
+	 * @return bool
+	 */
+	public static function is_enabled( bool $network ): bool {
+		if ( defined( 'RVRT_DISABLE_WALKTHROUGH' ) && RVRT_DISABLE_WALKTHROUGH ) {
+			return false;
+		}
+
+		$settings = $network ? Settings::network() : Settings::resolved();
+
+		/**
+		 * Whether the walkthrough of the settings screen is offered.
+		 *
+		 * @param bool $enabled Whether the settings switch it on.
+		 * @param bool $network Whether the network admin is meant.
+		 */
+		return (bool) apply_filters( 'revision_retention_walkthrough', ! empty( $settings['walkthrough'] ), $network );
+	}
+
+	/**
 	 * Whether the current user has steps they have not seen yet.
 	 *
 	 * @param bool $network Whether the network admin is meant.
@@ -170,7 +212,7 @@ final class Tour extends Singleton {
 	 * @return bool
 	 */
 	public static function is_pending( bool $network ): bool {
-		if ( ! current_user_can( Settings::capability( $network ) ) ) {
+		if ( ! current_user_can( Settings::capability( $network ) ) || ! self::is_enabled( $network ) ) {
 			return false;
 		}
 
@@ -207,7 +249,7 @@ final class Tour extends Singleton {
 	public function enqueue( $hook_suffix ): void {
 		$network = is_network_admin();
 
-		if ( ! is_string( $hook_suffix ) || ! str_contains( $hook_suffix, SettingsPage::PAGE_SLUG ) || ! current_user_can( Settings::capability( $network ) ) ) {
+		if ( ! is_string( $hook_suffix ) || ! str_contains( $hook_suffix, SettingsPage::PAGE_SLUG ) || ! current_user_can( Settings::capability( $network ) ) || ! self::is_enabled( $network ) ) {
 			return;
 		}
 
@@ -229,6 +271,7 @@ final class Tour extends Singleton {
 				[
 					'steps'   => self::steps(),
 					'pending' => $pending ? self::steps_since( self::seen() ) : [],
+					'start'   => self::START_ARG,
 					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 					'action'  => self::ACTION,
 					'nonce'   => wp_create_nonce( self::ACTION ),
@@ -239,62 +282,57 @@ final class Tour extends Singleton {
 	}
 
 	/**
-	 * Core's name for this version's menu pointer, dismissed per user through
-	 * core's own `dismiss-wp-pointer`.
+	 * The "Start walkthrough" link beside Settings on the Plugins screen,
+	 * tagged "New" while this user has steps they have not seen.
 	 *
-	 * @return string
+	 * Left untyped on purpose, like the other filter callbacks.
+	 *
+	 * @param mixed $links Action links of the plugin's row.
+	 *
+	 * @return mixed
 	 */
-	private static function pointer_name(): string {
-		return 'rvrt_tour_' . str_replace( '.', '_', self::version() );
+	public function add_action_link( $links ) {
+		$network = is_network_admin();
+
+		if ( ! is_array( $links ) || ! current_user_can( Settings::capability( $network ) ) || ! self::is_enabled( $network ) ) {
+			return $links;
+		}
+
+		$tag = self::is_pending( $network )
+			? ' <span class="rvrt-walkthrough-tag">' . esc_html_x( 'New', 'walkthrough tag on the Plugins screen', 'revision-retention' ) . '</span>'
+			: '';
+
+		$link = sprintf(
+			'<a href="%s">%s</a>%s',
+			esc_url( add_query_arg( self::START_ARG, '1', SettingsPage::page_url( $network ) ) ),
+			esc_html_x( 'Start walkthrough', 'plugin action link', 'revision-retention' ),
+			$tag
+		);
+
+		// Right after Settings, which SettingsPage puts first.
+		array_splice( $links, 1, 0, [ $link ] );
+
+		return $links;
 	}
 
 	/**
-	 * The card beside the Settings menu, until the walkthrough is taken or put off.
+	 * The look of the "New" tag, on the Plugins screen only, while it shows.
 	 *
 	 * @param string $hook_suffix Screen the hook fired for.
 	 *
 	 * @return void
 	 */
-	public function menu_pointer( $hook_suffix ): void {
-		$network = is_network_admin();
-
-		if ( ( is_string( $hook_suffix ) && str_contains( $hook_suffix, SettingsPage::PAGE_SLUG ) ) || ! self::is_pending( $network ) ) {
+	public function tag_style( $hook_suffix ): void {
+		if ( 'plugins.php' !== $hook_suffix || ! self::is_pending( is_network_admin() ) ) {
 			return;
 		}
 
-		$dismissed = explode( ',', (string) get_user_meta( get_current_user_id(), 'dismissed_wp_pointers', true ) );
-
-		if ( in_array( self::pointer_name(), $dismissed, true ) ) {
-			return;
-		}
-
-		$script = Assets::url( 'src/menu-pointer.js' );
-
-		if ( null === $script ) {
-			return;
-		}
-
-		$first = '' === self::seen();
-
-		self::enqueue_style( false );
-		wp_enqueue_script( 'rvrt-menu-pointer', $script, [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
-		wp_add_inline_script(
-			'rvrt-menu-pointer',
-			'window.rvrtMenuPointer = ' . wp_json_encode(
-				[
-					'name'     => self::pointer_name(),
-					'title'    => _x( 'Revision Retention', 'admin menu and page title', 'revision-retention' ),
-					'text'     => $first
-						? _x( 'Keep the revisions you need and sweep out the rest. A short walkthrough shows you around the settings.', 'walkthrough pointer', 'revision-retention' )
-						: _x( 'Revision Retention has changed. A short walkthrough shows what is new.', 'walkthrough pointer', 'revision-retention' ),
-					'link'     => SettingsPage::page_url( $network ),
-					'linkText' => _x( 'Take the walkthrough', 'walkthrough pointer', 'revision-retention' ),
-					'dismiss'  => _x( 'Not now', 'walkthrough pointer', 'revision-retention' ),
-					'wapuu'    => plugin_dir_url( RVRT_PLUGIN_FILE ) . 'src/images/wapuu.png',
-					'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-				]
-			) . ';',
-			'before'
+		// Shaped like core's update count bubbles, in core's red, white on it.
+		wp_register_style( 'rvrt-walkthrough-tag', false, [], RVRT_VERSION );
+		wp_enqueue_style( 'rvrt-walkthrough-tag' );
+		wp_add_inline_style(
+			'rvrt-walkthrough-tag',
+			'.rvrt-walkthrough-tag{display:inline-block;margin-inline-start:4px;padding:0 6px;border-radius:9px;background:#d63638;color:#fff;font-size:9px;font-weight:600;line-height:17px;text-transform:uppercase;vertical-align:text-top}@media (forced-colors:active){.rvrt-walkthrough-tag{border:1px solid CanvasText}}'
 		);
 	}
 
@@ -319,21 +357,17 @@ final class Tour extends Singleton {
 	}
 
 	/**
-	 * The pointers' own styles.
-	 *
-	 * @param bool $core Whether core's pointer is used too, which the walkthrough's steps are.
+	 * The pointers' own styles, over core's.
 	 *
 	 * @return void
 	 */
-	private static function enqueue_style( bool $core = true ): void {
+	private static function enqueue_style(): void {
 		$style = Assets::url( 'src/pointer.css' );
 
-		if ( $core ) {
-			wp_enqueue_style( 'wp-pointer' );
-		}
+		wp_enqueue_style( 'wp-pointer' );
 
 		if ( null !== $style ) {
-			wp_enqueue_style( 'rvrt-pointer', $style, $core ? [ 'wp-pointer' ] : [], null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_style( 'rvrt-pointer', $style, [ 'wp-pointer' ], null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 		}
 	}
 
