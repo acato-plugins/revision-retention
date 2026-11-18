@@ -192,7 +192,7 @@ class SettingsPage extends Singleton {
 		}
 
 		if ( null !== $script ) {
-			wp_enqueue_script( 'rvrt-settings', $script, [ 'wp-a11y', 'wp-i18n' ], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+			wp_enqueue_script( 'rvrt-settings', $script, array_merge( [ 'wp-a11y', 'wp-i18n' ], TabSync::dependency() ), null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			wp_set_script_translations( 'rvrt-settings', 'revision-retention' );
 		}
 
@@ -278,11 +278,12 @@ class SettingsPage extends Singleton {
 		$tabs      = self::tabs( $is_network, $read_only );
 		$current   = self::current_tab( $tabs );
 		?>
-		<div class="wrap rvrt-settings">
+		<div class="wrap rvrt-settings"<?php echo TabSync::channels_attribute( $is_network ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in channels_attribute(). ?>>
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
 			<?php
 			$this->render_notice();
+			TabSync::render_head( [ $is_network ? 'network' : 'site' => $is_network ] );
 			$this->render_intro( $is_network, $read_only );
 
 			if ( ! $is_network ) {
@@ -333,9 +334,10 @@ class SettingsPage extends Singleton {
 	private function render_log_only(): void {
 		$tabs = self::tabs( false, false );
 		?>
-		<div class="wrap rvrt-settings">
+		<div class="wrap rvrt-settings"<?php echo TabSync::channels_attribute( false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in channels_attribute(). ?>>
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<?php
+			TabSync::render_head( [ 'site' => false ] );
 			$this->render_stats();
 			$this->render_tab_nav( $tabs, 'logs', array_diff( array_keys( $tabs ), [ 'logs' ] ) );
 			$this->render_panel(
@@ -454,9 +456,11 @@ class SettingsPage extends Singleton {
 	 */
 	private function render_panel( string $slug, string $current, callable $contents ): void {
 		printf(
-			'<div class="rvrt-panel" id="rvrt-panel-%1$s" role="tabpanel" aria-labelledby="rvrt-tab-%1$s" data-tab="%1$s"%2$s>',
+			'<div class="rvrt-panel" id="rvrt-panel-%1$s" role="tabpanel" aria-labelledby="rvrt-tab-%1$s" data-tab="%1$s"%2$s%3$s>',
 			esc_attr( $slug ),
-			$slug === $current ? '' : ' hidden'
+			$slug === $current ? '' : ' hidden',
+			// The log is brought up to date in place after a sweep; see src/channel.js.
+			'logs' === $slug ? ' data-rvrt-region="logs"' : ''
 		);
 
 		$contents();
@@ -476,7 +480,7 @@ class SettingsPage extends Singleton {
 		$types  = count( array_filter( $counts ) );
 		$next   = (int) wp_next_scheduled( Scheduler::HOOK );
 		?>
-		<ul class="rvrt-stats">
+		<ul class="rvrt-stats" data-rvrt-region="stats">
 			<li>
 				<span class="rvrt-stat-value"><?php echo esc_html( number_format_i18n( $total ) ); ?></span>
 				<span class="rvrt-stat-label"><?php echo esc_html_x( 'Revisions stored', 'statistic label', 'revision-retention' ); ?></span>
@@ -719,8 +723,37 @@ class SettingsPage extends Singleton {
 		$action      = $is_network
 			? network_admin_url( 'edit.php?action=' . self::NETWORK_ACTION )
 			: admin_url( 'admin-post.php' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display only flag set by our own redirect after a nonce checked save.
+		$notice = isset( $_GET['rvrt-notice'] ) ? sanitize_key( wp_unslash( $_GET['rvrt-notice'] ) ) : '';
 		?>
-		<form method="post" action="<?php echo esc_url( $action ); ?>" class="rvrt-form">
+		<form
+			method="post"
+			action="<?php echo esc_url( $action ); ?>"
+			class="rvrt-form"
+			data-channel="<?php echo esc_attr( TabSync::channel( $is_network ) ); ?>"
+			data-stamp="<?php echo esc_attr( TabSync::stamp( $stored ) ); ?>"
+			<?php
+			// The page a save lands on tells the other tabs what it now holds.
+			if ( in_array( $notice, [ 'saved', 'promoted' ], true ) ) {
+				echo ' data-saved';
+			}
+
+			// A promotion rewrote the network's settings too.
+			if ( 'promoted' === $notice ) {
+				printf(
+					' data-promoted-channel="%s" data-promoted-stamp="%s"',
+					esc_attr( TabSync::channel( true ) ),
+					esc_attr( TabSync::stamp( $inherited ) )
+				);
+			}
+			?>
+		>
+			<div class="rvrt-changed-elsewhere notice notice-warning inline" hidden>
+				<p>
+					<?php echo esc_html_x( 'These settings were saved in another tab since this page was loaded. Saving here would put the older values back, so reload first.', 'admin notice', 'revision-retention' ); ?>
+					<button type="button" class="button-link rvrt-reload"><?php echo esc_html_x( 'Reload', 'button label', 'revision-retention' ); ?></button>
+				</p>
+			</div>
 			<?php
 			wp_nonce_field( $is_network ? self::NETWORK_ACTION : self::SAVE_ACTION );
 
@@ -1588,6 +1621,7 @@ class SettingsPage extends Singleton {
 			action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 			class="rvrt-sweep"
 			data-scope="site"
+			data-channel="<?php echo esc_attr( TabSync::channel( false ) ); ?>"
 			data-request="<?php echo esc_attr( self::RUN_ACTION ); ?>"
 			data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 			data-nonce="<?php echo esc_attr( wp_create_nonce( self::RUN_ACTION ) ); ?>"
@@ -1595,7 +1629,7 @@ class SettingsPage extends Singleton {
 				<?php wp_nonce_field( self::RUN_ACTION ); ?>
 			<input type="hidden" name="action" value="<?php echo esc_attr( self::RUN_ACTION ); ?>" />
 
-			<p class="rvrt-sweep-status">
+			<p class="rvrt-sweep-status" data-rvrt-region="sweep-status">
 				<?php
 				echo esc_html( self::describe_sweep_state( $state ) );
 
@@ -1626,6 +1660,8 @@ class SettingsPage extends Singleton {
 					<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
 				</button>
 			</div>
+
+				<?php TabSync::render_elsewhere_notice(); ?>
 
 			<div class="rvrt-progress" hidden>
 				<div
@@ -1925,13 +1961,14 @@ class SettingsPage extends Singleton {
 					action="<?php echo esc_url( network_admin_url( 'edit.php?action=' . self::NETWORK_RUN_ACTION ) ); ?>"
 					class="rvrt-sweep"
 					data-scope="network"
+					data-channel="<?php echo esc_attr( TabSync::channel( true ) ); ?>"
 					data-request="<?php echo esc_attr( self::NETWORK_RUN_ACTION ); ?>"
 					data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 					data-nonce="<?php echo esc_attr( wp_create_nonce( self::NETWORK_RUN_ACTION ) ); ?>"
 				>
 					<?php wp_nonce_field( self::NETWORK_BOOK_NONCE ); ?>
 
-					<p class="rvrt-sweep-status">
+					<p class="rvrt-sweep-status" data-rvrt-region="sweep-status">
 						<?php
 						printf(
 							/* translators: %s: number of sites on the network the plugin is active on. */
@@ -1966,6 +2003,8 @@ class SettingsPage extends Singleton {
 							<?php echo esc_html_x( 'Stop', 'button label', 'revision-retention' ); ?>
 						</button>
 					</div>
+
+					<?php TabSync::render_elsewhere_notice(); ?>
 
 					<div class="rvrt-progress" hidden>
 						<div

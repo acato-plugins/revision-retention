@@ -23,8 +23,13 @@
 		const tip = chart.querySelector( '.rvrt-chart-tip' );
 
 		if ( ! area || ! bars.length || ! tip ) {
-			return;
+			return () => {};
 		}
+
+		// The listeners on the document go with the chart, when an update
+		// puts a new one in its place.
+		const controller = new AbortController();
+		const { signal } = controller;
 
 		let pinned = null;
 
@@ -161,18 +166,37 @@
 			if ( event.key === 'Escape' && ! tip.hidden ) {
 				hide();
 			}
-		} );
+		}, { signal } );
 
 		document.addEventListener( 'click', ( event ) => {
 			if ( pinned && ! chart.contains( event.target ) ) {
 				hide();
 			}
-		} );
+		}, { signal } );
+
+		return () => controller.abort();
 	};
 
-	document.addEventListener( 'DOMContentLoaded', () => {
-		for ( const chart of document.querySelectorAll( '.rvrt-chart' ) ) {
-			syncChart( chart );
+	// Each chart on the page, with what lets go of it.
+	const charts = new Map();
+
+	const syncCharts = ( root ) => {
+		for ( const [ chart, stop ] of charts ) {
+			if ( ! chart.isConnected ) {
+				stop();
+				charts.delete( chart );
+			}
 		}
-	} );
+
+		for ( const chart of root.querySelectorAll( '.rvrt-chart' ) ) {
+			if ( ! charts.has( chart ) ) {
+				charts.set( chart, syncChart( chart ) );
+			}
+		}
+	};
+
+	document.addEventListener( 'DOMContentLoaded', () => syncCharts( document ) );
+
+	// A part of the page brought up to date may hold a new chart.
+	document.addEventListener( 'rvrt:refresh', ( event ) => syncCharts( event.target ) );
 } )();
