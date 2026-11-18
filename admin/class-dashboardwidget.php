@@ -120,13 +120,13 @@ class DashboardWidget extends Singleton {
 
 		// The chart's tooltips, and the widget's tabs and period switch.
 		foreach ( [
-			'rvrt-chart'  => 'src/chart.js',
-			'rvrt-widget' => 'src/widget.js',
-		] as $handle => $source ) {
+			'rvrt-chart'  => [ 'src/chart.js', [] ],
+			'rvrt-widget' => [ 'src/widget.js', TabSync::dependency() ],
+		] as $handle => [ $source, $dependencies ] ) {
 			$script = Assets::url( $source );
 
 			if ( null !== $script ) {
-				wp_enqueue_script( $handle, $script, [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
+				wp_enqueue_script( $handle, $script, $dependencies, null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- The hash in the built file name, or the ver on a source, is the version.
 			}
 		}
 	}
@@ -140,12 +140,26 @@ class DashboardWidget extends Singleton {
 	 * @return void
 	 */
 	public function render(): void {
-		echo '<div class="rvrt-settings rvrt-widget">';
+		// The views on show, and so the channels whose sweeps bring the
+		// widget's figures up to date.
+		$views = self::has_network_tab()
+			? [
+				'site'    => false,
+				'network' => true,
+			]
+			: [ ( is_network_admin() ? 'network' : 'site' ) => is_network_admin() ];
+
+		echo '<div class="rvrt-settings rvrt-widget"' . TabSync::channels_attribute( ...array_values( $views ) ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped in channels_attribute().
+
+		TabSync::render_head( $views );
 
 		if ( self::has_network_tab() ) {
 			$this->render_tabs();
 		} else {
+			// Its own element, for an update to fill again; see src/channel.js.
+			echo '<div data-rvrt-region="widget-view">';
 			self::render_view( is_network_admin() );
+			echo '</div>';
 		}
 
 		echo '</div>';
@@ -182,7 +196,7 @@ class DashboardWidget extends Singleton {
 		</div>
 		<?php foreach ( $views as $view => $label ) { ?>
 			<?php // The script makes these tab panels once it brings in the tabs; without it, they are plain sections under a heading. ?>
-			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" data-tab="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>">
+			<div class="rvrt-widget-panel" id="rvrt-widget-panel-<?php echo esc_attr( $view ); ?>" data-tab="rvrt-widget-tab-<?php echo esc_attr( $view ); ?>" data-rvrt-region="widget-<?php echo esc_attr( $view ); ?>">
 				<h3 class="rvrt-widget-view-title"><?php echo esc_html( $label ); ?></h3>
 				<?php self::render_view( 'network' === $view, 4 ); ?>
 			</div>

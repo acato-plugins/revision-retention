@@ -330,16 +330,30 @@
 		let started = null;
 
 		/*
+		 * Other tabs on this site with a sweep going, each with the timer that
+		 * forgets it. A tab says so again with every batch; one that stops
+		 * saying anything, closed by a crash rather than by its visitor, is let
+		 * go of once a batch could no longer be running.
+		 */
+		const others = new Map();
+		const elsewhere = form.querySelector( '.rvrt-sweep-elsewhere' );
+
+		/*
 		 * Marked unavailable rather than disabled. A disabled button drops the
 		 * focus of whoever just pressed it to the top of the page; this one
 		 * keeps it, says it is unavailable, and the running flag ignores it.
 		 */
-		const setBusy = ( busy ) => {
-			running = busy;
+		const markButtons = () => {
+			const unavailable = running || others.size > 0;
 
 			for ( const button of buttons ) {
-				button.setAttribute( 'aria-disabled', busy ? 'true' : 'false' );
+				button.setAttribute( 'aria-disabled', unavailable ? 'true' : 'false' );
 			}
+		};
+
+		const setBusy = ( busy ) => {
+			running = busy;
+			markButtons();
 
 			spinner.classList.toggle( 'is-active', busy );
 			progress.hidden = false;
@@ -552,6 +566,48 @@
 			return payload.data;
 		};
 
+		const showOthers = () => {
+			markButtons();
+
+			if ( others.size > 0 ) {
+				window.rvrtChannel?.reveal( elsewhere );
+			} else if ( elsewhere ) {
+				elsewhere.hidden = true;
+			}
+		};
+
+		const forget = ( tab ) => {
+			window.clearTimeout( others.get( tab ) );
+			others.delete( tab );
+		};
+
+		/** What another tab on this site says about its sweep. */
+		const hear = ( message ) => {
+			if ( message.type === 'sweep:start' ) {
+				forget( message.tab );
+				others.set(
+					message.tab,
+					window.setTimeout( () => {
+						forget( message.tab );
+						showOthers();
+					}, BATCH_TIMEOUT + 60 * 1000 )
+				);
+			} else if ( message.type === 'sweep:end' ) {
+				// The figures are brought up to date by channel.js, which
+				// listens for this on the whole screen.
+				forget( message.tab );
+			} else {
+				return;
+			}
+
+			showOthers();
+		};
+
+		// A tab closed in the middle of a sweep stops it, and says so on its way out.
+		const channel = window.rvrtChannel?.open( form.dataset.channel, hear, {
+			beforeClose: ( post ) => running && post( 'sweep:end', { mode: started.value } ),
+		} );
+
 		const sweep = async ( mode ) => {
 			// Checked is every post a batch looked at, which is what keeps the
 			// progress moving; posts is only the ones that lost something.
@@ -561,6 +617,10 @@
 			let finished = false;
 
 			while ( ! finished && ! cancelled ) {
+				// Said again before every batch, so the other tabs know the
+				// sweep is still going rather than lost with a closed tab.
+				channel?.post( 'sweep:start', { mode } );
+
 				// Each batch is awaited before the next is asked for, so the
 				// site is never handed more than one sweep at a time.
 				// eslint-disable-next-line no-await-in-loop
@@ -593,7 +653,9 @@
 			// a press then must not post the form either.
 			event.preventDefault();
 
-			if ( running ) {
+			// The server would refuse a second sweep anyway; the buttons
+			// already say it is unavailable while another tab runs one.
+			if ( running || others.size > 0 ) {
 				return;
 			}
 
@@ -627,6 +689,13 @@
 				announce( error.message, error.lost ? 'warning' : 'error' );
 			} finally {
 				setBusy( false );
+				channel?.post( 'sweep:end', { mode: button.value } );
+
+				// The totals and the log above and beside the sweep now count
+				// what it removed; its own result has already been said.
+				if ( button.value === 'run' ) {
+					window.rvrtChannel?.refresh();
+				}
 			}
 		} );
 
@@ -823,7 +892,13 @@
 	 * for a moment that has passed and counts up from there, as the server
 	 * would have rendered it on a reload.
 	 */
+	let stopCountdowns = () => {};
+
 	const syncCountdowns = () => {
+		// Started again when an update brings new countdowns in, so the old
+		// ones, no longer on the page, stop ticking first.
+		stopCountdowns();
+
 		const countdowns = [ ...document.querySelectorAll( '.rvrt-countdown[data-left]' ) ].map( ( element ) => ( {
 			element,
 			left: Number( element.dataset.left ),
@@ -870,12 +945,57 @@
 			timer = window.setInterval( tick, 1000 );
 		};
 
-		document.addEventListener( 'visibilitychange', run );
+		const controller = new AbortController();
+
+		document.addEventListener( 'visibilitychange', run, { signal: controller.signal } );
 		run();
+
+		stopCountdowns = () => {
+			controller.abort();
+			window.clearInterval( timer );
+		};
+	};
+
+	/**
+	 * Warn before a save would undo one made in another tab.
+	 *
+	 * The settings form posts all of its fields, so saving a copy that was
+	 * opened before another tab saved puts the older values back. The page a
+	 * save lands on tells the other tabs which settings it now holds, by a
+	 * fingerprint of them, and a tab holding different ones says to reload.
+	 * Reloading the saved page says the same again, which the tabs that are
+	 * up to date simply find matches what they have.
+	 */
+	const syncSaved = () => {
+		const form = document.querySelector( '.rvrt-form[data-channel]' );
+		const notice = document.querySelector( '.rvrt-changed-elsewhere' );
+
+		if ( ! form || ! window.rvrtChannel ) {
+			return;
+		}
+
+		const hear = ( message ) =>
+			message.type === 'settings:saved' && message.stamp !== form.dataset.stamp && window.rvrtChannel.reveal( notice );
+
+		const channel = window.rvrtChannel.open( form.dataset.channel, hear );
+
+		if ( form.dataset.saved !== undefined ) {
+			channel.post( 'settings:saved', { stamp: form.dataset.stamp } );
+		}
+
+		// Promoting a site's settings rewrites the network's too, which the
+		// network screen open in another tab needs to hear.
+		if ( form.dataset.promotedChannel && form.dataset.promotedStamp ) {
+			const network = window.rvrtChannel.open( form.dataset.promotedChannel, () => {} );
+
+			network.post( 'settings:saved', { stamp: form.dataset.promotedStamp } );
+			network.stop();
+		}
 	};
 
 	document.addEventListener( 'DOMContentLoaded', () => {
 		syncTabs();
+		syncSaved();
 		syncConfirms();
 		syncDependent( 'rvrt-cron-enabled', [ 'rvrt-cron-interval', 'rvrt-cron-days', 'rvrt-cron-repeat', 'rvrt-max-deletions', 'rvrt-batch-size' ] );
 		syncWeekdays();
@@ -883,6 +1003,9 @@
 		syncDependent( 'rvrt-dashboard-widget', [ 'rvrt-widget-roles' ] );
 		syncQuietRows();
 		syncCountdowns();
+
+		// New totals or a new status bring their countdowns along.
+		document.addEventListener( 'rvrt:refresh', syncCountdowns );
 
 		if ( window.fetch ) {
 			for ( const form of document.querySelectorAll( '.rvrt-sweep[data-ajax-url]' ) ) {

@@ -29,7 +29,9 @@ export default defineConfig( {
 			// The chart's script is an entry of its own rather than imported by
 			// the other two, which would split it into a shared module chunk
 			// that a classic script cannot load.
-			input: [ 'src/settings.js', 'src/settings.css', 'src/widget.js', 'src/chart.js', 'src/tour.js', 'src/pointer.css' ],
+			// The same goes for the channel the open tabs talk over, which both
+			// the settings screen and the widget use.
+			input: [ 'src/channel.js', 'src/settings.js','src/settings.css', 'src/widget.js', 'src/chart.js', 'src/tour.js', 'src/pointer.css' ],
 		},
 	},
 } );

@@ -138,6 +138,7 @@
 		for ( const widget of document.querySelectorAll( '.rvrt-widget' ) ) {
 			syncWidgetTabs( widget );
 			syncPeriods( widget );
+			syncRefreshed( widget );
 		}
 	} );
 } )();
